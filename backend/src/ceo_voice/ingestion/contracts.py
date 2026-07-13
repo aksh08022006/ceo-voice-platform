@@ -1,9 +1,10 @@
 """Typed contracts passed between ingestion boundaries."""
 
 from enum import StrEnum
+from typing import Self
 from uuid import UUID
 
-from pydantic import AnyUrl, Field, JsonValue, field_validator
+from pydantic import AnyUrl, Field, JsonValue, field_validator, model_validator
 
 from ceo_voice.core.constants import DEFAULT_LANGUAGE_CODE
 from ceo_voice.models.base import ContractModel, NonBlankText, NonEmptyStr, UtcDatetime
@@ -224,6 +225,7 @@ class ExtractedMetadata(ContractModel):
     """Typed metadata projection stored separately from canonical content."""
 
     document_id: UUID = Field(description="Canonical document identifier.")
+    document_version: int = Field(ge=1, description="Canonical document version.")
     raw_document_id: UUID = Field(description="Immutable raw-artifact identifier.")
     tenant_id: UUID = Field(description="Tenant ownership boundary.")
     ceo_id: UUID = Field(description="Leader associated with the content.")
@@ -274,3 +276,96 @@ class ValidationResult(ContractModel):
         default_factory=tuple,
         description="All validation findings in deterministic order.",
     )
+
+
+class CleanDocument(ContractModel):
+    """Durable clean-document projection referencing separately stored raw bytes."""
+
+    id: UUID = Field(description="Stable canonical document identifier.")
+    raw_document_id: UUID = Field(description="Associated immutable raw artifact.")
+    tenant_id: UUID = Field(description="Tenant ownership boundary.")
+    ceo_id: UUID = Field(description="Leader associated with the content.")
+    external_id: NonEmptyStr = Field(description="Item identifier in the source system.")
+    source: DocumentSourceType = Field(description="Source family.")
+    document_type: DocumentType = Field(description="Canonical content form.")
+    author: NonEmptyStr = Field(description="Normalized author label.")
+    platform: Platform | None = Field(description="Associated platform when meaningful.")
+    publication_date: UtcDatetime | None = Field(description="UTC publication timestamp.")
+    title: str | None = Field(description="Normalized title when available.")
+    content: NonBlankText = Field(description="Cleaned content with stylistic form retained.")
+    metadata: dict[str, JsonValue] = Field(
+        default_factory=dict,
+        description="Source and transformation metadata.",
+    )
+    language: NonEmptyStr = Field(description="BCP 47 language code.")
+    url: AnyUrl | None = Field(description="Canonical public source URL.")
+    tags: tuple[NonEmptyStr, ...] = Field(description="Ordered classification tags.")
+    raw_checksum: NonEmptyStr = Field(description="SHA-256 digest of source bytes.")
+    content_checksum: NonEmptyStr = Field(description="SHA-256 digest of clean text.")
+    fetched_at: UtcDatetime = Field(description="UTC acquisition timestamp.")
+    processed_at: UtcDatetime = Field(description="UTC processing timestamp.")
+    source_version: str | None = Field(description="Source-provided revision token.")
+    version: int = Field(ge=1, description="Monotonic canonical document version.")
+
+
+class RepositoryWriteDisposition(StrEnum):
+    """Outcome of an idempotent repository write."""
+
+    CREATED = "created"
+    UPDATED = "updated"
+    ALREADY_EXISTS = "already_exists"
+
+
+class ConnectorCheckpoint(ContractModel):
+    """Successful connector progress used to seed a later incremental fetch."""
+
+    connector_id: NonEmptyStr = Field(description="Stable connector identifier.")
+    tenant_id: UUID = Field(description="Tenant checkpoint boundary.")
+    ceo_id: UUID = Field(description="Leader checkpoint boundary.")
+    cursor: str | None = Field(description="Opaque connector cursor after the successful batch.")
+    modified_after: UtcDatetime | None = Field(
+        description="Timestamp lower bound suggested for the next fetch."
+    )
+    last_successful_fetch_at: UtcDatetime = Field(description="UTC successful fetch timestamp.")
+    updated_at: UtcDatetime = Field(description="UTC checkpoint write timestamp.")
+
+
+class DocumentChangeKind(StrEnum):
+    """Incremental-processing decision for a source item."""
+
+    NEW = "new"
+    CHANGED = "changed"
+    UNCHANGED = "unchanged"
+    DUPLICATE = "duplicate"
+
+
+class DocumentChangeDecision(ContractModel):
+    """Auditable incremental decision made before or after normalization."""
+
+    kind: DocumentChangeKind = Field(description="Required processing disposition.")
+    next_version: int | None = Field(
+        default=None,
+        ge=1,
+        description="Version to persist for new or changed content.",
+    )
+    existing_document_id: UUID | None = Field(
+        default=None,
+        description="Related stored document for changed, unchanged, or duplicate content.",
+    )
+    existing_version: int | None = Field(
+        default=None,
+        ge=1,
+        description="Version of the related stored document.",
+    )
+    reason: NonEmptyStr = Field(description="Stable human-readable decision rationale.")
+
+    @model_validator(mode="after")
+    def validate_version_semantics(self) -> Self:
+        """Require a write version only for decisions that continue processing."""
+
+        if self.kind in {DocumentChangeKind.NEW, DocumentChangeKind.CHANGED}:
+            if self.next_version is None:
+                raise ValueError("new and changed decisions require next_version")
+        elif self.next_version is not None:
+            raise ValueError("unchanged and duplicate decisions must not set next_version")
+        return self

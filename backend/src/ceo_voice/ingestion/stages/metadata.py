@@ -33,6 +33,7 @@ class MetadataExtractor:
         reading_seconds = math.ceil(word_count * 60 / self._reading_words_per_minute)
         return ExtractedMetadata(
             document_id=document.id,
+            document_version=document.version,
             raw_document_id=document.raw_document_id,
             tenant_id=document.tenant_id,
             ceo_id=document.ceo_id,
