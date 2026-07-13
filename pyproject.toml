@@ -1,0 +1,89 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ceo-voice-platform"
+version = "0.1.0"
+description = "Production foundation for a multi-tenant executive voice intelligence platform."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+license = "LicenseRef-Proprietary"
+authors = [{ name = "CEO Voice Platform Engineering" }]
+dependencies = [
+    "pydantic>=2.12,<3",
+    "pydantic-settings>=2.14,<3",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1,<27",
+    "mypy>=1.15,<2",
+    "pip-tools>=7.5,<8",
+    "pre-commit>=4,<5",
+    "pytest>=8.3,<10",
+    "pytest-cov>=6,<8",
+    "ruff>=0.11,<1",
+]
+
+[tool.setuptools]
+package-dir = { "" = "backend/src" }
+
+[tool.setuptools.packages.find]
+where = ["backend/src"]
+
+[tool.setuptools.package-data]
+ceo_voice = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+src = ["backend/src", "tests"]
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "F", "I", "PIE", "PTH", "RUF", "SIM", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["ceo_voice"]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["backend/src", "tests"]
+plugins = ["pydantic.mypy"]
+strict = true
+warn_unreachable = true
+show_error_codes = true
+pretty = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_decorators = false
+
+[tool.pytest.ini_options]
+addopts = [
+    "--strict-config",
+    "--strict-markers",
+    "-ra",
+    "--cov=ceo_voice",
+    "--cov-report=term-missing",
+    "--cov-report=xml",
+    "--cov-fail-under=90",
+]
+testpaths = ["tests"]
+pythonpath = ["backend/src"]
+
+[tool.coverage.run]
+branch = true
+source = ["ceo_voice"]
+
+[tool.coverage.report]
+exclude_also = [
+    "if TYPE_CHECKING:",
+    "raise NotImplementedError",
+]
+show_missing = true

@@ -1,0 +1,45 @@
+# Operating-system files
+.DS_Store
+Thumbs.db
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+
+# Test, coverage, and type-checking artifacts
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Local configuration and secrets
+.env
+.env.*
+!.env.example
+
+# IDE and editor state
+.idea/
+.vscode/
+*.swp
+
+# Runtime data and logs
+data/raw/
+data/interim/
+data/processed/
+logs/
+*.log
+
+# Frontend artifacts reserved for a later phase
+frontend/node_modules/
+frontend/.next/
+frontend/dist/
