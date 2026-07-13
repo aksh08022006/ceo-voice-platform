@@ -46,9 +46,11 @@ contracts and boundaries established here.
 
 ## Why this foundation is not a generic RAG skeleton
 
-The shared model deliberately avoids representing voice as a single prose summary. A
-`VoiceProfile` contains versioned, atomic `VoiceFeature` records with linguistic layer, global or
-platform scope, calibrated confidence, evidence counts, and document provenance. A
+The shared model deliberately avoids representing voice as a single prose summary. The current
+`VoiceProfile` contract is a foundation-phase transport placeholder, not the final scientific
+representation. The authoritative design is a versioned Hierarchical Voice Model with typed
+distributions, leader residuals, conditional platform inheritance, evidence and counterevidence,
+structured confidence, interactions, constraints, and immutable release lineage. A
 `RetrievedContext` labels every item by role—voice evidence, factual evidence, structural
 reference, or platform reference—so downstream code never has to blend those concerns implicitly.
 
@@ -147,6 +149,9 @@ See [.env.example](.env.example) for the complete current surface and
 - [Data Pipeline](docs/DATA_PIPELINE.md) defines ingestion flow, identity, failure, storage, and
   connector-extension policies.
 - [Engineering Blueprint](docs/ENGINEERING_BLUEPRINT.md) contains the full product architecture.
+- [Computational Voice Profile Representation](docs/VOICE_PROFILE_REPRESENTATION.md) defines the
+  research-backed Voice DNA ontology, evidence model, confidence, inheritance, and evaluation
+  contract; it intentionally contains no extraction or generation implementation.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.

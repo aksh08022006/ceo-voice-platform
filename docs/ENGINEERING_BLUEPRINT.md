@@ -451,6 +451,13 @@ RAG remains useful for factual grounding and bounded prototype inspection. It is
 
 The authoritative artifact is a **Hierarchical Voice Model (HVM)**. It is not one vector, one prompt, one fine-tune, or one natural-language profile. A human-readable summary may be generated from it for review, but that summary is a projection and cannot drive generation by itself.
 
+The detailed research contract—feature taxonomy, typed value hierarchy, evidence graph,
+confidence semantics, platform inheritance, versioning, retrieval projections, and validation
+gates—is defined in [Computational Voice Profile
+Representation](VOICE_PROFILE_REPRESENTATION.md). That document is authoritative for the future
+Voice Profile Engine representation; the current foundation-phase shared schema is only a transport
+placeholder until an implementation milestone adopts the contract deliberately.
+
 Operationally, “voice” means the leader-specific distribution of observable surface choices after semantics, discourse structure, language, platform, content form, source modality, topic, time, and co-author/editor effects are accounted for. Conceptually:
 
 ```text
