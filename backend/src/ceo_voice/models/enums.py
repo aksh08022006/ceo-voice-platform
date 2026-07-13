@@ -8,6 +8,8 @@ class Platform(StrEnum):
 
     LINKEDIN = "linkedin"
     X = "x"
+    YOUTUBE = "youtube"
+    PODCAST = "podcast"
     BLOG = "blog"
     NEWSLETTER = "newsletter"
     GENERIC = "generic"
@@ -22,11 +24,36 @@ class DocumentSourceType(StrEnum):
     NEWSLETTER = "newsletter"
     INTERVIEW = "interview"
     PODCAST = "podcast"
+    YOUTUBE = "youtube"
     VIDEO = "video"
     EARNINGS_CALL = "earnings_call"
     SHAREHOLDER_LETTER = "shareholder_letter"
+    CONFERENCE_TALK = "conference_talk"
     FILE_UPLOAD = "file_upload"
     OTHER = "other"
+
+
+class DocumentType(StrEnum):
+    """Canonical content form independent of the source provider."""
+
+    SOCIAL_POST = "social_post"
+    VIDEO_TRANSCRIPT = "video_transcript"
+    PODCAST_TRANSCRIPT = "podcast_transcript"
+    EARNINGS_CALL_TRANSCRIPT = "earnings_call_transcript"
+    BLOG_POST = "blog_post"
+    INTERVIEW_TRANSCRIPT = "interview_transcript"
+    SHAREHOLDER_LETTER = "shareholder_letter"
+    CONFERENCE_TALK_TRANSCRIPT = "conference_talk_transcript"
+    NEWSLETTER = "newsletter"
+    OTHER = "other"
+
+
+class ContentFormat(StrEnum):
+    """Transport format of content before source-independent parsing."""
+
+    PLAIN_TEXT = "plain_text"
+    HTML = "html"
+    MARKDOWN = "markdown"
 
 
 class DocumentStatus(StrEnum):
