@@ -121,7 +121,7 @@ def test_normalizer_defaults_platform_and_records_transform_lineage(
     _, document = _normalize(item, fixed_time)
 
     assert document.platform is Platform.LINKEDIN
-    assert document.metadata["transformations"] == {
+    assert document.transformation_lineage == {
         "parser_version": "text-parser-v1",
         "cleaner_version": "style-preserving-cleaner-v1",
         "operations": [],
@@ -209,6 +209,8 @@ def test_metadata_extractor_calculates_deterministic_lengths_and_reading_time(
     assert metadata.content_length_characters == len(content)
     assert metadata.content_length_bytes == len(content.encode())
     assert metadata.estimated_reading_time_seconds == 60
+    assert metadata.source_fingerprint == document.source_fingerprint
+    assert metadata.document_fingerprint == document.document_fingerprint
 
 
 def test_metadata_extractor_requires_positive_reading_rate() -> None:

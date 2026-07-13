@@ -7,7 +7,7 @@ the dependency lock, CI, and typing semantics aligned. A later runtime change sh
 `pyproject.toml`, `requirements.lock`, CI, and this document in the same pull request.
 
 No database, Node.js runtime, provider account, API key, or model access is needed for the current
-foundation.
+foundation and in-memory data-pipeline test adapters.
 
 ## First-time setup
 

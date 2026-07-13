@@ -68,6 +68,14 @@ def test_raw_repository_is_idempotent_tenant_scoped_and_conflict_safe(
     async def scenario() -> None:
         assert await repository.save(raw) is RepositoryWriteDisposition.CREATED
         assert await repository.save(raw) is RepositoryWriteDisposition.ALREADY_EXISTS
+        refetch = raw.model_copy(
+            update={
+                "fetched_at": raw.fetched_at + timedelta(seconds=1),
+                "stored_at": raw.stored_at + timedelta(seconds=1),
+                "cursor": "new-fetch-cursor",
+            }
+        )
+        assert await repository.save(refetch) is RepositoryWriteDisposition.ALREADY_EXISTS
         assert await repository.get(tenant_id, raw.id) == raw
         assert await repository.get(UUID(int=0), raw.id) is None
 
@@ -93,7 +101,9 @@ def test_clean_repository_enforces_contiguous_versions_and_indexes_checksums(
             "version": 2,
             "raw_document_id": UUID("90000000-0000-0000-0000-000000000009"),
             "raw_checksum": "b" * 64,
+            "source_fingerprint": "d" * 64,
             "content_checksum": "c" * 64,
+            "document_fingerprint": "e" * 64,
             "content": "Changed content",
         }
     )
@@ -111,9 +121,22 @@ def test_clean_repository_enforces_contiguous_versions_and_indexes_checksums(
             )
             == second
         )
-        assert await repository.find_by_raw_checksum(tenant_id, ceo_id, first.raw_checksum) == first
         assert (
-            await repository.find_by_content_checksum(tenant_id, ceo_id, second.content_checksum)
+            await repository.find_by_source_fingerprint(
+                tenant_id,
+                ceo_id,
+                first.source,
+                first.source_fingerprint,
+            )
+            == first
+        )
+        assert (
+            await repository.find_by_document_fingerprint(
+                tenant_id,
+                ceo_id,
+                second.source,
+                second.document_fingerprint,
+            )
             == second
         )
 

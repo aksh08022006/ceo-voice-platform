@@ -10,10 +10,17 @@ from pydantic import ValidationError
 
 from ceo_voice.ingestion import (
     ConnectorCapabilities,
+    ConnectorCheckpoint,
     FetchRequest,
     IngestionDocument,
+    IngestionItemResult,
+    IngestionItemStatus,
+    IngestionRunResult,
+    IngestionRunStatus,
     SourceConnector,
     SourceItem,
+    ValidationIssue,
+    ValidationSeverity,
 )
 from ceo_voice.models import ContentFormat, DocumentSourceType, DocumentType, Platform
 
@@ -121,7 +128,9 @@ def test_ingestion_document_contains_common_source_independent_fields(
         url="https://example.com/episodes/42",
         tags=("operations",),
         raw_checksum="a" * 64,
-        content_checksum="b" * 64,
+        source_fingerprint="b" * 64,
+        content_checksum="c" * 64,
+        document_fingerprint="d" * 64,
         fetched_at=fixed_time,
         processed_at=fixed_time,
     )
@@ -154,3 +163,73 @@ def test_connector_protocol_is_structural_and_async(
 
     assert isinstance(connector, SourceConnector)
     assert asyncio.run(collect()) == [item]
+
+
+def test_ingestion_results_enforce_status_and_aggregate_semantics(
+    tenant_id: UUID,
+    ceo_id: UUID,
+    fixed_time: datetime,
+) -> None:
+    issue = ValidationIssue(
+        code="missing_author",
+        message="A usable author is required.",
+        severity=ValidationSeverity.ERROR,
+        field="author",
+    )
+    rejected = IngestionItemResult(
+        external_id="bad-item",
+        status=IngestionItemStatus.REJECTED,
+        validation_issues=(issue,),
+    )
+    checkpoint = ConnectorCheckpoint(
+        connector_id="test-connector",
+        tenant_id=tenant_id,
+        ceo_id=ceo_id,
+        cursor="cursor-1",
+        modified_after=fixed_time,
+        last_successful_fetch_at=fixed_time + timedelta(seconds=1),
+        updated_at=fixed_time + timedelta(seconds=1),
+    )
+    result = IngestionRunResult(
+        connector_id="test-connector",
+        tenant_id=tenant_id,
+        ceo_id=ceo_id,
+        status=IngestionRunStatus.COMPLETED_WITH_REJECTIONS,
+        started_at=fixed_time,
+        completed_at=fixed_time + timedelta(seconds=1),
+        items=(rejected,),
+        checkpoint=checkpoint,
+        stored_count=0,
+        skipped_count=0,
+        rejected_count=1,
+    )
+
+    assert result.rejected_count == 1
+    with pytest.raises(ValidationError, match="require a document id"):
+        IngestionItemResult(external_id="bad", status=IngestionItemStatus.STORED)
+    with pytest.raises(ValidationError, match="require validation issues"):
+        IngestionItemResult(external_id="bad", status=IngestionItemStatus.REJECTED)
+    with pytest.raises(ValidationError, match="only rejected results"):
+        IngestionItemResult(
+            external_id="bad",
+            status=IngestionItemStatus.UNCHANGED,
+            validation_issues=(issue,),
+        )
+    with pytest.raises(ValidationError, match="aggregate counts"):
+        result.model_copy(update={"rejected_count": 0}).model_validate(
+            result.model_copy(update={"rejected_count": 0}).model_dump()
+        )
+    with pytest.raises(ValidationError, match="must not precede"):
+        IngestionRunResult(
+            **{
+                **result.model_dump(),
+                "started_at": fixed_time + timedelta(seconds=2),
+            }
+        )
+    with pytest.raises(ValidationError, match="status must reflect"):
+        IngestionRunResult(
+            **{
+                **result.model_dump(),
+                "status": IngestionRunStatus.COMPLETED,
+            }
+        )

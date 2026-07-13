@@ -1,25 +1,32 @@
 """Heterogeneous source ingestion contracts and pipeline boundaries."""
 
-from ceo_voice.ingestion.connectors import SourceConnector
+from ceo_voice.ingestion.connectors import ConnectorRegistry, SourceConnector
 from ceo_voice.ingestion.contracts import (
     CleanDocument,
     CleanedContent,
     ConnectorCapabilities,
     ConnectorCheckpoint,
-    DocumentChangeDecision,
-    DocumentChangeKind,
     ExtractedMetadata,
     FetchRequest,
     IngestionDocument,
     ParsedContent,
     RawDocument,
-    RepositoryWriteDisposition,
     SourceItem,
+)
+from ceo_voice.ingestion.incremental import IncrementalPlanner
+from ceo_voice.ingestion.outcomes import (
+    DocumentChangeDecision,
+    DocumentChangeKind,
+    IngestionItemResult,
+    IngestionItemStatus,
+    IngestionRunResult,
+    IngestionRunStatus,
+    RepositoryWriteDisposition,
     ValidationIssue,
     ValidationResult,
     ValidationSeverity,
 )
-from ceo_voice.ingestion.incremental import IncrementalPlanner
+from ceo_voice.ingestion.pipeline import IngestionPipeline
 from ceo_voice.ingestion.repositories import (
     CheckpointRepository,
     CleanDocumentRepository,
@@ -49,6 +56,7 @@ __all__ = [
     "CleanedContent",
     "ConnectorCapabilities",
     "ConnectorCheckpoint",
+    "ConnectorRegistry",
     "ContentParser",
     "DocumentChangeDecision",
     "DocumentChangeKind",
@@ -63,7 +71,12 @@ __all__ = [
     "InMemoryRawDocumentRepository",
     "IncrementalPlanner",
     "IngestionDocument",
+    "IngestionItemResult",
+    "IngestionItemStatus",
+    "IngestionPipeline",
     "IngestionRepositories",
+    "IngestionRunResult",
+    "IngestionRunStatus",
     "MetadataExtractor",
     "MetadataRepository",
     "ParsedContent",

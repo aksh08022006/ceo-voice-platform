@@ -9,8 +9,8 @@ from ceo_voice.ingestion.contracts import (
     ConnectorCheckpoint,
     ExtractedMetadata,
     RawDocument,
-    RepositoryWriteDisposition,
 )
+from ceo_voice.ingestion.outcomes import RepositoryWriteDisposition
 from ceo_voice.models.enums import DocumentSourceType
 
 
@@ -54,17 +54,25 @@ class CleanDocumentRepository(Protocol):
 
         ...
 
-    async def find_by_raw_checksum(
-        self, tenant_id: UUID, ceo_id: UUID, checksum: str
+    async def find_by_source_fingerprint(
+        self,
+        tenant_id: UUID,
+        ceo_id: UUID,
+        source: DocumentSourceType,
+        fingerprint: str,
     ) -> CleanDocument | None:
-        """Find exact raw duplication within one leader corpus."""
+        """Find an identical source envelope within one leader and source corpus."""
 
         ...
 
-    async def find_by_content_checksum(
-        self, tenant_id: UUID, ceo_id: UUID, checksum: str
+    async def find_by_document_fingerprint(
+        self,
+        tenant_id: UUID,
+        ceo_id: UUID,
+        source: DocumentSourceType,
+        fingerprint: str,
     ) -> CleanDocument | None:
-        """Find exact canonical-content duplication within one leader corpus."""
+        """Find an identical canonical document within one leader and source corpus."""
 
         ...
 

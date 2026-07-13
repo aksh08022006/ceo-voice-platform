@@ -43,6 +43,7 @@ class MetadataExtractor:
             platform=document.platform,
             author=document.author,
             publication_date=document.publication_date,
+            source_modified_at=document.source_modified_at,
             fetched_at=document.fetched_at,
             processed_at=document.processed_at,
             language=document.language,
@@ -53,6 +54,8 @@ class MetadataExtractor:
             word_count=word_count,
             estimated_reading_time_seconds=reading_seconds,
             raw_checksum=document.raw_checksum,
+            source_fingerprint=document.source_fingerprint,
             content_checksum=document.content_checksum,
+            document_fingerprint=document.document_fingerprint,
             metadata_schema_version=self._schema_version,
         )

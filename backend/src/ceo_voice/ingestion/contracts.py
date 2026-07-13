@@ -1,10 +1,8 @@
 """Typed contracts passed between ingestion boundaries."""
 
-from enum import StrEnum
-from typing import Self
 from uuid import UUID
 
-from pydantic import AnyUrl, Field, JsonValue, field_validator, model_validator
+from pydantic import AnyUrl, Field, JsonValue, field_validator
 
 from ceo_voice.core.constants import DEFAULT_LANGUAGE_CODE
 from ceo_voice.models.base import ContractModel, NonBlankText, NonEmptyStr, UtcDatetime
@@ -73,6 +71,10 @@ class SourceItem(ContractModel):
         default=None,
         description="UTC-normalized publication timestamp when supplied.",
     )
+    source_modified_at: UtcDatetime | None = Field(
+        default=None,
+        description="Provider-reported UTC modification timestamp for incremental fetching.",
+    )
     title: str | None = Field(default=None, description="Source-supplied title when available.")
     language_hint: str | None = Field(
         default=None,
@@ -126,6 +128,12 @@ class RawDocument(ContractModel):
         pattern=r"^[a-f0-9]{64}$",
         description="SHA-256 digest of raw content.",
     )
+    source_fingerprint: str = Field(
+        min_length=64,
+        max_length=64,
+        pattern=r"^[a-f0-9]{64}$",
+        description="SHA-256 digest of the stable source envelope.",
+    )
     fetched_at: UtcDatetime = Field(description="UTC acquisition timestamp.")
     stored_at: UtcDatetime = Field(description="UTC raw-storage timestamp.")
     source_version: str | None = Field(default=None, description="Source change token.")
@@ -154,6 +162,10 @@ class IngestionDocument(ContractModel):
     author: NonEmptyStr = Field(description="Normalized author label.")
     platform: Platform | None = Field(description="Associated platform when meaningful.")
     publication_date: UtcDatetime | None = Field(description="UTC publication timestamp.")
+    source_modified_at: UtcDatetime | None = Field(
+        default=None,
+        description="Provider-reported UTC modification timestamp.",
+    )
     title: str | None = Field(description="Normalized document title when available.")
     content: NonBlankText = Field(description="Cleaned text with stylistic form preserved.")
     raw_content: bytes = Field(
@@ -161,7 +173,11 @@ class IngestionDocument(ContractModel):
     )
     metadata: dict[str, JsonValue] = Field(
         default_factory=dict,
-        description="Extracted and source-provided JSON-compatible metadata.",
+        description="Source-provided JSON-compatible metadata.",
+    )
+    transformation_lineage: dict[str, JsonValue] = Field(
+        default_factory=dict,
+        description="Parser and cleaner versions applied to this canonical version.",
     )
     language: NonEmptyStr = Field(
         default=DEFAULT_LANGUAGE_CODE,
@@ -178,11 +194,23 @@ class IngestionDocument(ContractModel):
         pattern=r"^[a-f0-9]{64}$",
         description="SHA-256 digest of the original bytes.",
     )
+    source_fingerprint: str = Field(
+        min_length=64,
+        max_length=64,
+        pattern=r"^[a-f0-9]{64}$",
+        description="SHA-256 digest of stable provider content and metadata.",
+    )
     content_checksum: str = Field(
         min_length=64,
         max_length=64,
         pattern=r"^[a-f0-9]{64}$",
         description="SHA-256 digest of canonical clean text.",
+    )
+    document_fingerprint: str = Field(
+        min_length=64,
+        max_length=64,
+        pattern=r"^[a-f0-9]{64}$",
+        description="SHA-256 digest of canonical content and voice-relevant context.",
     )
     fetched_at: UtcDatetime = Field(description="UTC source-acquisition timestamp.")
     processed_at: UtcDatetime = Field(description="UTC canonical-processing timestamp.")
@@ -235,6 +263,10 @@ class ExtractedMetadata(ContractModel):
     platform: Platform | None = Field(description="Associated platform when meaningful.")
     author: NonEmptyStr = Field(description="Normalized author label.")
     publication_date: UtcDatetime | None = Field(description="UTC publication timestamp.")
+    source_modified_at: UtcDatetime | None = Field(
+        default=None,
+        description="Provider-reported UTC modification timestamp.",
+    )
     fetched_at: UtcDatetime = Field(description="UTC acquisition timestamp.")
     processed_at: UtcDatetime = Field(description="UTC processing timestamp.")
     language: NonEmptyStr = Field(description="BCP 47 language code.")
@@ -248,34 +280,12 @@ class ExtractedMetadata(ContractModel):
         description="Estimated reading time using the configured words-per-minute rate.",
     )
     raw_checksum: NonEmptyStr = Field(description="SHA-256 digest of source bytes.")
+    source_fingerprint: NonEmptyStr = Field(description="Stable source-envelope digest.")
     content_checksum: NonEmptyStr = Field(description="SHA-256 digest of clean text.")
-    metadata_schema_version: NonEmptyStr = Field(description="Metadata extractor schema version.")
-
-
-class ValidationSeverity(StrEnum):
-    """Severity assigned to an ingestion validation issue."""
-
-    ERROR = "error"
-    WARNING = "warning"
-
-
-class ValidationIssue(ContractModel):
-    """One machine-readable validation finding."""
-
-    code: NonEmptyStr = Field(description="Stable issue code.")
-    message: NonEmptyStr = Field(description="Safe operator-facing explanation.")
-    severity: ValidationSeverity = Field(description="Whether processing must stop.")
-    field: str | None = Field(default=None, description="Related field when applicable.")
-
-
-class ValidationResult(ContractModel):
-    """Complete non-short-circuiting validation result for one artifact."""
-
-    is_valid: bool = Field(description="Whether no error-severity findings were produced.")
-    issues: tuple[ValidationIssue, ...] = Field(
-        default_factory=tuple,
-        description="All validation findings in deterministic order.",
+    document_fingerprint: NonEmptyStr = Field(
+        description="Digest of canonical content and voice-relevant context."
     )
+    metadata_schema_version: NonEmptyStr = Field(description="Metadata extractor schema version.")
 
 
 class CleanDocument(ContractModel):
@@ -291,29 +301,33 @@ class CleanDocument(ContractModel):
     author: NonEmptyStr = Field(description="Normalized author label.")
     platform: Platform | None = Field(description="Associated platform when meaningful.")
     publication_date: UtcDatetime | None = Field(description="UTC publication timestamp.")
+    source_modified_at: UtcDatetime | None = Field(
+        default=None,
+        description="Provider-reported UTC modification timestamp.",
+    )
     title: str | None = Field(description="Normalized title when available.")
     content: NonBlankText = Field(description="Cleaned content with stylistic form retained.")
     metadata: dict[str, JsonValue] = Field(
         default_factory=dict,
-        description="Source and transformation metadata.",
+        description="Source-provided metadata.",
+    )
+    transformation_lineage: dict[str, JsonValue] = Field(
+        default_factory=dict,
+        description="Parser and cleaner versions applied to this canonical version.",
     )
     language: NonEmptyStr = Field(description="BCP 47 language code.")
     url: AnyUrl | None = Field(description="Canonical public source URL.")
     tags: tuple[NonEmptyStr, ...] = Field(description="Ordered classification tags.")
     raw_checksum: NonEmptyStr = Field(description="SHA-256 digest of source bytes.")
+    source_fingerprint: NonEmptyStr = Field(description="Stable source-envelope digest.")
     content_checksum: NonEmptyStr = Field(description="SHA-256 digest of clean text.")
+    document_fingerprint: NonEmptyStr = Field(
+        description="Digest of canonical content and voice-relevant context."
+    )
     fetched_at: UtcDatetime = Field(description="UTC acquisition timestamp.")
     processed_at: UtcDatetime = Field(description="UTC processing timestamp.")
     source_version: str | None = Field(description="Source-provided revision token.")
     version: int = Field(ge=1, description="Monotonic canonical document version.")
-
-
-class RepositoryWriteDisposition(StrEnum):
-    """Outcome of an idempotent repository write."""
-
-    CREATED = "created"
-    UPDATED = "updated"
-    ALREADY_EXISTS = "already_exists"
 
 
 class ConnectorCheckpoint(ContractModel):
@@ -328,44 +342,3 @@ class ConnectorCheckpoint(ContractModel):
     )
     last_successful_fetch_at: UtcDatetime = Field(description="UTC successful fetch timestamp.")
     updated_at: UtcDatetime = Field(description="UTC checkpoint write timestamp.")
-
-
-class DocumentChangeKind(StrEnum):
-    """Incremental-processing decision for a source item."""
-
-    NEW = "new"
-    CHANGED = "changed"
-    UNCHANGED = "unchanged"
-    DUPLICATE = "duplicate"
-
-
-class DocumentChangeDecision(ContractModel):
-    """Auditable incremental decision made before or after normalization."""
-
-    kind: DocumentChangeKind = Field(description="Required processing disposition.")
-    next_version: int | None = Field(
-        default=None,
-        ge=1,
-        description="Version to persist for new or changed content.",
-    )
-    existing_document_id: UUID | None = Field(
-        default=None,
-        description="Related stored document for changed, unchanged, or duplicate content.",
-    )
-    existing_version: int | None = Field(
-        default=None,
-        ge=1,
-        description="Version of the related stored document.",
-    )
-    reason: NonEmptyStr = Field(description="Stable human-readable decision rationale.")
-
-    @model_validator(mode="after")
-    def validate_version_semantics(self) -> Self:
-        """Require a write version only for decisions that continue processing."""
-
-        if self.kind in {DocumentChangeKind.NEW, DocumentChangeKind.CHANGED}:
-            if self.next_version is None:
-                raise ValueError("new and changed decisions require next_version")
-        elif self.next_version is not None:
-            raise ValueError("unchanged and duplicate decisions must not set next_version")
-        return self

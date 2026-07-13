@@ -4,9 +4,10 @@ A production-oriented foundation for an executive voice intelligence platform. T
 system will represent a leader's writing as versioned, evidence-backed micro-patterns and keep
 voice, factual grounding, platform structure, and evaluation as independent concerns.
 
-This repository is currently at **Engineering Foundation (Phase 2)**. It contains the package
-boundaries, configuration, logging, error contracts, shared types, conservative utilities,
-quality gates, and documentation required before feature development begins.
+This repository has completed **Data Pipeline (Phase 3)**. It contains the engineering foundation
+plus an executable, source-independent ingestion framework that retains raw artifacts and produces
+clean, validated, versioned canonical documents. It does not contain network source connectors or
+scraping behavior.
 
 ## Current scope
 
@@ -20,20 +21,28 @@ Implemented:
   generation messages, and evaluation results;
 - bounded file, text, JSON, time, retry, and hashing utilities;
 - deterministic dependency locking, pre-commit hooks, and GitHub Actions quality gates;
-- unit tests with strict configuration and a 90% minimum coverage threshold.
+- unit tests with strict configuration and a 90% minimum coverage threshold;
+- a structural async connector contract and connector registry;
+- strict parsing and style-preserving HTML, Markdown, Unicode, control, whitespace, and duplicate-
+  paragraph cleaning;
+- raw, source-envelope, and canonical fingerprints with source-scoped duplicate policy;
+- source and canonical validation, deterministic metadata extraction, and version normalization;
+- async repository ports with concurrency-safe in-memory adapters;
+- incremental new, changed, unchanged, and duplicate decisions;
+- failure-safe pipeline orchestration with raw retention and post-stream checkpoints.
 
 Intentionally not implemented:
 
 - API endpoints or an application server;
-- data ingestion, scraping, or normalization pipelines;
+- real provider connectors, provider credentials, scraping, or network acquisition;
 - voice extraction or profile inference;
 - retrieval, RAG, embeddings, or vector storage;
 - prompt assets, prompt assembly, LLM clients, or generation behavior;
 - virality scoring or evaluation behavior;
 - a frontend.
 
-Keeping those absent is a design constraint, not unfinished foundation work. Later milestones can
-add each capability behind the contracts and boundaries established here.
+Keeping those absent is a design constraint. Later milestones can add each capability behind the
+contracts and boundaries established here.
 
 ## Why this foundation is not a generic RAG skeleton
 
@@ -58,7 +67,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── models/       # Canonical cross-module domain contracts
 │       ├── schemas/      # Boundary request/response messages
 │       ├── services/     # Future use-case orchestration boundary
-│       ├── ingestion/    # Future source pipeline boundary
+│       ├── ingestion/    # Source-neutral ETL contracts, stages, ports, and orchestration
 │       ├── voice/        # Future voice-analysis boundary
 │       ├── virality/     # Future platform-performance boundary
 │       ├── retrieval/    # Future evidence-retrieval boundary
@@ -135,6 +144,8 @@ See [.env.example](.env.example) for the complete current surface and
 ## Documentation
 
 - [Architecture Overview](docs/ARCHITECTURE.md) explains module ownership and dependency rules.
+- [Data Pipeline](docs/DATA_PIPELINE.md) defines ingestion flow, identity, failure, storage, and
+  connector-extension policies.
 - [Engineering Blueprint](docs/ENGINEERING_BLUEPRINT.md) contains the full product architecture.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.

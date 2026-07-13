@@ -62,6 +62,11 @@ def test_source_validator_returns_all_errors_without_mutation(
         author=None,
         publication_date=fixed_time + timedelta(minutes=10),
         language_hint="not_a_language",
+    ).model_copy(
+        update={
+            "fetched_at": fixed_time + timedelta(minutes=10),
+            "source_modified_at": fixed_time + timedelta(minutes=10),
+        }
     )
     validator = SourceItemValidator(max_raw_bytes=3, clock=lambda: fixed_time)
 
@@ -71,7 +76,9 @@ def test_source_validator_returns_all_errors_without_mutation(
     assert [issue.code for issue in result.issues] == [
         "missing_author",
         "raw_content_too_large",
+        "future_fetched_at",
         "future_publication_date",
+        "future_source_modified_at",
         "malformed_language",
     ]
     assert item.raw_content == b"too large"
@@ -104,6 +111,7 @@ def test_document_validator_detects_integrity_encoding_and_timestamp_errors(
             "content_checksum": sha256_text("different content"),
             "processed_at": fixed_time - timedelta(seconds=1),
             "publication_date": fixed_time + timedelta(minutes=10),
+            "source_modified_at": fixed_time + timedelta(minutes=10),
             "language": "bad_language",
         }
     )
@@ -114,8 +122,10 @@ def test_document_validator_detects_integrity_encoding_and_timestamp_errors(
     assert {issue.code for issue in result.issues} == {
         "raw_checksum_mismatch",
         "content_checksum_mismatch",
+        "document_fingerprint_mismatch",
         "processing_before_fetch",
         "future_publication_date",
+        "future_source_modified_at",
         "malformed_language",
         "replacement_character",
     }

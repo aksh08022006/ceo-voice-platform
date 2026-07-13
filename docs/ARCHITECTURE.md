@@ -1,14 +1,15 @@
 # Architecture Overview
 
-## Purpose of this phase
+## Current architectural increment
 
-The foundation establishes stable boundaries before the first AI or data integration is selected.
+The foundation establishes stable boundaries before an AI or provider integration is selected.
 It makes later feature decisions reversible: an embedding provider, database, LLM, web framework,
 or workflow engine can be replaced without rewriting canonical contracts or cross-cutting policy.
 
-The code in this phase is intentionally executable infrastructure, not a set of empty feature
-stubs disguised as a product. Feature packages exist to reserve ownership boundaries; their
-business behavior remains absent until an independently testable milestone requires it.
+The ingestion package is the first functional subsystem. It is intentionally provider-neutral:
+real parsing, cleaning, normalization, validation, incremental decisions, persistence ports, and
+orchestration exist, while network acquisition remains an adapter concern. Other feature packages
+remain ownership boundaries until an independently testable milestone requires their behavior.
 
 ## Dependency direction
 
@@ -49,7 +50,7 @@ database client directly.
 | `models` | Defines canonical cross-module data contracts | Validated domain data in, immutable snapshots out | core constants, Pydantic | Contracts are not ORM entities and do not inherit persistence concerns |
 | `schemas` | Defines use-case request and response messages | External values in, typed boundary messages out | models, Pydantic | Callers do not see prompts, provider parameters, or database structures |
 | `services` | Reserves use-case orchestration | Future commands in, results out | ports, models, schemas, core | Orchestration belongs outside domain engines and transports |
-| `ingestion` | Reserves source acquisition and normalization | Raw source artifacts in, canonical documents out | future source ports, models | Source adapters and normalization evolve independently |
+| `ingestion` | Implements provider-neutral ETL, validation, incremental identity, and persistence ports | Connector `SourceItem` streams in, raw artifacts, clean documents, metadata, checkpoints, and run outcomes out | models, core, utilities | Provider adapters, transformation policy, and storage implementations evolve independently |
 | `voice` | Reserves voice analysis and versioning | Documents in, evidence-backed voice artifacts out | models, future analysis ports | Voice representation is deeper than a generated prose summary |
 | `virality` | Reserves platform-performance modeling | Structured content features in, platform signals out | models, evaluation contracts | Platform effectiveness must not contaminate identity fidelity |
 | `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |

@@ -14,6 +14,11 @@ from ceo_voice.ingestion.contracts import (
     RawDocument,
     SourceItem,
 )
+from ceo_voice.ingestion.fingerprints import (
+    calculate_document_fingerprint,
+    calculate_source_fingerprint,
+    source_attributes,
+)
 from ceo_voice.models.enums import DocumentSourceType, DocumentType, Platform
 from ceo_voice.utils.hashing import sha256_bytes, sha256_text
 
@@ -51,23 +56,10 @@ class RawDocumentFactory:
 
         raw_checksum = sha256_bytes(item.raw_content)
         identity = _source_identity(item)
-        attributes: dict[str, JsonValue] = dict(item.metadata)
-        attributes.update(
-            {
-                "author": item.author,
-                "platform": item.platform.value if item.platform else None,
-                "publication_date": (
-                    item.publication_date.isoformat() if item.publication_date else None
-                ),
-                "title": item.title,
-                "language_hint": item.language_hint,
-                "url": str(item.url) if item.url else None,
-                "tags": list(item.tags),
-                "encoding_hint": item.encoding_hint,
-            }
-        )
+        attributes = source_attributes(item)
+        source_fingerprint = calculate_source_fingerprint(item)
         return RawDocument(
-            id=uuid5(NAMESPACE_URL, f"{identity}:raw:{raw_checksum}"),
+            id=uuid5(NAMESPACE_URL, f"{identity}:raw:{source_fingerprint}"),
             tenant_id=item.tenant_id,
             ceo_id=item.ceo_id,
             external_id=item.external_id,
@@ -75,6 +67,7 @@ class RawDocumentFactory:
             raw_content=item.raw_content,
             content_format=item.content_format,
             raw_checksum=raw_checksum,
+            source_fingerprint=source_fingerprint,
             fetched_at=item.fetched_at,
             stored_at=stored_at,
             source_version=item.source_version,
@@ -120,8 +113,24 @@ class DocumentNormalizer:
                 details={"source": item.source.value},
             ) from exc
 
-        metadata: dict[str, JsonValue] = dict(item.metadata)
-        metadata["transformations"] = {
+        author = item.author.strip()
+        platform = item.platform or self._default_platforms.get(item.source)
+        title = item.title.strip() if item.title else None
+        language = (item.language_hint or DEFAULT_LANGUAGE_CODE).strip()
+        content_checksum = sha256_text(cleaned.content)
+        document_fingerprint = calculate_document_fingerprint(
+            content_checksum=content_checksum,
+            document_type=document_type,
+            author=author,
+            platform=platform,
+            publication_date=item.publication_date,
+            title=title,
+            language=language,
+            url=str(item.url) if item.url else None,
+            tags=item.tags,
+            metadata=item.metadata,
+        )
+        transformation_lineage: dict[str, JsonValue] = {
             "parser_version": cleaned.parser_version,
             "cleaner_version": cleaned.cleaner_version,
             "operations": list(cleaned.applied_operations),
@@ -136,19 +145,23 @@ class DocumentNormalizer:
             external_id=item.external_id,
             source=item.source,
             document_type=document_type,
-            author=item.author.strip(),
-            platform=item.platform or self._default_platforms.get(item.source),
+            author=author,
+            platform=platform,
             publication_date=item.publication_date,
-            title=item.title.strip() if item.title else None,
+            source_modified_at=item.source_modified_at,
+            title=title,
             content=cleaned.content,
             raw_content=item.raw_content,
-            metadata=metadata,
-            language=(item.language_hint or DEFAULT_LANGUAGE_CODE).strip(),
+            metadata=item.metadata,
+            transformation_lineage=transformation_lineage,
+            language=language,
             url=item.url,
             tags=item.tags,
             raw_checksum=raw_document.raw_checksum,
-            content_checksum=sha256_text(cleaned.content),
-            fetched_at=item.fetched_at,
+            source_fingerprint=raw_document.source_fingerprint,
+            content_checksum=content_checksum,
+            document_fingerprint=document_fingerprint,
+            fetched_at=raw_document.fetched_at,
             processed_at=processed_at,
             source_version=item.source_version,
             version=version,
@@ -162,6 +175,7 @@ class DocumentNormalizer:
             item.external_id,
             item.source,
             sha256_bytes(item.raw_content),
+            calculate_source_fingerprint(item),
         )
         actual = (
             raw_document.tenant_id,
@@ -169,6 +183,7 @@ class DocumentNormalizer:
             raw_document.external_id,
             raw_document.source,
             raw_document.raw_checksum,
+            raw_document.source_fingerprint,
         )
         if actual != expected:
             raise DataIngestionError(

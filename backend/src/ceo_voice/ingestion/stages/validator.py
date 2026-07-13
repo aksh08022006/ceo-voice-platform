@@ -8,9 +8,9 @@ from ceo_voice.ingestion.constants import (
     DEFAULT_FUTURE_TIMESTAMP_TOLERANCE,
     DEFAULT_MAX_RAW_CONTENT_BYTES,
 )
-from ceo_voice.ingestion.contracts import (
-    IngestionDocument,
-    SourceItem,
+from ceo_voice.ingestion.contracts import IngestionDocument, SourceItem
+from ceo_voice.ingestion.fingerprints import calculate_document_fingerprint
+from ceo_voice.ingestion.outcomes import (
     ValidationIssue,
     ValidationResult,
     ValidationSeverity,
@@ -53,12 +53,31 @@ class SourceItemValidator:
                     "raw_content",
                 )
             )
+        if item.fetched_at > self._clock() + self._future_tolerance:
+            issues.append(
+                _error(
+                    "future_fetched_at",
+                    "Acquisition date is implausibly far in the future.",
+                    "fetched_at",
+                )
+            )
         if item.publication_date and item.publication_date > self._clock() + self._future_tolerance:
             issues.append(
                 _error(
                     "future_publication_date",
                     "Publication date is implausibly far in the future.",
                     "publication_date",
+                )
+            )
+        if (
+            item.source_modified_at
+            and item.source_modified_at > self._clock() + self._future_tolerance
+        ):
+            issues.append(
+                _error(
+                    "future_source_modified_at",
+                    "Source modification date is implausibly far in the future.",
+                    "source_modified_at",
                 )
             )
         if item.language_hint and not _LANGUAGE_PATTERN.fullmatch(item.language_hint):
@@ -104,6 +123,26 @@ class DocumentValidator:
                     "content_checksum",
                 )
             )
+        expected_document_fingerprint = calculate_document_fingerprint(
+            content_checksum=document.content_checksum,
+            document_type=document.document_type,
+            author=document.author,
+            platform=document.platform,
+            publication_date=document.publication_date,
+            title=document.title,
+            language=document.language,
+            url=str(document.url) if document.url else None,
+            tags=document.tags,
+            metadata=document.metadata,
+        )
+        if expected_document_fingerprint != document.document_fingerprint:
+            issues.append(
+                _error(
+                    "document_fingerprint_mismatch",
+                    "Canonical document fingerprint does not match.",
+                    "document_fingerprint",
+                )
+            )
         if document.processed_at < document.fetched_at:
             issues.append(
                 _error(
@@ -121,6 +160,17 @@ class DocumentValidator:
                     "future_publication_date",
                     "Publication date is implausibly far in the future.",
                     "publication_date",
+                )
+            )
+        if (
+            document.source_modified_at
+            and document.source_modified_at > self._clock() + self._future_tolerance
+        ):
+            issues.append(
+                _error(
+                    "future_source_modified_at",
+                    "Source modification date is implausibly far in the future.",
+                    "source_modified_at",
                 )
             )
         if not _LANGUAGE_PATTERN.fullmatch(document.language):

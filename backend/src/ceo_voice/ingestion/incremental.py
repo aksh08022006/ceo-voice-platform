@@ -1,12 +1,7 @@
 """Repository-backed incremental processing decisions."""
 
-from ceo_voice.ingestion.contracts import (
-    DocumentChangeDecision,
-    DocumentChangeKind,
-    IngestionDocument,
-    RawDocument,
-    SourceItem,
-)
+from ceo_voice.ingestion.contracts import IngestionDocument, RawDocument, SourceItem
+from ceo_voice.ingestion.outcomes import DocumentChangeDecision, DocumentChangeKind
 from ceo_voice.ingestion.repositories.ports import CleanDocumentRepository
 
 
@@ -27,23 +22,26 @@ class IncrementalPlanner:
             item.source,
             item.external_id,
         )
-        if latest is not None and latest.raw_checksum == raw_document.raw_checksum:
+        if latest is not None and latest.source_fingerprint == raw_document.source_fingerprint:
             return DocumentChangeDecision(
                 kind=DocumentChangeKind.UNCHANGED,
                 existing_document_id=latest.id,
                 existing_version=latest.version,
-                reason="raw checksum matches the latest source version",
+                reason="source fingerprint matches the latest source version",
             )
 
-        duplicate = await self._repository.find_by_raw_checksum(
-            item.tenant_id, item.ceo_id, raw_document.raw_checksum
+        duplicate = await self._repository.find_by_source_fingerprint(
+            item.tenant_id,
+            item.ceo_id,
+            item.source,
+            raw_document.source_fingerprint,
         )
         if duplicate is not None and (latest is None or duplicate.id != latest.id):
             return DocumentChangeDecision(
                 kind=DocumentChangeKind.DUPLICATE,
                 existing_document_id=duplicate.id,
                 existing_version=duplicate.version,
-                reason="raw checksum matches another stored document",
+                reason="source fingerprint matches another stored document",
             )
 
         if latest is not None:
@@ -52,7 +50,7 @@ class IncrementalPlanner:
                 next_version=latest.version + 1,
                 existing_document_id=latest.id,
                 existing_version=latest.version,
-                reason="raw checksum changed for an existing source item",
+                reason="source fingerprint changed for an existing source item",
             )
         return DocumentChangeDecision(
             kind=DocumentChangeKind.NEW,
@@ -76,7 +74,7 @@ class IncrementalPlanner:
             document.source,
             document.external_id,
         )
-        if latest is not None and latest.content_checksum == document.content_checksum:
+        if latest is not None and latest.document_fingerprint == document.document_fingerprint:
             return DocumentChangeDecision(
                 kind=DocumentChangeKind.UNCHANGED,
                 existing_document_id=latest.id,
@@ -84,10 +82,11 @@ class IncrementalPlanner:
                 reason="canonical content is unchanged after transport cleanup",
             )
 
-        duplicate = await self._repository.find_by_content_checksum(
+        duplicate = await self._repository.find_by_document_fingerprint(
             document.tenant_id,
             document.ceo_id,
-            document.content_checksum,
+            document.source,
+            document.document_fingerprint,
         )
         if duplicate is not None and (latest is None or duplicate.id != latest.id):
             return DocumentChangeDecision(

@@ -9,13 +9,13 @@ from ceo_voice.ingestion.contracts import (
     ConnectorCheckpoint,
     ExtractedMetadata,
     RawDocument,
-    RepositoryWriteDisposition,
 )
+from ceo_voice.ingestion.outcomes import RepositoryWriteDisposition
 from ceo_voice.models.enums import DocumentSourceType
 
 _DocumentVersionKey = tuple[UUID, UUID, int]
 _SourceKey = tuple[UUID, UUID, DocumentSourceType, str]
-_ChecksumKey = tuple[UUID, UUID, str]
+_FingerprintKey = tuple[UUID, UUID, DocumentSourceType, str]
 _CheckpointKey = tuple[UUID, UUID, str]
 
 
@@ -31,6 +31,24 @@ class InMemoryRawDocumentRepository:
         async with self._lock:
             existing = self._documents.get(key)
             if existing == document:
+                return RepositoryWriteDisposition.ALREADY_EXISTS
+            if existing is not None and (
+                existing.ceo_id,
+                existing.external_id,
+                existing.source,
+                existing.content_format,
+                existing.raw_content,
+                existing.raw_checksum,
+                existing.source_fingerprint,
+            ) == (
+                document.ceo_id,
+                document.external_id,
+                document.source,
+                document.content_format,
+                document.raw_content,
+                document.raw_checksum,
+                document.source_fingerprint,
+            ):
                 return RepositoryWriteDisposition.ALREADY_EXISTS
             if existing is not None:
                 raise StorageError(
@@ -51,8 +69,8 @@ class InMemoryCleanDocumentRepository:
     def __init__(self) -> None:
         self._documents: dict[_DocumentVersionKey, CleanDocument] = {}
         self._latest_by_source: dict[_SourceKey, _DocumentVersionKey] = {}
-        self._raw_checksums: dict[_ChecksumKey, _DocumentVersionKey] = {}
-        self._content_checksums: dict[_ChecksumKey, _DocumentVersionKey] = {}
+        self._source_fingerprints: dict[_FingerprintKey, _DocumentVersionKey] = {}
+        self._document_fingerprints: dict[_FingerprintKey, _DocumentVersionKey] = {}
         self._lock = asyncio.Lock()
 
     async def save(self, document: CleanDocument) -> RepositoryWriteDisposition:
@@ -89,11 +107,23 @@ class InMemoryCleanDocumentRepository:
 
             self._documents[key] = document
             self._latest_by_source[source_key] = key
-            self._raw_checksums.setdefault(
-                (document.tenant_id, document.ceo_id, document.raw_checksum), key
+            self._source_fingerprints.setdefault(
+                (
+                    document.tenant_id,
+                    document.ceo_id,
+                    document.source,
+                    document.source_fingerprint,
+                ),
+                key,
             )
-            self._content_checksums.setdefault(
-                (document.tenant_id, document.ceo_id, document.content_checksum), key
+            self._document_fingerprints.setdefault(
+                (
+                    document.tenant_id,
+                    document.ceo_id,
+                    document.source,
+                    document.document_fingerprint,
+                ),
+                key,
             )
             return RepositoryWriteDisposition.CREATED
 
@@ -113,18 +143,26 @@ class InMemoryCleanDocumentRepository:
             key = self._latest_by_source.get(source_key)
             return self._documents.get(key) if key else None
 
-    async def find_by_raw_checksum(
-        self, tenant_id: UUID, ceo_id: UUID, checksum: str
+    async def find_by_source_fingerprint(
+        self,
+        tenant_id: UUID,
+        ceo_id: UUID,
+        source: DocumentSourceType,
+        fingerprint: str,
     ) -> CleanDocument | None:
         async with self._lock:
-            key = self._raw_checksums.get((tenant_id, ceo_id, checksum))
+            key = self._source_fingerprints.get((tenant_id, ceo_id, source, fingerprint))
             return self._documents.get(key) if key else None
 
-    async def find_by_content_checksum(
-        self, tenant_id: UUID, ceo_id: UUID, checksum: str
+    async def find_by_document_fingerprint(
+        self,
+        tenant_id: UUID,
+        ceo_id: UUID,
+        source: DocumentSourceType,
+        fingerprint: str,
     ) -> CleanDocument | None:
         async with self._lock:
-            key = self._content_checksums.get((tenant_id, ceo_id, checksum))
+            key = self._document_fingerprints.get((tenant_id, ceo_id, source, fingerprint))
             return self._documents.get(key) if key else None
 
 
