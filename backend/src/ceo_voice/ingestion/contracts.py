@@ -1,5 +1,6 @@
 """Typed contracts passed between ingestion boundaries."""
 
+from enum import StrEnum
 from uuid import UUID
 
 from pydantic import AnyUrl, Field, JsonValue, field_validator
@@ -195,3 +196,81 @@ class IngestionDocument(ContractModel):
         if len(value) != len(set(value)):
             raise ValueError("tags must be unique")
         return value
+
+
+class ParsedContent(ContractModel):
+    """Deterministically decoded source content before cleaning."""
+
+    content: NonBlankText = Field(description="Decoded text with no cleaning applied.")
+    encoding: NonEmptyStr = Field(description="Canonical codec used to decode source bytes.")
+    content_format: ContentFormat = Field(description="Transport representation being cleaned.")
+    parser_version: NonEmptyStr = Field(description="Version of the deterministic parser.")
+
+
+class CleanedContent(ContractModel):
+    """Style-preserving cleaning output and transformation lineage."""
+
+    content: NonBlankText = Field(description="Clean text with meaningful style retained.")
+    source_encoding: NonEmptyStr = Field(description="Codec used during parsing.")
+    parser_version: NonEmptyStr = Field(description="Parser version used before cleaning.")
+    cleaner_version: NonEmptyStr = Field(description="Cleaning-policy version.")
+    applied_operations: tuple[NonEmptyStr, ...] = Field(
+        default_factory=tuple,
+        description="Ordered cleaning operations that changed the text.",
+    )
+
+
+class ExtractedMetadata(ContractModel):
+    """Typed metadata projection stored separately from canonical content."""
+
+    document_id: UUID = Field(description="Canonical document identifier.")
+    raw_document_id: UUID = Field(description="Immutable raw-artifact identifier.")
+    tenant_id: UUID = Field(description="Tenant ownership boundary.")
+    ceo_id: UUID = Field(description="Leader associated with the content.")
+    external_id: NonEmptyStr = Field(description="Item identifier in the source system.")
+    source: DocumentSourceType = Field(description="Source family.")
+    document_type: DocumentType = Field(description="Canonical content form.")
+    platform: Platform | None = Field(description="Associated platform when meaningful.")
+    author: NonEmptyStr = Field(description="Normalized author label.")
+    publication_date: UtcDatetime | None = Field(description="UTC publication timestamp.")
+    fetched_at: UtcDatetime = Field(description="UTC acquisition timestamp.")
+    processed_at: UtcDatetime = Field(description="UTC processing timestamp.")
+    language: NonEmptyStr = Field(description="BCP 47 language code.")
+    url: AnyUrl | None = Field(description="Canonical public source URL.")
+    tags: tuple[NonEmptyStr, ...] = Field(description="Ordered classification tags.")
+    content_length_characters: int = Field(ge=1, description="Unicode character count.")
+    content_length_bytes: int = Field(ge=1, description="UTF-8 byte count.")
+    word_count: int = Field(ge=0, description="Deterministic word count.")
+    estimated_reading_time_seconds: int = Field(
+        ge=0,
+        description="Estimated reading time using the configured words-per-minute rate.",
+    )
+    raw_checksum: NonEmptyStr = Field(description="SHA-256 digest of source bytes.")
+    content_checksum: NonEmptyStr = Field(description="SHA-256 digest of clean text.")
+    metadata_schema_version: NonEmptyStr = Field(description="Metadata extractor schema version.")
+
+
+class ValidationSeverity(StrEnum):
+    """Severity assigned to an ingestion validation issue."""
+
+    ERROR = "error"
+    WARNING = "warning"
+
+
+class ValidationIssue(ContractModel):
+    """One machine-readable validation finding."""
+
+    code: NonEmptyStr = Field(description="Stable issue code.")
+    message: NonEmptyStr = Field(description="Safe operator-facing explanation.")
+    severity: ValidationSeverity = Field(description="Whether processing must stop.")
+    field: str | None = Field(default=None, description="Related field when applicable.")
+
+
+class ValidationResult(ContractModel):
+    """Complete non-short-circuiting validation result for one artifact."""
+
+    is_valid: bool = Field(description="Whether no error-severity findings were produced.")
+    issues: tuple[ValidationIssue, ...] = Field(
+        default_factory=tuple,
+        description="All validation findings in deterministic order.",
+    )
