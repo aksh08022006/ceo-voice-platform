@@ -166,7 +166,10 @@ reviewed voice corpus. See [Governed Corpus Acquisition](docs/CORPUS_ACQUISITION
 `LocalExportConnector` accepts bounded JSON or JSONL files produced through official exports,
 licensed datasets, or operator-curated transcripts. It supports cursor resumption,
 `modified_after`, source versions, structured metadata, and path confinement. A synthetic schema
-example is at [local-export.jsonl](data/examples/local-export.jsonl).
+example is at [local-export.jsonl](data/examples/local-export.jsonl). Before persistence,
+`CatalogAuthorizedConnector` matches every record to its reviewed catalog entry and preserves a
+content-free authorization receipt. The matching synthetic catalog is at
+[source-catalog.json](data/examples/source-catalog.json).
 
 The repository intentionally does not include credentialless X/LinkedIn scraping. Network source
 adapters must use official APIs or authorized feeds behind the existing connector contract.

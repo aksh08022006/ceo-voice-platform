@@ -73,6 +73,29 @@ class CorpusAcquisitionPolicy(ContractModel):
     require_human_review: bool = True
 
 
+class AuthorizedImportPolicy(ContractModel):
+    """Integrity requirements applied to each connector-emitted source item."""
+
+    require_manifest_review: bool = True
+    require_author_match: bool = True
+    require_url_match: bool = True
+    require_publication_date_match: bool = True
+    require_catalog_fingerprint: bool = False
+
+
+class AuthorizedImportReceipt(ContractModel):
+    """Content-free proof that one item passed catalog authorization."""
+
+    source_id: NonEmptyStr
+    catalog_schema_version: NonEmptyStr
+    acquisition_method: AcquisitionMethod
+    authorship_basis: AuthorshipBasis
+    content_role: CorpusContentRole
+    content_sha256: NonEmptyStr = Field(pattern=r"^[a-f0-9]{64}$")
+    reviewed_at: UtcDatetime | None
+    reviewer_id: UUID | None
+
+
 class CorpusAuditFinding(ContractModel):
     """One traceable corpus governance or coverage finding."""
 

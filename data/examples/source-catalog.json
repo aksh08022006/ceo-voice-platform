@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "tenant_id": "10000000-0000-0000-0000-000000000001",
+  "leader_id": "20000000-0000-0000-0000-000000000002",
+  "leader_name": "Example Leader",
+  "entries": [
+    {
+      "source_id": "synthetic-catalog-001",
+      "source": "linkedin",
+      "platform": "linkedin",
+      "document_type": "social_post",
+      "canonical_url": "https://example.com/leader/posts/1",
+      "title": "Synthetic operating lesson",
+      "publisher": "Synthetic fixture",
+      "publication_date": "2025-01-15T09:00:00Z",
+      "acquisition_method": "authorized_export",
+      "review_status": "approved",
+      "authorship_basis": "first_party_account",
+      "content_role": "primary_voice",
+      "requires_authentication": false,
+      "requires_payment": false,
+      "eligible_for_voice_analysis": true,
+      "attribution_notes": "Synthetic fixture created by the repository maintainers.",
+      "access_notes": "Synthetic content; no external acquisition occurred.",
+      "content_fingerprint": "25fc9ab43d99f7701b8a8963a408adf3246843c7e2dbe0a38d986183f3261ad2",
+      "captured_at": "2025-01-15T09:00:00Z"
+    },
+    {
+      "source_id": "synthetic-catalog-002",
+      "source": "linkedin",
+      "platform": "linkedin",
+      "document_type": "social_post",
+      "canonical_url": "https://example.com/leader/posts/2",
+      "title": "Synthetic operating question",
+      "publisher": "Synthetic fixture",
+      "publication_date": "2025-02-15T09:00:00Z",
+      "acquisition_method": "authorized_export",
+      "review_status": "approved",
+      "authorship_basis": "first_party_account",
+      "content_role": "primary_voice",
+      "requires_authentication": false,
+      "requires_payment": false,
+      "eligible_for_voice_analysis": true,
+      "attribution_notes": "Synthetic fixture created by the repository maintainers.",
+      "access_notes": "Synthetic content; no external acquisition occurred.",
+      "content_fingerprint": "8436040d14e6587051abd6875ed770275991987624bfeab9c41647366e997c29",
+      "captured_at": "2025-02-15T09:00:00Z"
+    }
+  ],
+  "created_at": "2025-02-15T09:00:00Z",
+  "reviewed_at": "2025-02-15T10:00:00Z",
+  "reviewer_id": "30000000-0000-0000-0000-000000000003"
+}

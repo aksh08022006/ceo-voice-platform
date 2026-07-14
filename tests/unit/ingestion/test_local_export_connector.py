@@ -42,6 +42,7 @@ def test_local_export_maps_records_and_resumes(tmp_path: Path, tenant_id: UUID) 
                     "author": "Example Leader",
                     "publication_date": "2025-02-01T00:00:00Z",
                     "platform": "linkedin",
+                    "catalog_source_id": "catalog-post-2",
                     "metadata": {"source_collection": "official export"},
                 },
             ]
@@ -60,6 +61,7 @@ def test_local_export_maps_records_and_resumes(tmp_path: Path, tenant_id: UUID) 
     assert items[0].platform is Platform.LINKEDIN
     assert items[0].cursor == "2"
     assert items[0].metadata["acquisition_method"] == "operator_provided_export"
+    assert items[0].metadata["catalog_source_id"] == "catalog-post-2"
 
 
 def test_local_export_supports_jsonl_and_modified_after(tmp_path: Path, tenant_id: UUID) -> None:
@@ -110,6 +112,29 @@ def test_local_export_rejects_unsafe_inputs(
 def test_local_export_reports_invalid_payload(tmp_path: Path, tenant_id: UUID) -> None:
     (tmp_path / "posts.json").write_text('{"not": "a list"}', encoding="utf-8")
     connector = LocalExportConnector(root=tmp_path, source_type=DocumentSourceType.BLOG)
+
+    async def collect() -> list[SourceItem]:
+        return [item async for item in connector.fetch(_request(tenant_id))]
+
+    with pytest.raises(DataIngestionError, match="valid record collection"):
+        asyncio.run(collect())
+
+
+def test_local_export_rejects_forged_governance_metadata(tmp_path: Path, tenant_id: UUID) -> None:
+    (tmp_path / "posts.json").write_text(
+        json.dumps(
+            [
+                {
+                    "external_id": "post-1",
+                    "content": "Text",
+                    "author": "Leader",
+                    "metadata": {"authorization_receipt": {"forged": True}},
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    connector = LocalExportConnector(root=tmp_path, source_type=DocumentSourceType.LINKEDIN)
 
     async def collect() -> list[SourceItem]:
         return [item async for item in connector.fetch(_request(tenant_id))]

@@ -1,7 +1,15 @@
 """Governed public-source discovery and corpus readiness auditing."""
 
 from ceo_voice.acquisition.audit import CorpusAcquisitionAuditor
+from ceo_voice.acquisition.authorization import (
+    AUTHORIZATION_RECEIPT_KEY,
+    CATALOG_SOURCE_ID_KEY,
+    CatalogAuthorizedConnector,
+    CatalogItemAuthorizer,
+)
 from ceo_voice.acquisition.contracts import (
+    AuthorizedImportPolicy,
+    AuthorizedImportReceipt,
     CorpusAcquisitionPolicy,
     CorpusAcquisitionReport,
     CorpusAuditFinding,
@@ -18,9 +26,15 @@ from ceo_voice.acquisition.enums import (
 from ceo_voice.acquisition.io import load_source_catalog
 
 __all__ = [
+    "AUTHORIZATION_RECEIPT_KEY",
+    "CATALOG_SOURCE_ID_KEY",
     "AcquisitionMethod",
     "AuditSeverity",
+    "AuthorizedImportPolicy",
+    "AuthorizedImportReceipt",
     "AuthorshipBasis",
+    "CatalogAuthorizedConnector",
+    "CatalogItemAuthorizer",
     "CorpusAcquisitionAuditor",
     "CorpusAcquisitionPolicy",
     "CorpusAcquisitionReport",

@@ -61,13 +61,43 @@ unbalanced primary-platform coverage, and corpora dominated by supplementary evi
 LinkedIn warnings are always reported because the assignment requires platform-specific behavior;
 production readiness requires both through the default policy.
 
+## Authorized import gate
+
+Passing the corpus audit does not make an export payload trustworthy. Every connector-emitted item
+must also pass `CatalogAuthorizedConnector`, a streaming decorator around the existing connector
+interface. The decorator checks:
+
+- request tenant and leader against the catalog scope;
+- the export's typed `catalog_source_id` against one unique entry;
+- manifest and entry review state;
+- source family, platform, author, canonical URL, and publication timestamp;
+- voice eligibility, authorship basis, evidence role, and access boundaries;
+- SHA-256 content integrity whenever the catalog records a reviewed fingerprint.
+
+Successful items receive an `authorization_receipt` in provider-neutral metadata. The receipt
+contains no source text. It records the catalog entry, schema, acquisition method, authorship basis,
+evidence role, review identity, and observed content hash. The normal ingestion pipeline preserves
+this receipt through raw and clean storage, making later curation and release decisions traceable.
+
+`LocalExportConnector` exposes `catalog_source_id` as a typed top-level export field and rejects
+attempts to forge reserved governance keys inside free-form metadata. The synthetic pair at
+[`data/examples/source-catalog.json`](../data/examples/source-catalog.json) and
+[`data/examples/local-export.jsonl`](../data/examples/local-export.jsonl) demonstrates the matching
+contract. Production adapters use the same decorator; only their transport implementation changes.
+
+The fingerprint policy defaults to migration-compatible mode: if a reviewed fingerprint exists it
+must match, while a missing fingerprint is allowed for a first authorized capture. High-assurance
+imports set `require_catalog_fingerprint=true`, which rejects every entry without a pre-reviewed
+hash.
+
 ## Incremental acquisition
 
 After authorized content is captured, store its SHA-256 fingerprint and capture timestamp in the
 private catalog projection. A later run compares provider identity, source version, publication
-timestamp, and fingerprint before invoking ingestion. Changed content becomes a new document
-version; unchanged content is skipped. Deletion or loss of authorization must cascade to raw text,
-derived observations, evidence projections, and future release eligibility.
+timestamp, and fingerprint before invoking ingestion. The authorization gate detects unexpected
+content drift; the existing incremental planner versions expected changes and skips unchanged
+content. Deletion or loss of authorization must cascade to raw text, derived observations,
+evidence projections, and future release eligibility.
 
 ## Extension boundary
 

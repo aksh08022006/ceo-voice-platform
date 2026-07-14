@@ -4,7 +4,7 @@ import json
 from collections.abc import AsyncIterator
 from pathlib import Path
 
-from pydantic import AnyUrl, Field, JsonValue, ValidationError
+from pydantic import AnyUrl, Field, JsonValue, ValidationError, field_validator
 
 from ceo_voice.core.exceptions import DataIngestionError
 from ceo_voice.ingestion.contracts import ConnectorCapabilities, FetchRequest, SourceItem
@@ -20,6 +20,10 @@ class ExportRecord(ContractModel):
     """One normalized record in a JSON or JSONL export owned by the operator."""
 
     external_id: NonEmptyStr = Field(description="Stable source-system record identifier.")
+    catalog_source_id: NonEmptyStr | None = Field(
+        default=None,
+        description="Reviewed source-catalog entry authorizing this record.",
+    )
     content: NonBlankText = Field(description="Original post, article, or transcript text.")
     author: NonEmptyStr = Field(description="Author asserted by the export.")
     publication_date: UtcDatetime | None = None
@@ -32,6 +36,16 @@ class ExportRecord(ContractModel):
     content_format: ContentFormat = ContentFormat.PLAIN_TEXT
     source_version: str | None = None
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
+
+    @field_validator("metadata")
+    @classmethod
+    def protect_governance_metadata(cls, value: dict[str, JsonValue]) -> dict[str, JsonValue]:
+        """Prevent an export payload from forging authorization metadata."""
+
+        reserved = {"catalog_source_id", "authorization_receipt"}
+        if reserved.intersection(value):
+            raise ValueError("metadata contains a reserved governance key")
+        return value
 
 
 class LocalExportConnector:
@@ -100,6 +114,11 @@ class LocalExportConnector:
                     **record.metadata,
                     "acquisition_method": "operator_provided_export",
                     "export_file": export_path.name,
+                    **(
+                        {"catalog_source_id": record.catalog_source_id}
+                        if record.catalog_source_id is not None
+                        else {}
+                    ),
                 },
                 source_version=record.source_version,
                 cursor=str(index + 1),
