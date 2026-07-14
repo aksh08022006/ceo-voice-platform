@@ -5,11 +5,12 @@ system will represent a leader's writing as versioned, evidence-backed micro-pat
 voice, factual grounding, platform structure, and evaluation as independent concerns.
 
 This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
-representation kernel**, **Voice Analysis Framework**, and the first executable **Voice Profile
-Builder**. It now also contains an independent **Virality Structure Library** that turns authorized
-post-performance corpora into evidence-backed, platform-aware structural patterns. It does not
-contain network acquisition, calibrated stylometric inference, LLM behavior, retrieval execution,
-or generation.
+representation kernel**, **Voice Analysis Framework**, first executable **Voice Profile Builder**,
+and independent **Virality Structure Library**. It now also contains a deterministic **Context
+Compilation Engine** that transforms pinned HVM/VKR releases, intent, platform policy, constraints,
+and supplied evidence into one immutable, model-neutral `GenerationContext`. It does not contain
+network acquisition, calibrated stylometric inference, LLM behavior, retrieval execution, prompt
+rendering, or generation.
 
 ## Current scope
 
@@ -69,6 +70,17 @@ Implemented:
   comparability, and observational performance difference;
 - immutable virality releases with validation, atomic activation/supersession, human inspection,
   exact faceted search, and deterministic release comparison.
+- fail-closed context compilation over exact active HVM/VKR releases, governed identity, registry
+  hash, platform contract, request lineage, and tenant boundary;
+- generation-authorized voice projection with confidence gates, conditional inheritance, explicit
+  preference precedence, interaction dependency checks, compact ranking, and ignored decisions;
+- independent platform-specific structural projection with support, leader-breadth, comparability,
+  descriptive-authority, and per-dimension selection policy;
+- typed hard, soft, negative-space, platform, formatting, user, and safety constraints with
+  conflict detection and source attribution;
+- validation and role partitioning of future retrieved evidence without retrieval behavior;
+- content-addressed immutable `GenerationContext` output with selection, confidence, constraint,
+  and evidence-trace reports.
 
 Intentionally not implemented:
 
@@ -113,6 +125,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
 │       ├── profiles/     # Executable profile builds, publication, reports, and local workspace
 │       ├── virality/     # Structural evidence, performance patterns, releases, and search
+│       ├── context/      # Deterministic HVM/VKR/intent compilation into GenerationContext
 │       ├── retrieval/    # Future evidence-retrieval boundary
 │       ├── generation/   # Future generation orchestration boundary
 │       ├── evaluation/   # Future evaluator boundary
@@ -214,6 +227,9 @@ See [.env.example](.env.example) for the complete current surface and
   semantics, recovery model, scientific authority, reports, and corpus manifest contract.
 - [Virality Structure Library](docs/VIRALITY_LIBRARY.md) defines the independent structural
   representation, deterministic features, performance statistics, release workflow, and limits.
+- [Context Compilation Engine](docs/CONTEXT_COMPILER.md) defines generation-authority gates,
+  voice inheritance, structural selection, constraints, supplied evidence, deterministic sealing,
+  reports, failure modes, and extension policy.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.

@@ -6,6 +6,7 @@ from ceo_voice.core.exceptions import (
     ApplicationError,
     ApplicationValidationError,
     ConfigurationError,
+    ContextCompilationError,
     DataIngestionError,
     EvaluationError,
     ExternalAPIError,
@@ -36,6 +37,7 @@ def test_application_error_has_transport_neutral_shape() -> None:
     ("exception_type", "expected_code"),
     [
         (ConfigurationError, "configuration_error"),
+        (ContextCompilationError, "context_compilation_error"),
         (DataIngestionError, "data_ingestion_error"),
         (RetrievalError, "retrieval_error"),
         (GenerationError, "generation_error"),

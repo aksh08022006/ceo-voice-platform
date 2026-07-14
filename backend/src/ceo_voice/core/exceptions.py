@@ -66,6 +66,12 @@ class GenerationError(ApplicationError):
     code = "generation_error"
 
 
+class ContextCompilationError(ApplicationError):
+    """Raised when governed artifacts cannot form a safe generation context."""
+
+    code = "context_compilation_error"
+
+
 class EvaluationError(ApplicationError):
     """Raised when a candidate cannot be evaluated reliably."""
 

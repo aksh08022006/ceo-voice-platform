@@ -19,7 +19,10 @@ corpus builds, conservative Tier 1 compilation, release publication, inspection,
 and retrieval-projection materialization. It adds orchestration, not a second domain model. The
 `virality` package is the first structure-intelligence increment. It independently converts
 authorized outcome corpora into evidence-backed structural observations and reusable
-platform-aware pattern releases; it has no dependency on `voice` or `profiles`.
+platform-aware pattern releases; it has no dependency on `voice` or `profiles`. The `context`
+package is the first generation-enabling increment: it validates and projects exact active HVM and
+VKR releases into an immutable `GenerationContext` while preserving separate voice, structure,
+constraint, intent, and evidence planes. It performs no retrieval, prompt rendering, or model call.
 
 ## Dependency direction
 
@@ -65,6 +68,7 @@ database client directly.
 | `voice` | Implements the HVM representation kernel and governance | Versioned evidence and observations in, validated sealed releases and typed retrieval contracts out | models, core exceptions, deterministic utilities, injected analysis/storage ports | Voice is a traceable graph of typed behavior, context, evidence, uncertainty, and lineage rather than a prose summary |
 | `profiles` | Executes the end-to-end Voice Profile Builder | Curated corpus manifest in, published immutable HVM, reports, and retrieval projection out | analysis, voice, ingestion contracts, core, utilities | One composition boundary owns workflow state, incremental reuse, publication, and recovery while the analysis and HVM kernels remain independently testable |
 | `virality` | Implements deterministic structure intelligence and observational engagement patterns | Canonical social posts plus pinned performance snapshots in, validated immutable structural pattern releases out | ingestion contracts, shared models, core, utilities | Structural tactics remain evidence-backed, platform-aware, searchable, and completely independent from personal voice |
+| `context` | Implements deterministic generation-context compilation | Active pinned HVM/VKR, identity, intent, policy, constraints, and supplied evidence in; sealed model-neutral `GenerationContext` out | voice and virality contracts, shared models/schemas, core, deterministic utilities | One fail-closed boundary owns authority, inheritance, compact selection, constraint conflicts, and traceability before any prompt or provider exists |
 | `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |
 | `generation` | Reserves draft orchestration | Pinned request and context in, candidates out | service ports, models, schemas | Provider calls and prompt assembly will remain replaceable collaborators |
 | `evaluation` | Reserves offline and online quality measurement | Candidate plus references in, versioned metrics out | models | Evaluation is a first-class release gate, not a logging afterthought |
