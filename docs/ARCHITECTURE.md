@@ -13,7 +13,10 @@ the second domain increment: an immutable HVM knowledge graph, declarative featu
 compiler ports, structural validation, release governance, and retrieval contracts. It contains no
 statistical estimator, persistence adapter, or retrieval implementation. The `analysis` package is
 the third increment: it compiles clean documents into HVM-native observations through registered,
-independent analyzers. It does not mutate profiles or perform stylometric inference.
+independent analyzers. It does not mutate profiles or perform stylometric inference. The `profiles`
+package is the application workflow increment: it composes those stable subsystems into restartable
+corpus builds, conservative Tier 1 compilation, release publication, inspection, health reporting,
+and retrieval-projection materialization. It adds orchestration, not a second domain model.
 
 ## Dependency direction
 
@@ -57,6 +60,7 @@ database client directly.
 | `ingestion` | Implements provider-neutral ETL, validation, incremental identity, and persistence ports | Connector `SourceItem` streams in, raw artifacts, clean documents, metadata, checkpoints, and run outcomes out | models, core, utilities | Provider adapters, transformation policy, and storage implementations evolve independently |
 | `analysis` | Implements structural addressing, analyzer registration and scheduling, confidence dispatch, and HVM observation construction | Immutable `CleanDocument` plus governed identity and registry in, canonical `ObservationSet` out | ingestion contracts, HVM contracts/ports, core, utilities | Analyzers emit measurements only; one builder owns evidence, provenance, confidence, and HVM schema enforcement |
 | `voice` | Implements the HVM representation kernel and governance | Versioned evidence and observations in, validated sealed releases and typed retrieval contracts out | models, core exceptions, deterministic utilities, injected analysis/storage ports | Voice is a traceable graph of typed behavior, context, evidence, uncertainty, and lineage rather than a prose summary |
+| `profiles` | Executes the end-to-end Voice Profile Builder | Curated corpus manifest in, published immutable HVM, reports, and retrieval projection out | analysis, voice, ingestion contracts, core, utilities | One composition boundary owns workflow state, incremental reuse, publication, and recovery while the analysis and HVM kernels remain independently testable |
 | `virality` | Reserves platform-performance modeling | Structured content features in, platform signals out | models, evaluation contracts | Platform effectiveness must not contaminate identity fidelity |
 | `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |
 | `generation` | Reserves draft orchestration | Pinned request and context in, candidates out | service ports, models, schemas | Provider calls and prompt assembly will remain replaceable collaborators |

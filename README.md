@@ -5,10 +5,11 @@ system will represent a leader's writing as versioned, evidence-backed micro-pat
 voice, factual grounding, platform structure, and evaluation as independent concerns.
 
 This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
-representation kernel**, and **Voice Analysis Framework**. It contains an executable,
-source-independent ingestion framework, a typed and release-governed voice representation, and a
-dependency-aware compiler that produces deterministic evidence-backed observations. It does not
-contain network acquisition, statistical inference, LLM behavior, retrieval, or generation.
+representation kernel**, **Voice Analysis Framework**, and the first executable **Voice Profile
+Builder**. It can analyze a curated CEO corpus, reuse unchanged document observations, compile a
+scientifically conservative Tier 1 HVM, validate and publish an immutable release, and emit health,
+inspection, and retrieval-projection artifacts. It does not contain network acquisition, calibrated
+stylometric inference, LLM behavior, retrieval execution, or generation.
 
 ## Current scope
 
@@ -51,13 +52,21 @@ Implemented:
 - 23 Tier 1 deterministic measurements for document size, structure, punctuation and markers,
   formatting, whitespace, reading time, and declared thread length;
 - confidence-composition contracts for deterministic, statistical, classifier, LLM, and
-  evidence-weighted strategies, with only declared deterministic confidence implemented.
+  evidence-weighted strategies, with only declared deterministic confidence implemented;
+- restartable corpus orchestration with bounded concurrent analysis and per-document isolation;
+- content-addressed observation reuse and immutable incremental profile release lineage;
+- concrete Tier 1 scalar aggregation, explicit versioned baselines, platform conditionals, and
+  evidence-derived support without making unmeasured distinctiveness claims;
+- validation, approval, activation, supersession, and artifact publication in one workflow;
+- corpus-health and human inspection reports plus a machine-readable retrieval projection;
+- in-memory and atomic local JSON workspaces behind one persistence boundary;
+- a manifest-driven `ceo-voice build` CLI with progress events and failure recovery.
 
 Intentionally not implemented:
 
 - API endpoints or an application server;
 - real provider connectors, provider credentials, scraping, or network acquisition;
-- stylometric inference, profile estimation algorithms, statistical fitting, or learned analyzers;
+- calibrated stylometric inference, cohort baselines, statistical fitting, or learned analyzers;
 - retrieval implementations, RAG, embeddings, or vector storage;
 - prompt assets, prompt assembly, LLM clients, or generation behavior;
 - virality scoring or evaluation behavior;
@@ -94,6 +103,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── ingestion/    # Source-neutral ETL contracts, stages, ports, and orchestration
 │       ├── analysis/     # Analyzer registry, execution, evidence builder, and Tier 1 measurements
 │       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
+│       ├── profiles/     # Executable profile builds, publication, reports, and local workspace
 │       ├── virality/     # Future platform-performance boundary
 │       ├── retrieval/    # Future evidence-retrieval boundary
 │       ├── generation/   # Future generation orchestration boundary
@@ -130,6 +140,19 @@ make check
 
 The setup command installs the reviewed dependency lock, then installs the local package in
 editable mode without resolving a second dependency graph.
+
+Build a profile from a curated corpus manifest:
+
+```bash
+ceo-voice build \
+  --manifest data/curated/ali-ghodsi/corpus.json \
+  --workspace data/profile-workspace \
+  --output data/profile-workspace/latest-profile.json
+```
+
+The CLI writes structured progress to standard error and the completed profile summary to standard
+output. Repeating the same command is idempotent; adding or changing corpus documents creates the
+next immutable release while reusing compatible observation sets.
 
 ## Quality commands
 
@@ -179,6 +202,8 @@ See [.env.example](.env.example) for the complete current surface and
   registry, compiler ports, structural validator, release lifecycle, and extension rules.
 - [Voice Analysis Framework](docs/VOICE_ANALYSIS.md) defines analyzer registration, scheduling,
   evidence attribution, confidence composition, Tier 1 semantics, failure policy, and extensions.
+- [Voice Profile Builder](docs/PROFILE_BUILDER.md) documents the executable lifecycle, incremental
+  semantics, recovery model, scientific authority, reports, and corpus manifest contract.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.

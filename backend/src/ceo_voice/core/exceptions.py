@@ -108,6 +108,12 @@ class ObservationBuildError(VoiceAnalysisError):
     code = "observation_build_error"
 
 
+class ProfileBuildError(VoiceProfileError):
+    """Raised when a corpus cannot produce or publish a valid profile release."""
+
+    code = "profile_build_error"
+
+
 class HVMValidationError(VoiceProfileError):
     """Raised when an HVM candidate fails mandatory structural validation."""
 
