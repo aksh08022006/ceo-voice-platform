@@ -1,4 +1,4 @@
-.PHONY: setup format lint typecheck test check check-all frontend-setup frontend-check doctor demo benchmark clean
+.PHONY: setup format lint typecheck test check check-all frontend-setup frontend-check doctor demo benchmark api frontend-dev clean
 
 PYTHON := .venv/bin/python
 
@@ -33,6 +33,12 @@ check-all: check frontend-check
 
 doctor:
 	$(PYTHON) -m ceo_voice.profiles.cli doctor
+
+api:
+	$(PYTHON) -m uvicorn ceo_voice.api.app:app --host 127.0.0.1 --port 8000 --reload
+
+frontend-dev:
+	cd frontend && npm run dev
 
 demo:
 	mkdir -p data/demo

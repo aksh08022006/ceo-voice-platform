@@ -15,6 +15,18 @@ reach into an entire profile.
 > They do not establish authorship or automatically authorize generation in a real person's voice.
 > Production generation fails closed until an organization supplies reviewed, calibrated evidence.
 
+## Problem
+
+Conventional voice generation collapses a person into a handful of examples and a prose prompt.
+That loses micro-patterns, mixes style with engagement structure, hides weak evidence, and makes a
+draft impossible to audit after a human edits it.
+
+## Motivation
+
+This project treats executive voice as governed knowledge, not prompt decoration. It keeps voice,
+structure, evidence, platform policy, intent, and user constraints separate until prompt rendering,
+then evaluates the result independently.
+
 ## Architecture
 
 ```mermaid
@@ -69,6 +81,20 @@ make check-all
 branch coverage, ESLint, TypeScript, and a production Next.js build. It needs
 no model credential, database, Node.js runtime, or network service.
 
+### Launch the product
+
+Run these in separate terminals after `make setup` and `make frontend-setup`:
+
+```bash
+make api
+make frontend-dev
+```
+
+Open `http://127.0.0.1:3000`. The browser can select a showcase profile, generate, edit, Re-Voice,
+evaluate, and inspect every report. The local provider is deterministic and credential-free; the
+same engine boundaries accept a production provider adapter. API documentation is available at
+`http://127.0.0.1:8000/api/docs`.
+
 ### One-command offline demonstration
 
 ```bash
@@ -92,7 +118,7 @@ evaluation-report.json      evaluation-report.md
 integration-outcome.json
 ```
 
-## CLI
+## Pipeline and features
 
 ```bash
 ceo-voice --help
@@ -131,6 +157,15 @@ example is at [local-export.jsonl](data/examples/local-export.jsonl).
 
 The repository intentionally does not include credentialless X/LinkedIn scraping. Network source
 adapters must use official APIs or authorized feeds behind the existing connector contract.
+
+## Demo and walkthroughs
+
+The Generate page includes three backend-served walkthroughs: an Ali Ghodsi AI feature launch, a
+Matei Zaharia technical announcement, and a Jensen Huang keynote thread. Their corpora and outputs
+are synthetic, explicitly labelled, and make no identity-fidelity claim. Selecting one carries its
+human edit through the full browser workflow.
+
+For a 3–5 minute submission recording, follow [Demo Runbook](docs/DEMO_RUNBOOK.md).
 
 ## Benchmarks and evaluation
 
@@ -205,8 +240,8 @@ logs, and backwards-compatible release schemas.
 - Tier-1 features are deterministic structural measurements. Calibrated stylometry, cohort
   baselines, nuisance controls, and real-person human evaluation remain required.
 - Virality statistics are descriptive associations, not causal claims or guaranteed tactics.
-- The frontend currently uses labelled synthetic adapters because no public backend HTTP API exists.
-  The CLI remains the authoritative production workflow until that transport is introduced.
+- The HTTP API stores showcase workflow sessions in process memory. A multi-instance deployment
+  requires a durable session repository and tenant authentication before exposing the endpoints.
 - Semantic retrieval, embeddings, and vector storage are deliberately absent; deterministic
   retrieval remains the auditable baseline.
 

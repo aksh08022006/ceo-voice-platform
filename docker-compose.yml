@@ -5,6 +5,8 @@ services:
     build:
       context: ./frontend
       target: runtime
+      args:
+        NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:8000
     image: ceo-voice-frontend:local
     ports:
       - "3000:3000"
@@ -15,6 +17,31 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+  api:
+    build:
+      context: .
+      target: runtime
+    image: ceo-voice-platform:local
+    entrypoint: []
+    command: ["python", "-m", "uvicorn", "ceo_voice.api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+    ports:
+      - "8000:8000"
+    environment:
+      CEO_VOICE_APPLICATION__ENVIRONMENT: production
+      CEO_VOICE_APPLICATION__DEBUG: "false"
+      CEO_VOICE_LOGGING__FORMAT: json
+      CEO_VOICE_API__ALLOWED_ORIGINS: '["http://localhost:3000","http://127.0.0.1:3000"]'
+      CEO_VOICE_API__SHOWCASE_ENABLED: "true"
+    read_only: true
+    tmpfs:
+      - /tmp:size=128m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
 
   cli:
     build:
