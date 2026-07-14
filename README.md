@@ -6,10 +6,10 @@ voice, factual grounding, platform structure, and evaluation as independent conc
 
 This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
 representation kernel**, **Voice Analysis Framework**, and the first executable **Voice Profile
-Builder**. It can analyze a curated CEO corpus, reuse unchanged document observations, compile a
-scientifically conservative Tier 1 HVM, validate and publish an immutable release, and emit health,
-inspection, and retrieval-projection artifacts. It does not contain network acquisition, calibrated
-stylometric inference, LLM behavior, retrieval execution, or generation.
+Builder**. It now also contains an independent **Virality Structure Library** that turns authorized
+post-performance corpora into evidence-backed, platform-aware structural patterns. It does not
+contain network acquisition, calibrated stylometric inference, LLM behavior, retrieval execution,
+or generation.
 
 ## Current scope
 
@@ -60,7 +60,15 @@ Implemented:
 - validation, approval, activation, supersession, and artifact publication in one workflow;
 - corpus-health and human inspection reports plus a machine-readable retrieval projection;
 - in-memory and atomic local JSON workspaces behind one persistence boundary;
-- a manifest-driven `ceo-voice build` CLI with progress events and failure recovery.
+- a manifest-driven `ceo-voice build` CLI with progress events and failure recovery;
+- an independent Virality Knowledge Representation with ten governed structural feature families;
+- transparent impression/audience normalization with explicit confounding and collection lineage;
+- deterministic hook, opening, pacing, transition, paragraph, narrative, CTA, formatting, thread,
+  and announcement-organization extraction without retaining reusable wording;
+- cross-document and cross-leader pattern aggregation with prevalence, standard error, exposure
+  comparability, and observational performance difference;
+- immutable virality releases with validation, atomic activation/supersession, human inspection,
+  exact faceted search, and deterministic release comparison.
 
 Intentionally not implemented:
 
@@ -69,7 +77,7 @@ Intentionally not implemented:
 - calibrated stylometric inference, cohort baselines, statistical fitting, or learned analyzers;
 - retrieval implementations, RAG, embeddings, or vector storage;
 - prompt assets, prompt assembly, LLM clients, or generation behavior;
-- virality scoring or evaluation behavior;
+- predictive or causal virality ranking, tactic recommendation, or calibration;
 - a frontend.
 
 Keeping those absent is a design constraint. Later milestones can add each capability behind the
@@ -104,7 +112,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── analysis/     # Analyzer registry, execution, evidence builder, and Tier 1 measurements
 │       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
 │       ├── profiles/     # Executable profile builds, publication, reports, and local workspace
-│       ├── virality/     # Future platform-performance boundary
+│       ├── virality/     # Structural evidence, performance patterns, releases, and search
 │       ├── retrieval/    # Future evidence-retrieval boundary
 │       ├── generation/   # Future generation orchestration boundary
 │       ├── evaluation/   # Future evaluator boundary
@@ -204,6 +212,8 @@ See [.env.example](.env.example) for the complete current surface and
   evidence attribution, confidence composition, Tier 1 semantics, failure policy, and extensions.
 - [Voice Profile Builder](docs/PROFILE_BUILDER.md) documents the executable lifecycle, incremental
   semantics, recovery model, scientific authority, reports, and corpus manifest contract.
+- [Virality Structure Library](docs/VIRALITY_LIBRARY.md) defines the independent structural
+  representation, deterministic features, performance statistics, release workflow, and limits.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.

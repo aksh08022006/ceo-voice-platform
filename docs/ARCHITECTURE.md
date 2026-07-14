@@ -16,7 +16,10 @@ the third increment: it compiles clean documents into HVM-native observations th
 independent analyzers. It does not mutate profiles or perform stylometric inference. The `profiles`
 package is the application workflow increment: it composes those stable subsystems into restartable
 corpus builds, conservative Tier 1 compilation, release publication, inspection, health reporting,
-and retrieval-projection materialization. It adds orchestration, not a second domain model.
+and retrieval-projection materialization. It adds orchestration, not a second domain model. The
+`virality` package is the first structure-intelligence increment. It independently converts
+authorized outcome corpora into evidence-backed structural observations and reusable
+platform-aware pattern releases; it has no dependency on `voice` or `profiles`.
 
 ## Dependency direction
 
@@ -61,7 +64,7 @@ database client directly.
 | `analysis` | Implements structural addressing, analyzer registration and scheduling, confidence dispatch, and HVM observation construction | Immutable `CleanDocument` plus governed identity and registry in, canonical `ObservationSet` out | ingestion contracts, HVM contracts/ports, core, utilities | Analyzers emit measurements only; one builder owns evidence, provenance, confidence, and HVM schema enforcement |
 | `voice` | Implements the HVM representation kernel and governance | Versioned evidence and observations in, validated sealed releases and typed retrieval contracts out | models, core exceptions, deterministic utilities, injected analysis/storage ports | Voice is a traceable graph of typed behavior, context, evidence, uncertainty, and lineage rather than a prose summary |
 | `profiles` | Executes the end-to-end Voice Profile Builder | Curated corpus manifest in, published immutable HVM, reports, and retrieval projection out | analysis, voice, ingestion contracts, core, utilities | One composition boundary owns workflow state, incremental reuse, publication, and recovery while the analysis and HVM kernels remain independently testable |
-| `virality` | Reserves platform-performance modeling | Structured content features in, platform signals out | models, evaluation contracts | Platform effectiveness must not contaminate identity fidelity |
+| `virality` | Implements deterministic structure intelligence and observational engagement patterns | Canonical social posts plus pinned performance snapshots in, validated immutable structural pattern releases out | ingestion contracts, shared models, core, utilities | Structural tactics remain evidence-backed, platform-aware, searchable, and completely independent from personal voice |
 | `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |
 | `generation` | Reserves draft orchestration | Pinned request and context in, candidates out | service ports, models, schemas | Provider calls and prompt assembly will remain replaceable collaborators |
 | `evaluation` | Reserves offline and online quality measurement | Candidate plus references in, versioned metrics out | models | Evaluation is a first-class release gate, not a logging afterthought |

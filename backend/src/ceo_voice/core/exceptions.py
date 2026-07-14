@@ -72,6 +72,18 @@ class EvaluationError(ApplicationError):
     code = "evaluation_error"
 
 
+class ViralityError(ApplicationError):
+    """Raised when structural engagement intelligence cannot be produced safely."""
+
+    code = "virality_error"
+
+
+class ViralityValidationError(ViralityError):
+    """Raised when a Virality Knowledge Release violates mandatory invariants."""
+
+    code = "virality_validation_error"
+
+
 class VoiceProfileError(ApplicationError):
     """Raised when a voice profile cannot be created, loaded, or validated."""
 
