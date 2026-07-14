@@ -1,65 +1,34 @@
-import type { Metadata } from "next";
+"use client";
+
+import { useMutation, useQuery } from "@tanstack/react-query";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useEffect } from "react";
+import { toast } from "sonner";
 
 import { ReportSection } from "@/components/report-section";
+import { buttonStyles } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { api } from "@/lib/api";
 
-export const metadata: Metadata = { title: "Evaluation" };
+export default function EvaluationPage() { return <Suspense fallback={<EvaluationSkeleton />}><EvaluationContent /></Suspense>; }
 
-const dimensions = [
-  { label: "Voice", value: 94, detail: "Supported HVM features align with the selected evidence." },
-  { label: "Structure", value: 96, detail: "The selected VKR arc and paragraph pacing are present." },
-  { label: "Platform", value: 100, detail: "LinkedIn length and formatting constraints passed." },
-  { label: "Readability", value: 89, detail: "Clear executive reading level with one dense paragraph." },
-  { label: "Constraint", value: 100, detail: "All hard, negative, and user constraints passed." },
-  { label: "Evidence", value: 86, detail: "Seven evidence units; one feature has moderate coverage." },
-];
-
-export default function EvaluationPage() {
-  return (
-    <div className="page-shell py-16 sm:py-24">
-      <header className="grid gap-10 border-b border-border pb-16 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div className="max-w-3xl">
-          <p className="eyebrow">Evaluation</p>
-          <h1 className="balanced mt-5 font-display text-5xl font-medium tracking-[-0.05em] sm:text-7xl">
-            Quality, without hiding the failure modes.
-          </h1>
-        </div>
-        <div className="lg:text-right">
-          <div className="font-display text-8xl font-medium tracking-[-0.07em] sm:text-9xl">92</div>
-          <div className="mt-2 text-sm text-muted-foreground">Overall · Passed</div>
-        </div>
-      </header>
-
-      <section className="py-16" aria-labelledby="dimension-heading">
-        <h2 id="dimension-heading" className="sr-only">Evaluation dimensions</h2>
-        <div className="space-y-9">
-          {dimensions.map((dimension) => (
-            <div className="grid gap-3 md:grid-cols-[10rem_1fr_3rem] md:items-center" key={dimension.label}>
-              <span className="font-display text-lg font-medium">{dimension.label}</span>
-              <div>
-                <Progress value={dimension.value} />
-                <p className="mt-2 text-xs leading-5 text-muted-foreground">{dimension.detail}</p>
-              </div>
-              <span className="font-mono text-sm md:text-right">{dimension.value}</span>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      <section className="border-t border-border">
-        <ReportSection title="Blocking findings">
-          <p>No platform, factual, protected-edit, or hard-constraint violations were found.</p>
-        </ReportSection>
-        <ReportSection title="Recommended improvement">
-          <p>Split the third paragraph once to move readability from 89 toward the profile median.</p>
-        </ReportSection>
-        <ReportSection title="Evidence trace">
-          <p>
-            Evaluation report ev_0187 references HVM v4.2, VKR v2.6, retrieval bundle rb_89a2, and
-            generation report gr_4107. The optional LLM judge was disabled.
-          </p>
-        </ReportSection>
-      </section>
-    </div>
-  );
+function EvaluationContent() {
+  const session = useSearchParams().get("session") ?? "";
+  const current = useQuery({ queryKey: ["workflow", session], queryFn: () => api.workflow(session), enabled: Boolean(session) });
+  const evaluation = useMutation({ mutationFn: () => api.evaluate(session), onError: (error) => toast.error(error.message) });
+  useEffect(() => { if (current.data && current.data.evaluation_score === null && !evaluation.isPending && !evaluation.data) evaluation.mutate(); }, [current.data, evaluation]);
+  const data = evaluation.data ?? current.data;
+  if (!session) return <Empty />;
+  if (!data || evaluation.isPending) return <EvaluationSkeleton />;
+  return <div className="page-shell py-16 sm:py-24">
+    <header className="grid gap-10 border-b border-border pb-16 lg:grid-cols-[1fr_auto] lg:items-end"><div className="max-w-3xl"><p className="eyebrow">Evaluation</p><h1 className="balanced mt-5 font-display text-5xl font-medium tracking-[-0.05em] sm:text-7xl">Quality, without hiding the failure modes.</h1></div><div className="lg:text-right"><div className="font-display text-8xl font-medium tracking-[-0.07em] sm:text-9xl">{Math.round(data.evaluation_score ?? 0)}</div><div className="mt-2 text-sm capitalize text-muted-foreground">Overall · {data.evaluation_status}</div></div></header>
+    <p className="mt-8 border-s-2 border-primary px-4 text-xs leading-5 text-muted-foreground">{data.disclaimer}</p>
+    <section className="space-y-9 py-16">{data.dimensions.map((dimension) => <div className="grid gap-3 md:grid-cols-[12rem_1fr_3rem] md:items-center" key={dimension.label}><span className="font-display text-lg font-medium">{dimension.label}</span><div><Progress value={dimension.score} /><p className="mt-2 text-xs leading-5 text-muted-foreground">{dimension.summary}</p></div><span className="font-mono text-sm md:text-right">{Math.round(dimension.score)}</span></div>)}</section>
+    <section className="border-t border-border"><ReportSection title="Recommended improvements"><p>{data.recommendations.length ? data.recommendations.join(" ") : "No deterministic improvement was required."}</p></ReportSection><ReportSection title="Evidence trace"><p>{data.evidence_count} evidence units evaluated against the sealed retrieval bundle. The optional LLM judge remained disabled.</p></ReportSection></section>
+  </div>;
 }
+
+function Empty() { return <div className="page-shell py-24 text-center"><p className="text-muted-foreground">Complete Generate and Re-Voice to evaluate a sealed workflow.</p><Link className={buttonStyles({ className: "mt-6" })} href="/generate">Start a workflow</Link></div>; }
+function EvaluationSkeleton() { return <div className="page-shell space-y-6 py-24"><Skeleton className="h-24 w-3/4" /><Skeleton className="h-8 w-full" /><Skeleton className="h-8 w-5/6" /></div>; }

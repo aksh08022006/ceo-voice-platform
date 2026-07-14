@@ -1,4 +1,5 @@
 import { ArrowDown } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { Reveal } from "@/components/motion/reveal";
@@ -49,7 +50,8 @@ export default function LandingPage() {
             From evidence to accountable output.
           </h2>
         </Reveal>
-        <ol className="mt-20 border-t border-border">
+        <Image alt="Ingestion, analysis, HVM, profile builder, context compiler, retrieval, generation, Re-Voice, and evaluation architecture" className="mt-16 hidden w-full border-y border-border dark:invert sm:block" height={320} priority={false} src="/architecture.svg" width={1440} />
+        <ol className="mt-20 border-t border-border sm:hidden">
           {stages.map((stage, index) => (
             <li key={stage} className="border-b border-border">
               <Reveal delay={Math.min(index * 0.025, 0.12)}>

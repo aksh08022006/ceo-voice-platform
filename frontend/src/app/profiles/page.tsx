@@ -1,10 +1,6 @@
-import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
-import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import { profiles } from "@/lib/demo-data";
+import { ProfilesList } from "@/components/profiles-list";
 
 export const metadata: Metadata = { title: "Profiles" };
 
@@ -22,28 +18,7 @@ export default function ProfilesPage() {
         </p>
       </header>
 
-      <div className="border-t border-border">
-        {profiles.map((profile) => (
-          <Link
-            className="group grid gap-6 border-b border-border py-8 transition-colors hover:bg-muted/30 sm:grid-cols-[1fr_9rem_4rem_1.5rem] sm:items-center sm:px-3"
-            href={`/profiles/${profile.slug}`}
-            key={profile.slug}
-          >
-            <div>
-              <h2 className="font-display text-2xl font-medium tracking-tight">{profile.name}</h2>
-              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">{profile.summary}</p>
-            </div>
-            <Badge className={profile.status === "Published" ? "border-primary/30 text-primary" : undefined}>
-              {profile.status}
-            </Badge>
-            <div>
-              <span className="font-mono text-sm">{profile.coverage}%</span>
-              <Progress className="mt-2" value={profile.coverage} />
-            </div>
-            <ArrowRight aria-hidden="true" className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-          </Link>
-        ))}
-      </div>
+      <ProfilesList />
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 
 import { RevoiceWorkspace } from "@/components/revoice-workspace";
 
@@ -17,7 +18,7 @@ export default function RevoicePage() {
           protected before a model is called.
         </p>
       </header>
-      <RevoiceWorkspace />
+      <Suspense fallback={<p className="text-muted-foreground">Loading workflow…</p>}><RevoiceWorkspace /></Suspense>
     </div>
   );
 }
