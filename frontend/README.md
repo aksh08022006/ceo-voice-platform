@@ -1,18 +1,38 @@
-# Frontend Boundary
+# CEO Voice frontend
 
-The frontend is intentionally not implemented during the engineering-foundation phase. This
-directory reserves an independently deployable client boundary without committing the platform to
-a framework before operator workflows, API contracts, authentication, and deployment constraints
-are validated.
+Editorial product interface for the CEO Voice Platform. It uses Next.js 15 App Router, TypeScript,
+Tailwind CSS, owned shadcn-style primitives, Framer Motion, React Hook Form, Zod, TanStack Query,
+Lucide, and Sonner.
 
-When frontend work is authorized, it should:
+## Local development
 
-- consume versioned public API schemas rather than import backend Python models;
-- separate operator review, profile inspection, generation, and evaluation workflows;
-- make voice evidence, confidence, profile version, and candidate evaluation visible;
-- avoid exposing provider prompts, credentials, or internal storage identifiers;
-- implement accessible states for loading, partial results, validation, failure, and retry;
-- maintain its own tests, type checking, formatting, build, and dependency lock.
+```bash
+npm ci
+npm run dev
+```
 
-No JavaScript package manifest is present because adding one would imply a framework decision and
-frontend implementation outside the current scope.
+Open `http://localhost:3000`. The current data adapter is an explicitly synthetic in-browser
+fixture because the backend release does not expose an HTTP API. Replace functions in
+`src/lib/demo-data.ts` and mutation adapters with a typed API client when that transport exists;
+page and component contracts do not depend on Python internals.
+
+## Quality gate
+
+```bash
+npm run lint
+npm run typecheck
+npm run build
+```
+
+## Routes
+
+- `/` — product explanation and architecture timeline
+- `/generate` — governed generation workspace
+- `/revoice` — protected human-edit restoration
+- `/evaluation` — multidimensional quality report
+- `/profiles` and `/profiles/[slug]` — published voice-profile inspection
+- `/benchmarks` — synthetic regression suite disclosure
+- `/documentation` — product and governance concepts
+
+Light mode is the editorial default; dark mode uses the same neutral tokens. Motion stays below
+300ms and respects `prefers-reduced-motion`.

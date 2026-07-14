@@ -1,4 +1,4 @@
-.PHONY: setup format lint typecheck test check doctor demo benchmark clean
+.PHONY: setup format lint typecheck test check check-all frontend-setup frontend-check doctor demo benchmark clean
 
 PYTHON := .venv/bin/python
 
@@ -22,6 +22,14 @@ test:
 	$(PYTHON) -m pytest
 
 check: lint typecheck test
+
+frontend-setup:
+	cd frontend && npm ci
+
+frontend-check:
+	cd frontend && npm run lint && npm run typecheck && npm run build
+
+check-all: check frontend-check
 
 doctor:
 	$(PYTHON) -m ceo_voice.profiles.cli doctor

@@ -5,7 +5,8 @@ content structure, and producing traceable LinkedIn and X drafts. It is designed
 question than “can an LLM imitate these examples?”: **which measured voice decisions are supported,
 authorized, relevant to this request, and preserved through human editing?**
 
-The platform is a typed Python 3.13 package with immutable HVM (voice) and VKR (structure) releases,
+The platform combines a typed Python 3.13 engine with an editorial Next.js 15 product interface,
+immutable HVM (voice) and VKR (structure) releases,
 deterministic context and retrieval, governed model boundaries, constraint-preserving Re-Voice, and
 independent evaluation. It does not reduce a person to a prose prompt and does not let prompt code
 reach into an entire profile.
@@ -61,10 +62,11 @@ cd "VERY IMPORTANT TASK"
 make setup
 cp .env.example .env
 make doctor
-make check
+make check-all
 ```
 
-`make check` runs Ruff, Black verification, strict mypy, and pytest with branch coverage. It needs
+`make check-all` runs the Python and frontend quality gates: Ruff, Black, strict mypy, pytest with
+branch coverage, ESLint, TypeScript, and a production Next.js build. It needs
 no model credential, database, Node.js runtime, or network service.
 
 ### One-command offline demonstration
@@ -169,6 +171,7 @@ backend/src/ceo_voice/
   ingestion/   analysis/     voice/        profiles/      virality/
   context/     retrieval/    generation/   revoice/       evaluation/
   config/      core/         models/       schemas/       utils/
+frontend/      Next.js App Router product interface and owned UI primitives
 configs/       environment-safe non-secret examples
 data/          synthetic schemas, benchmark manifests, ignored runtime data
 docs/          architecture, subsystem, operations, and engineering guides
@@ -184,6 +187,8 @@ make lint         # Ruff and Black verification
 make typecheck    # strict mypy
 make test         # pytest with branch coverage
 make check        # complete release gate
+make frontend-check # ESLint, TypeScript, and production Next.js build
+make check-all    # backend and frontend release gates
 ```
 
 Read [Development Setup](docs/DEVELOPMENT.md), [Coding Guidelines](docs/CODING_GUIDELINES.md), and
@@ -200,7 +205,8 @@ logs, and backwards-compatible release schemas.
 - Tier-1 features are deterministic structural measurements. Calibrated stylometry, cohort
   baselines, nuisance controls, and real-person human evaluation remain required.
 - Virality statistics are descriptive associations, not causal claims or guaranteed tactics.
-- There is no public HTTP API or frontend. The CLI is the supported release interface.
+- The frontend currently uses labelled synthetic adapters because no public backend HTTP API exists.
+  The CLI remains the authoritative production workflow until that transport is introduced.
 - Semantic retrieval, embeddings, and vector storage are deliberately absent; deterministic
   retrieval remains the auditable baseline.
 

@@ -1,6 +1,21 @@
 name: ceo-voice-platform
 
 services:
+  frontend:
+    build:
+      context: ./frontend
+      target: runtime
+    image: ceo-voice-frontend:local
+    ports:
+      - "3000:3000"
+    read_only: true
+    tmpfs:
+      - /tmp:size=32m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
   cli:
     build:
       context: .

@@ -24,7 +24,7 @@ work is limited to making implemented capabilities safe, reproducible, and evalu
 | Testing and engineering quality | Strict typing, Ruff, Black, 95% branch-coverage gate, pre-commit, CI, unit and integration tests | Satisfied | Keep the complete gate as the release acceptance check. |
 | Reproducible setup and deployment | Locked dependencies and environment template exist; containers and runtime health check do not | Partial | Add rootless multi-stage Docker packaging, Compose profiles, and a `doctor` health command. |
 | Evaluator usability | Extensive subsystem docs exist, but the README is an implementation ledger and commands are fragmented | Partial | Rewrite README around install, evaluate, operate, limitations, and evidence. |
-| User interface | The original blueprint marks frontend as optional; no frontend is required by the implementation phases | Not required | Keep CLI as the release interface; do not spend release scope on a UI. |
+| User interface | Editorial Next.js product surface now covers generation, Re-Voice, evaluation, profiles, benchmarks, and documentation | Satisfied by later product phase | Keep synthetic transport clearly labelled until a backend HTTP API exists. |
 
 ## Tasks justified for this release
 
