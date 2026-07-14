@@ -97,7 +97,7 @@ Run one test module or test directly:
 .venv/bin/python -m pytest tests/unit/test_models.py::test_document_preserves_voice_significant_whitespace
 ```
 
-Pytest measures branch coverage across `ceo_voice` and fails below 90%. Coverage is a regression
+Pytest measures branch coverage across `ceo_voice` and fails below 95%. Coverage is a regression
 signal, not permission to write assertion-free tests; tests should exercise observable invariants
 and failure behavior.
 

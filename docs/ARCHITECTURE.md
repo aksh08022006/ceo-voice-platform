@@ -8,8 +8,10 @@ or workflow engine can be replaced without rewriting canonical contracts or cros
 
 The ingestion package is the first functional subsystem. It is intentionally provider-neutral:
 real parsing, cleaning, normalization, validation, incremental decisions, persistence ports, and
-orchestration exist, while network acquisition remains an adapter concern. Other feature packages
-remain ownership boundaries until an independently testable milestone requires their behavior.
+orchestration exist, while network acquisition remains an adapter concern. The `voice` package is
+the second domain increment: an immutable HVM knowledge graph, declarative feature registry,
+compiler ports, structural validation, release governance, and retrieval contracts. It contains no
+feature extraction, statistical estimator, persistence adapter, or retrieval implementation.
 
 ## Dependency direction
 
@@ -51,7 +53,7 @@ database client directly.
 | `schemas` | Defines use-case request and response messages | External values in, typed boundary messages out | models, Pydantic | Callers do not see prompts, provider parameters, or database structures |
 | `services` | Reserves use-case orchestration | Future commands in, results out | ports, models, schemas, core | Orchestration belongs outside domain engines and transports |
 | `ingestion` | Implements provider-neutral ETL, validation, incremental identity, and persistence ports | Connector `SourceItem` streams in, raw artifacts, clean documents, metadata, checkpoints, and run outcomes out | models, core, utilities | Provider adapters, transformation policy, and storage implementations evolve independently |
-| `voice` | Reserves voice analysis and versioning | Documents in, evidence-backed voice artifacts out | models, future analysis ports | Voice representation is deeper than a generated prose summary |
+| `voice` | Implements the HVM representation kernel and governance | Versioned evidence and observations in, validated sealed releases and typed retrieval contracts out | models, core exceptions, deterministic utilities, injected analysis/storage ports | Voice is a traceable graph of typed behavior, context, evidence, uncertainty, and lineage rather than a prose summary |
 | `virality` | Reserves platform-performance modeling | Structured content features in, platform signals out | models, evaluation contracts | Platform effectiveness must not contaminate identity fidelity |
 | `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |
 | `generation` | Reserves draft orchestration | Pinned request and context in, candidates out | service ports, models, schemas | Provider calls and prompt assembly will remain replaceable collaborators |

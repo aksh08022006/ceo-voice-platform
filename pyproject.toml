@@ -72,7 +72,7 @@ addopts = [
     "--cov=ceo_voice",
     "--cov-report=term-missing",
     "--cov-report=xml",
-    "--cov-fail-under=90",
+    "--cov-fail-under=95",
 ]
 testpaths = ["tests"]
 pythonpath = ["backend/src"]

@@ -98,7 +98,8 @@ No API is implemented in the current phase. When transport work begins:
 - Integration tests verify owned boundaries with disposable dependencies.
 - Evaluation tests use versioned datasets and compare quality dimensions independently.
 - Every defect fix starts with a reproducing test when feasible.
-- Coverage must remain at least 90%, but review focuses on assertion quality and risk coverage.
+- Branch coverage must remain at least 95%, but review focuses on assertion quality and risk
+  coverage rather than line execution alone.
 
 ## Documentation
 

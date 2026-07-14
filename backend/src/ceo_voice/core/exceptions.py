@@ -78,6 +78,30 @@ class VoiceProfileError(ApplicationError):
     code = "voice_profile_error"
 
 
+class FeatureRegistryError(VoiceProfileError):
+    """Raised when a feature registry reference is missing, ambiguous, or incompatible."""
+
+    code = "feature_registry_error"
+
+
+class HVMValidationError(VoiceProfileError):
+    """Raised when an HVM candidate fails mandatory structural validation."""
+
+    code = "hvm_validation_error"
+
+
+class ProfileCompilationError(VoiceProfileError):
+    """Raised when injected profile-compilation stages violate their contracts."""
+
+    code = "profile_compilation_error"
+
+
+class ReleaseLifecycleError(VoiceProfileError):
+    """Raised when an immutable release receives an invalid lifecycle transition."""
+
+    code = "release_lifecycle_error"
+
+
 class ExternalAPIError(ApplicationError):
     """Raised when a third-party dependency fails or violates its contract."""
 

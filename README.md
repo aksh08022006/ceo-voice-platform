@@ -4,10 +4,10 @@ A production-oriented foundation for an executive voice intelligence platform. T
 system will represent a leader's writing as versioned, evidence-backed micro-patterns and keep
 voice, factual grounding, platform structure, and evaluation as independent concerns.
 
-This repository has completed **Data Pipeline (Phase 3)**. It contains the engineering foundation
-plus an executable, source-independent ingestion framework that retains raw artifacts and produces
-clean, validated, versioned canonical documents. It does not contain network source connectors or
-scraping behavior.
+This repository has completed the **Data Pipeline** and the **Hierarchical Voice Model knowledge
+representation kernel**. It contains an executable, source-independent ingestion framework plus a
+typed, evidence-addressable, release-governed representation for future voice intelligence. It
+does not contain network acquisition, feature extraction, statistical estimation, or generation.
 
 ## Current scope
 
@@ -21,7 +21,7 @@ Implemented:
   generation messages, and evaluation results;
 - bounded file, text, JSON, time, retry, and hashing utilities;
 - deterministic dependency locking, pre-commit hooks, and GitHub Actions quality gates;
-- unit tests with strict configuration and a 90% minimum coverage threshold;
+- unit tests with strict configuration and a 95% minimum branch-coverage threshold;
 - a structural async connector contract and connector registry;
 - strict parsing and style-preserving HTML, Markdown, Unicode, control, whitespace, and duplicate-
   paragraph cleaning;
@@ -29,14 +29,24 @@ Implemented:
 - source and canonical validation, deterministic metadata extraction, and version normalization;
 - async repository ports with concurrency-safe in-memory adapters;
 - incremental new, changed, unchanged, and duplicate decisions;
-- failure-safe pipeline orchestration with raw retention and post-stream checkpoints.
+- failure-safe pipeline orchestration with raw retention and post-stream checkpoints;
+- a declarative, content-addressed feature registry spanning all independent HVM dimensions;
+- immutable identity, lineage, evidence, observation, aggregate, residual, interaction, prototype,
+  constraint, preference, confidence, drift, release, and retrieval-projection contracts;
+- producer-neutral observations and dependency-inverted ports for future estimators;
+- a compiler that orchestrates injected capabilities without implementing measurement algorithms;
+- exhaustive structural validation across registry, evidence, ownership, version, reference, and
+  confidence boundaries;
+- append-only release lifecycle management with approval, activation, supersession, rollback, and
+  point-in-time resolution;
+- provider- and storage-neutral retrieval query contracts, with no retrieval implementation.
 
 Intentionally not implemented:
 
 - API endpoints or an application server;
 - real provider connectors, provider credentials, scraping, or network acquisition;
-- voice extraction or profile inference;
-- retrieval, RAG, embeddings, or vector storage;
+- voice feature extraction, profile estimation algorithms, or statistical fitting;
+- retrieval implementations, RAG, embeddings, or vector storage;
 - prompt assets, prompt assembly, LLM clients, or generation behavior;
 - virality scoring or evaluation behavior;
 - a frontend.
@@ -46,11 +56,11 @@ contracts and boundaries established here.
 
 ## Why this foundation is not a generic RAG skeleton
 
-The shared model deliberately avoids representing voice as a single prose summary. The current
-`VoiceProfile` contract is a foundation-phase transport placeholder, not the final scientific
-representation. The authoritative design is a versioned Hierarchical Voice Model with typed
-distributions, leader residuals, conditional platform inheritance, evidence and counterevidence,
-structured confidence, interactions, constraints, and immutable release lineage. A
+The shared model deliberately avoids representing voice as a single prose summary. The legacy
+`models.VoiceProfile` remains a compatibility transport contract; the authoritative representation
+is the `ceo_voice.voice` domain. It is a versioned Hierarchical Voice Model with typed distributions,
+leader residuals, conditional inheritance, evidence and counterevidence, structured confidence,
+interactions, constraints, and immutable release lineage. A
 `RetrievedContext` labels every item by role—voice evidence, factual evidence, structural
 reference, or platform reference—so downstream code never has to blend those concerns implicitly.
 
@@ -70,7 +80,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── schemas/      # Boundary request/response messages
 │       ├── services/     # Future use-case orchestration boundary
 │       ├── ingestion/    # Source-neutral ETL contracts, stages, ports, and orchestration
-│       ├── voice/        # Future voice-analysis boundary
+│       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
 │       ├── virality/     # Future platform-performance boundary
 │       ├── retrieval/    # Future evidence-retrieval boundary
 │       ├── generation/   # Future generation orchestration boundary
@@ -152,6 +162,8 @@ See [.env.example](.env.example) for the complete current surface and
 - [Computational Voice Profile Representation](docs/VOICE_PROFILE_REPRESENTATION.md) defines the
   research-backed Voice DNA ontology, evidence model, confidence, inheritance, and evaluation
   contract; it intentionally contains no extraction or generation implementation.
+- [HVM Knowledge Representation Kernel](docs/HVM_KERNEL.md) explains the implemented domain graph,
+  registry, compiler ports, structural validator, release lifecycle, and extension rules.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.
