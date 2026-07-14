@@ -11,10 +11,19 @@ from ceo_voice.analysis import (
     DistributionalStylometryFeatures,
     DocumentStatisticsAnalyzer,
     DocumentStatisticsFeatures,
+    EnglishDiscourseMarkerAnalyzer,
+    EnglishDiscourseMarkerFeatures,
+    EnglishLexicalSignatureAnalyzer,
+    EnglishLexicalSignatureFeatures,
+    EnglishRhetoricalMarkerAnalyzer,
+    EnglishRhetoricalMarkerFeatures,
     FormattingAnalyzer,
     FormattingFeatures,
+    LexicalRhetoricConfig,
     OpeningStanceAnalyzer,
     OpeningStanceFeatures,
+    RepetitionSignatureAnalyzer,
+    RepetitionSignatureFeatures,
     RhetoricalPositionAnalyzer,
     RhetoricalPositionFeatures,
     StructuralAnalyzer,
@@ -50,7 +59,7 @@ from ceo_voice.voice import (
 )
 
 _FEATURE_VERSION = SemanticVersion.parse("1.0.0")
-_REGISTRY_VERSION = SemanticVersion.parse("1.1.0")
+_REGISTRY_VERSION = SemanticVersion.parse("1.2.0")
 _CREATED_AT = datetime(2026, 1, 1, tzinfo=UTC)
 _REGISTRY_ID = uuid5(NAMESPACE_URL, "ceo-voice:tier1-feature-registry")
 _BASELINE_ID = uuid5(NAMESPACE_URL, "ceo-voice:descriptive-zero-baseline")
@@ -369,6 +378,159 @@ _DECLARATIONS = (
         "normalized_position",
         "sentence",
     ),
+    _Declaration(
+        "function_word_ratio",
+        "analysis.function-word-ratio",
+        "Function word ratio",
+        VoiceDimension.LEXICAL,
+        "ratio",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "moving_average_type_token_ratio",
+        "analysis.moving-average-type-token-ratio",
+        "Moving-average type-token ratio",
+        VoiceDimension.LEXICAL,
+        "ratio",
+        "word window",
+        ("en",),
+    ),
+    _Declaration(
+        "apostrophized_word_ratio",
+        "analysis.apostrophized-word-ratio",
+        "Apostrophized word ratio",
+        VoiceDimension.ORTHOGRAPHIC,
+        "ratio",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "first_person_plural_ratio",
+        "analysis.first-person-plural-ratio",
+        "First-person plural pronoun ratio",
+        VoiceDimension.NARRATIVE_PERSPECTIVE,
+        "ratio",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "second_person_pronoun_ratio",
+        "analysis.second-person-pronoun-ratio",
+        "Second-person pronoun ratio",
+        VoiceDimension.AUDIENCE_INTERPERSONAL,
+        "ratio",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "hedge_marker_rate",
+        "analysis.hedge-marker-rate",
+        "Hedge marker rate",
+        VoiceDimension.PRAGMATIC_STANCE,
+        "markers_per_100_words",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "certainty_marker_rate",
+        "analysis.certainty-marker-rate",
+        "Certainty marker rate",
+        VoiceDimension.PRAGMATIC_STANCE,
+        "markers_per_100_words",
+        "word",
+        ("en",),
+    ),
+    _Declaration(
+        "transition_sentence_ratio",
+        "analysis.transition-sentence-ratio",
+        "Sentence-initial transition ratio",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "ratio",
+        "sentence",
+        ("en",),
+    ),
+    _Declaration(
+        "contrast_transition_ratio",
+        "analysis.contrast-transition-ratio",
+        "Contrast transition ratio",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "ratio",
+        "sentence",
+        ("en",),
+    ),
+    _Declaration(
+        "causal_transition_ratio",
+        "analysis.causal-transition-ratio",
+        "Causal transition ratio",
+        VoiceDimension.REASONING_ARGUMENT,
+        "ratio",
+        "sentence",
+        ("en",),
+    ),
+    _Declaration(
+        "additive_transition_ratio",
+        "analysis.additive-transition-ratio",
+        "Additive transition ratio",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "ratio",
+        "sentence",
+        ("en",),
+    ),
+    _Declaration(
+        "repeated_sentence_opening_ratio",
+        "analysis.repeated-sentence-opening-ratio",
+        "Repeated sentence opening ratio",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "ratio",
+        "sentence",
+        ("en",),
+    ),
+    _Declaration(
+        "repeated_bigram_ratio",
+        "analysis.repeated-bigram-ratio",
+        "Repeated bigram ratio",
+        VoiceDimension.LEXICAL,
+        "ratio",
+        "bigram",
+        ("en",),
+    ),
+    _Declaration(
+        "repeated_trigram_ratio",
+        "analysis.repeated-trigram-ratio",
+        "Repeated trigram ratio",
+        VoiceDimension.LEXICAL,
+        "ratio",
+        "trigram",
+        ("en",),
+    ),
+    _Declaration(
+        "numeric_opening_indicator",
+        "analysis.numeric-opening-indicator",
+        "Numeric opening indicator",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "binary",
+        "document",
+        ("en",),
+    ),
+    _Declaration(
+        "announcement_opening_indicator",
+        "analysis.announcement-opening-indicator",
+        "Announcement opening marker indicator",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "binary",
+        "document",
+        ("en",),
+    ),
+    _Declaration(
+        "closing_cta_marker_indicator",
+        "analysis.closing-cta-marker-indicator",
+        "Closing CTA marker indicator",
+        VoiceDimension.DISCOURSE_RHETORICAL,
+        "binary",
+        "document",
+        ("en",),
+    ),
 )
 
 
@@ -396,12 +558,17 @@ def build_tier1_runtime() -> Tier1Runtime:
         for item, definition in zip(_DECLARATIONS, definitions, strict=True)
     }
     configuration_hash = sha256_text(
-        "tier1-runtime:1.1.0:" + ",".join(item.feature_id for item in _DECLARATIONS)
+        "tier1-runtime:1.2.0:" + ",".join(item.feature_id for item in _DECLARATIONS)
     )
     config = DeterministicAnalyzerConfig(configuration_hash=configuration_hash)
     stylometry_config = StylometryAnalyzerConfig(
         configuration_hash=sha256_text(
             "tier1-stylometry:1.0.0:short<=5:long>=20:linear-percentiles"
+        )
+    )
+    lexical_config = LexicalRhetoricConfig(
+        configuration_hash=sha256_text(
+            "tier1-lexical-rhetoric-en:1.0.0:mattr=50:opening=2:lexicons=1"
         )
     )
     analyzers: tuple[Analyzer, ...] = (
@@ -447,8 +614,32 @@ def build_tier1_runtime() -> Tier1Runtime:
             ),
             config=stylometry_config,
         ),
+        EnglishLexicalSignatureAnalyzer(
+            features=EnglishLexicalSignatureFeatures(
+                **{key: references[key] for key in EnglishLexicalSignatureFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        EnglishDiscourseMarkerAnalyzer(
+            features=EnglishDiscourseMarkerFeatures(
+                **{key: references[key] for key in EnglishDiscourseMarkerFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        RepetitionSignatureAnalyzer(
+            features=RepetitionSignatureFeatures(
+                **{key: references[key] for key in RepetitionSignatureFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        EnglishRhetoricalMarkerAnalyzer(
+            features=EnglishRhetoricalMarkerFeatures(
+                **{key: references[key] for key in EnglishRhetoricalMarkerFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
     )
-    baseline_hash = sha256_text("descriptive-zero-baseline:1.1.0")
+    baseline_hash = sha256_text("descriptive-zero-baseline:1.2.0")
     baselines = ScalarBaselineSnapshot(
         baselines=tuple(
             ScalarFeatureBaseline(

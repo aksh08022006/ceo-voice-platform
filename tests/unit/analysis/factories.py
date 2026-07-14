@@ -12,10 +12,19 @@ from ceo_voice.analysis import (
     DistributionalStylometryFeatures,
     DocumentStatisticsAnalyzer,
     DocumentStatisticsFeatures,
+    EnglishDiscourseMarkerAnalyzer,
+    EnglishDiscourseMarkerFeatures,
+    EnglishLexicalSignatureAnalyzer,
+    EnglishLexicalSignatureFeatures,
+    EnglishRhetoricalMarkerAnalyzer,
+    EnglishRhetoricalMarkerFeatures,
     FormattingAnalyzer,
     FormattingFeatures,
+    LexicalRhetoricConfig,
     OpeningStanceAnalyzer,
     OpeningStanceFeatures,
+    RepetitionSignatureAnalyzer,
+    RepetitionSignatureFeatures,
     RhetoricalPositionAnalyzer,
     RhetoricalPositionFeatures,
     StructuralAnalyzer,
@@ -97,6 +106,23 @@ FEATURE_IDS = (
     "analysis.opening-second-person-indicator",
     "analysis.closing-question-indicator",
     "analysis.question-position-mean",
+    "analysis.function-word-ratio",
+    "analysis.moving-average-type-token-ratio",
+    "analysis.apostrophized-word-ratio",
+    "analysis.first-person-plural-ratio",
+    "analysis.second-person-pronoun-ratio",
+    "analysis.hedge-marker-rate",
+    "analysis.certainty-marker-rate",
+    "analysis.transition-sentence-ratio",
+    "analysis.contrast-transition-ratio",
+    "analysis.causal-transition-ratio",
+    "analysis.additive-transition-ratio",
+    "analysis.repeated-sentence-opening-ratio",
+    "analysis.repeated-bigram-ratio",
+    "analysis.repeated-trigram-ratio",
+    "analysis.numeric-opening-indicator",
+    "analysis.announcement-opening-indicator",
+    "analysis.closing-cta-marker-indicator",
 )
 
 
@@ -224,6 +250,7 @@ def analyzers() -> tuple[Analyzer, ...]:
     values = feature_map()
     config = DeterministicAnalyzerConfig(configuration_hash=CONFIG_HASH)
     stylometry_config = StylometryAnalyzerConfig(configuration_hash=CONFIG_HASH)
+    lexical_config = LexicalRhetoricConfig(configuration_hash=CONFIG_HASH)
     return (
         DocumentStatisticsAnalyzer(
             features=DocumentStatisticsFeatures(
@@ -266,6 +293,30 @@ def analyzers() -> tuple[Analyzer, ...]:
                 **{key: values[key] for key in OpeningStanceFeatures.model_fields}
             ),
             config=stylometry_config,
+        ),
+        EnglishLexicalSignatureAnalyzer(
+            features=EnglishLexicalSignatureFeatures(
+                **{key: values[key] for key in EnglishLexicalSignatureFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        EnglishDiscourseMarkerAnalyzer(
+            features=EnglishDiscourseMarkerFeatures(
+                **{key: values[key] for key in EnglishDiscourseMarkerFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        RepetitionSignatureAnalyzer(
+            features=RepetitionSignatureFeatures(
+                **{key: values[key] for key in RepetitionSignatureFeatures.model_fields}
+            ),
+            config=lexical_config,
+        ),
+        EnglishRhetoricalMarkerAnalyzer(
+            features=EnglishRhetoricalMarkerFeatures(
+                **{key: values[key] for key in EnglishRhetoricalMarkerFeatures.model_fields}
+            ),
+            config=lexical_config,
         ),
     )
 

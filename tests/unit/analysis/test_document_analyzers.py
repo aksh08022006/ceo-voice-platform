@@ -239,6 +239,88 @@ def test_distributional_analyzer_rejects_overlapping_length_thresholds() -> None
         )
 
 
+def test_english_lexical_signature_measures_word_choice_without_tone_inference() -> None:
+    candidates = asyncio.run(
+        analyzers()[7].analyze(
+            context_for(content="We're possibly building with you. We will definitely ship it.")
+        )
+    )
+    values = value_map(candidates)
+
+    assert values["analysis.function-word-ratio"] == 0.5
+    assert values["analysis.moving-average-type-token-ratio"] == 1
+    assert values["analysis.apostrophized-word-ratio"] == 0.1
+    assert values["analysis.first-person-plural-ratio"] == 0.2
+    assert values["analysis.second-person-pronoun-ratio"] == 0.1
+    assert values["analysis.hedge-marker-rate"] == 10
+    assert values["analysis.certainty-marker-rate"] == 20
+
+
+def test_moving_average_type_token_ratio_uses_fixed_windows_for_long_documents() -> None:
+    repeated = " ".join(("alpha beta gamma delta epsilon " * 12).split())
+    values = value_map(asyncio.run(analyzers()[7].analyze(context_for(content=repeated))))
+
+    assert values["analysis.moving-average-type-token-ratio"] == 0.1
+
+
+def test_discourse_marker_analyzer_measures_sentence_initial_transition_families() -> None:
+    candidates = asyncio.run(
+        analyzers()[8].analyze(
+            context_for(
+                content="However, we continue. Because it matters. Also, we ship. Plain ending."
+            )
+        )
+    )
+    values = value_map(candidates)
+
+    assert values["analysis.transition-sentence-ratio"] == 0.75
+    assert values["analysis.contrast-transition-ratio"] == 0.25
+    assert values["analysis.causal-transition-ratio"] == 0.25
+    assert values["analysis.additive-transition-ratio"] == 0.25
+
+
+def test_repetition_analyzer_measures_opening_and_ngram_reuse() -> None:
+    candidates = asyncio.run(
+        analyzers()[9].analyze(
+            context_for(content="We build fast. We build openly. We build fast.")
+        )
+    )
+    values = value_map(candidates)
+
+    assert values["analysis.repeated-sentence-opening-ratio"] == 1
+    assert values["analysis.repeated-bigram-ratio"] == pytest.approx(3 / 8)
+    assert values["analysis.repeated-trigram-ratio"] == pytest.approx(1 / 7)
+    assert tuple(candidate.opportunity_count for candidate in candidates) == (3, 8, 7)
+
+
+def test_rhetorical_marker_analyzer_keeps_visible_markers_separate_from_intent() -> None:
+    candidates = asyncio.run(
+        analyzers()[10].analyze(
+            context_for(content="3 things changed. Details follow. Learn more.")
+        )
+    )
+    announcement = value_map(
+        asyncio.run(analyzers()[10].analyze(context_for(content="Today we launch. Details.")))
+    )
+    values = value_map(candidates)
+
+    assert values["analysis.numeric-opening-indicator"] == 1
+    assert values["analysis.announcement-opening-indicator"] == 0
+    assert values["analysis.closing-cta-marker-indicator"] == 1
+    assert announcement["analysis.announcement-opening-indicator"] == 1
+
+
+def test_lexical_and_repetition_analyzers_handle_no_word_tokens() -> None:
+    context = context_for(content="🚀")
+    lexical = value_map(asyncio.run(analyzers()[7].analyze(context)))
+    repetition = value_map(asyncio.run(analyzers()[9].analyze(context)))
+
+    assert lexical["analysis.function-word-ratio"] == 0
+    assert lexical["analysis.moving-average-type-token-ratio"] == 0
+    assert repetition["analysis.repeated-bigram-ratio"] == 0
+    assert repetition["analysis.repeated-trigram-ratio"] == 0
+
+
 def test_analyzers_handle_zero_denominators_without_non_finite_values() -> None:
     context = context_for(content="🚀")
     structural = value_map(asyncio.run(analyzers()[1].analyze(context)))
@@ -263,6 +345,11 @@ def test_analyzer_specifications_expose_all_required_capabilities() -> None:
         assert specification.measurement_class.value == "deterministic"
         assert specification.dependencies == ()
     assert all(analyzer.specification.all_languages for analyzer in analyzers()[:6])
-    assert analyzers()[6].specification.supported_languages == ("en",)
+    assert all(
+        analyzer.specification.supported_languages == ("en",) for analyzer in analyzers()[6:]
+    )
     assert analyzers()[6].specification.supports(clean_document(language="en"))
-    assert not analyzers()[6].specification.supports(clean_document(language="fr"))
+    assert all(
+        not analyzer.specification.supports(clean_document(language="fr"))
+        for analyzer in analyzers()[6:]
+    )

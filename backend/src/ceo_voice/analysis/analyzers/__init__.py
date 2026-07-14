@@ -1,5 +1,16 @@
 """Registered analyzer implementations; orchestration depends only on analyzer ports."""
 
+from ceo_voice.analysis.analyzers.lexical_rhetoric import (
+    EnglishDiscourseMarkerAnalyzer,
+    EnglishDiscourseMarkerFeatures,
+    EnglishLexicalSignatureAnalyzer,
+    EnglishLexicalSignatureFeatures,
+    EnglishRhetoricalMarkerAnalyzer,
+    EnglishRhetoricalMarkerFeatures,
+    LexicalRhetoricConfig,
+    RepetitionSignatureAnalyzer,
+    RepetitionSignatureFeatures,
+)
 from ceo_voice.analysis.analyzers.stylometry import (
     DistributionalStylometryAnalyzer,
     DistributionalStylometryFeatures,
@@ -27,10 +38,19 @@ __all__ = [
     "DistributionalStylometryFeatures",
     "DocumentStatisticsAnalyzer",
     "DocumentStatisticsFeatures",
+    "EnglishDiscourseMarkerAnalyzer",
+    "EnglishDiscourseMarkerFeatures",
+    "EnglishLexicalSignatureAnalyzer",
+    "EnglishLexicalSignatureFeatures",
+    "EnglishRhetoricalMarkerAnalyzer",
+    "EnglishRhetoricalMarkerFeatures",
     "FormattingAnalyzer",
     "FormattingFeatures",
+    "LexicalRhetoricConfig",
     "OpeningStanceAnalyzer",
     "OpeningStanceFeatures",
+    "RepetitionSignatureAnalyzer",
+    "RepetitionSignatureFeatures",
     "RhetoricalPositionAnalyzer",
     "RhetoricalPositionFeatures",
     "StructuralAnalyzer",

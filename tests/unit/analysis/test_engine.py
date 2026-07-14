@@ -124,7 +124,7 @@ def test_end_to_end_tier1_output_is_hvm_consumable_and_repeatable() -> None:
 
     assert first == second
     assert first.status is AnalysisRunStatus.SUCCEEDED
-    assert len(first.observations) == 38
+    assert len(first.observations) == 55
     assert len(first.evidence_units) >= 3
     assert all(observation.evidence for observation in first.observations)
     assert all(
@@ -251,8 +251,8 @@ def test_cache_and_metrics_hooks_preserve_observation_determinism() -> None:
     assert first.observations == second.observations
     assert first.evidence_units == second.evidence_units
     assert all(item.status is AnalyzerRunStatus.CACHE_HIT for item in second.execution_trace)
-    assert len(cache.values) == 7
-    assert len(metrics.records) == 14
+    assert len(cache.values) == 11
+    assert len(metrics.records) == 22
     assert all(duration >= 0 for _, duration, _ in metrics.records)
     assert all(succeeded for _, _, succeeded in metrics.records)
 
@@ -261,7 +261,7 @@ def test_metrics_failure_does_not_change_domain_success() -> None:
     result = asyncio.run(engine(metrics=FailingMetrics()).analyze(request()))
 
     assert result.status is AnalysisRunStatus.SUCCEEDED
-    assert len(result.observations) == 38
+    assert len(result.observations) == 55
 
 
 def test_independent_analyzers_execute_concurrently() -> None:

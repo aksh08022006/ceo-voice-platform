@@ -42,10 +42,10 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
     assert profile.managed_release.status is ReleaseStatus.ACTIVE
     assert profile.validation_report.is_valid()
     assert release.version == 1
-    assert len(profile.observations) == 76
-    assert len(release.components.aggregates) == 38
-    assert len(release.components.residuals) == 38
-    assert len(release.components.conditional_residuals) == 38
+    assert len(profile.observations) == 110
+    assert len(release.components.aggregates) == 55
+    assert len(release.components.residuals) == 55
+    assert len(release.components.conditional_residuals) == 55
     assert {
         item.confidence.independent_cluster_count for item in release.components.aggregates
     } == {2}
@@ -54,12 +54,12 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
         for item in release.components.conditional_residuals
     } == {2}
     assert profile.corpus_health.successful_documents == 2
-    assert profile.corpus_health.observed_feature_count == 38
+    assert profile.corpus_health.observed_feature_count == 55
     assert profile.corpus_health.generation_ready is False
     assert profile.inspection.authority.value == "descriptive"
     assert "not an empirically calibrated" in profile.inspection.summary
-    assert len(profile.retrieval_projection.indexed_features) == 38
-    assert len(profile.retrieval_projection.indexed_component_ids) == 76
+    assert len(profile.retrieval_projection.indexed_features) == 55
+    assert len(profile.retrieval_projection.indexed_component_ids) == 110
     assert {event.kind for event in progress.events} >= {
         ProgressKind.BUILD_STARTED,
         ProgressKind.DOCUMENT_ANALYZED,
@@ -73,8 +73,8 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
 def test_tier1_registry_evolves_additively_and_scopes_english_stance_features() -> None:
     runtime = build_tier1_runtime()
 
-    assert (runtime.registry.version.major, runtime.registry.version.minor) == (1, 1)
-    assert len(runtime.registry.definitions) == 38
+    assert (runtime.registry.version.major, runtime.registry.version.minor) == (1, 2)
+    assert len(runtime.registry.definitions) == 55
     assert {
         (definition.semantic_version.major, definition.semantic_version.minor)
         for definition in runtime.registry.definitions

@@ -101,9 +101,9 @@ the observation builder.
 
 ## Tier 1 deterministic scope
 
-Seven small analyzers currently emit 38 scalar observations. Registry version `1.1.0` adds the
-distributional and rhetorical-position families without changing the semantic version of the 23
-existing feature definitions:
+Eleven small analyzers currently emit 55 scalar observations. Registry version `1.2.0` adds lexical,
+discourse, repetition, and visible rhetorical-marker families to the `1.1.0` distributional
+features without redefining earlier feature versions:
 
 | Analyzer | Measurements |
 | --- | --- |
@@ -114,6 +114,10 @@ existing feature definitions:
 | Distributional stylometry | Per-document sentence p25/median/p75, population dispersion, short/long ratios, paragraph median/dispersion, single-sentence paragraph ratio |
 | Rhetorical position | Opening length, opening/closing question use, normalized mean question position |
 | English opening stance | Explicit first-/second-person tokens in the opening sentence |
+| English lexical signature | Function-word ratio, moving-average type-token ratio, apostrophized words, first-person plural and second-person pronouns, hedge/certainty marker rates |
+| English discourse markers | Sentence-initial transition, contrast, causal, and additive marker ratios |
+| English repetition signature | Repeated two-word sentence openings and repeated bigram/trigram ratios |
+| English rhetorical markers | Numeric and announcement opening markers, closing CTA phrase markers |
 
 Feature references are constructor-injected bindings. The analyzer implementations contain no HVM
 feature IDs, so registry evolution and alternative feature namespaces do not require editing the
@@ -139,6 +143,17 @@ New measurements retain both the document evidence unit required by the current 
 and the exact sentence or paragraph units used in the calculation. Retrieval and inspection can
 therefore trace an aggregate back to its structural opportunities rather than only to whole source
 documents.
+
+Lexical diversity uses a 50-word moving-average type-token ratio so longer documents are compared
+through fixed-size windows rather than raw vocabulary totals. Repetition measures excess repeated
+n-grams over all available n-gram opportunities and repeated two-token sentence openings. These
+remain document-level summaries before corpus aggregation, preserving the document-balanced design.
+
+English transition, hedge, certainty, announcement, and CTA measurements are pinned lexicon matches,
+not semantic classifications. For example, a closing `learn more` match records a visible CTA marker;
+it does not prove persuasive intent or output quality. Lexicon version and window settings are part
+of the analyzer configuration hash. All new token-based features are explicitly English-only because
+whitespace tokenization and marker vocabularies must not be silently generalized to other languages.
 
 The versioned sentence splitter is deliberately dependency-free and conservative. It handles
 punctuation boundaries, line boundaries, URLs, list markers, and trailing symbols deterministically,
