@@ -30,6 +30,7 @@ from ceo_voice.profiles import (
     create_tier1_profile_builder,
 )
 from ceo_voice.profiles.builder import VoiceProfileBuilder
+from ceo_voice.revoice import EditedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.virality import InMemoryViralityWorkspace, create_virality_builder
 from ceo_voice.voice import DecisionState, DownstreamPermission, FeatureRegistry
@@ -51,6 +52,24 @@ class NeverCalledProvider:
             model=request.model,
             usage=TokenUsage(input_tokens=1, output_tokens=1),
             latency_ms=1,
+        )
+
+
+class SequenceProvider:
+    name = ProviderName.OPENAI
+
+    def __init__(self, outcomes: tuple[str, ...]) -> None:
+        self.outcomes = list(outcomes)
+        self.calls = 0
+
+    async def generate(self, request: ProviderRequest) -> ProviderResult:
+        self.calls += 1
+        return ProviderResult(
+            text=self.outcomes.pop(0),
+            provider=self.name,
+            model=request.model,
+            usage=TokenUsage(input_tokens=20, output_tokens=10),
+            latency_ms=2,
         )
 
 
@@ -295,3 +314,94 @@ def test_complete_workflow_reaches_validated_draft_with_explicitly_approved_fixt
         "generation-report.json",
     ):
         assert (artifact_root / name).exists()
+
+
+def test_generated_draft_can_flow_through_human_edit_and_revoice(tmp_path: Path) -> None:
+    runtime = build_tier1_runtime()
+    authorized_registry = FeatureRegistry.build(
+        registry_id=runtime.registry.id,
+        version=runtime.registry.version,
+        definitions=tuple(
+            item.model_copy(
+                update={
+                    "downstream_permissions": (
+                        *item.downstream_permissions,
+                        DownstreamPermission.GENERATE,
+                    )
+                }
+            )
+            for item in runtime.registry.definitions
+        ),
+        created_at=runtime.registry.created_at,
+    )
+    real_builder = create_tier1_profile_builder(
+        workspace=InMemoryProfileWorkspace(), runtime=runtime
+    )
+    virality_workspace = InMemoryViralityWorkspace()
+    provider = SequenceProvider(
+        (
+            "Ownership creates speed.\n\nClear decisions compound.",
+            "Ownership creates speed.\n\nClear decisions compound momentum.",
+        )
+    )
+    generation_policy = GenerationPolicy(
+        provider=ProviderName.OPENAI,
+        model="integration-model",
+        model_context_tokens=30_000,
+    )
+    budget = TokenBudgetManager(generation_policy)
+    prompt_builder, prompt_renderer = PromptBuilder(budget), PromptRenderer(budget)
+    runner = IntegrationRunner(
+        profile_builder=cast(
+            VoiceProfileBuilder, ApprovedFixtureBuilder(real_builder, authorized_registry)
+        ),
+        virality_builder=create_virality_builder(workspace=virality_workspace),
+        virality_workspace=virality_workspace,
+        feature_registry=authorized_registry,
+        context_compiler=create_context_compiler(),
+        prompt_builder=prompt_builder,
+        prompt_renderer=prompt_renderer,
+        generation_engine=GenerationEngine(
+            provider,
+            prompt_builder,
+            prompt_renderer,
+            OutputValidator(),
+            policy=generation_policy,
+        ),
+    )
+
+    outcome = asyncio.run(runner.run(integration_input(tmp_path)))
+    artifacts = outcome.artifacts
+    assert artifacts.draft is not None
+    assert artifacts.context is not None
+    assert artifacts.retrieval is not None
+    assert artifacts.voice_profile is not None
+    assert artifacts.virality_profile is not None
+    edited = EditedDraft(
+        original=artifacts.draft,
+        content="Ownership creates speed.\n\nClear decisions build momentum.",
+        edited_at=outcome.completed_at,
+    )
+    result = asyncio.run(
+        ReVoiceEngine(
+            provider,
+            policy=ReVoicePolicy(
+                provider=ProviderName.OPENAI,
+                model="integration-model",
+            ),
+        ).restore(
+            ReVoiceInput(
+                edited_draft=edited,
+                context=artifacts.context,
+                retrieval=artifacts.retrieval,
+                voice_profile=artifacts.voice_profile,
+                virality_profile=artifacts.virality_profile,
+                requested_at=outcome.completed_at,
+            )
+        )
+    )
+
+    assert result.content == ("Ownership creates speed.\n\nClear decisions compound momentum.")
+    assert result.report.final_validation.valid
+    assert result.report.changed_regions == ("editable.line.2",)
+    assert provider.calls == 2

@@ -6,11 +6,10 @@ voice, factual grounding, platform structure, and evaluation as independent conc
 
 This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
 representation kernel**, **Voice Analysis Framework**, first executable **Voice Profile Builder**,
-and independent **Virality Structure Library**. It now also contains a deterministic **Context
-Compilation Engine** that transforms pinned HVM/VKR releases, intent, platform policy, constraints,
-and supplied evidence into one immutable, model-neutral `GenerationContext`. It does not contain
-network acquisition, calibrated stylometric inference, LLM behavior, retrieval execution, prompt
-rendering, or generation.
+independent **Virality Structure Library**, deterministic **Context Compilation** and **Retrieval
+Intelligence** engines, governed **Generation Engine**, end-to-end **Integration Harness**, and a
+constraint-preserving **Re-Voice Engine**. Generation and Re-Voice are the only model-calling product
+workflows; all upstream knowledge and selection stages remain deterministic and traceable.
 
 ## Current scope
 
@@ -81,15 +80,23 @@ Implemented:
 - validation and role partitioning of future retrieved evidence without retrieval behavior;
 - content-addressed immutable `GenerationContext` output with selection, confidence, constraint,
   and evidence-trace reports.
+- compact, deterministic, confidence-aware retrieval bundles with requirement coverage, evidence
+  diversity, pruning reasons, and immutable HVM/VKR traceability;
+- provider-neutral prompt-last generation with bounded retries, platform validation, token budgets,
+  and complete generation reports;
+- an end-to-end integration harness proving curated corpus through validated generated draft while
+  retaining artifacts, timing, diagnostics, and profiling metrics;
+- deterministic generated-versus-edited difference analysis, editable-line detection, protected
+  factual and formatting regions, conservative Re-Voice restoration, and traceable Re-Voice reports.
 
 Intentionally not implemented:
 
 - API endpoints or an application server;
-- real provider connectors, provider credentials, scraping, or network acquisition;
+- provider credentials, production HTTP transport, scraping, or network acquisition;
 - calibrated stylometric inference, cohort baselines, statistical fitting, or learned analyzers;
-- retrieval implementations, RAG, embeddings, or vector storage;
-- prompt assets, prompt assembly, LLM clients, or generation behavior;
+- embeddings, vector storage, or semantic retrieval;
 - predictive or causal virality ranking, tactic recommendation, or calibration;
+- independent Re-Voice quality evaluation or semantic-equivalence certification;
 - a frontend.
 
 Keeping those absent is a design constraint. Later milestones can add each capability behind the
@@ -126,8 +133,9 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── profiles/     # Executable profile builds, publication, reports, and local workspace
 │       ├── virality/     # Structural evidence, performance patterns, releases, and search
 │       ├── context/      # Deterministic HVM/VKR/intent compilation into GenerationContext
-│       ├── retrieval/    # Future evidence-retrieval boundary
-│       ├── generation/   # Future generation orchestration boundary
+│       ├── retrieval/    # Deterministic evidence selection and traceability
+│       ├── generation/   # Prompt-last provider orchestration and validation
+│       ├── revoice/      # Human-edit analysis and constrained voice restoration
 │       ├── evaluation/   # Future evaluator boundary
 │       ├── storage/      # Future persistence ports and adapters
 │       ├── prompts/      # Future versioned prompt assets
@@ -241,3 +249,4 @@ external distribution.
 - [Retrieval intelligence](docs/retrieval-intelligence.md) — deterministic HVM/VKR evidence serving, budgets, and traceability.
 - [Generation engine](docs/generation-engine.md) — prompt-last model orchestration, provider isolation, validation, and reporting.
 - [End-to-end integration](docs/end-to-end-integration.md) — complete workflow wiring, artifacts, profiling, and the generation-authorization finding.
+- [Re-Voice engine](docs/revoice-engine.md) — human-edit analysis, protected-region preservation, constrained restoration, and trace reports.

@@ -96,6 +96,18 @@ class PromptBudgetError(GenerationError):
     code = "prompt_budget_error"
 
 
+class ReVoiceError(ApplicationError):
+    """Raised when a draft cannot be safely restored to a governed voice target."""
+
+    code = "revoice_error"
+
+
+class ReVoiceValidationError(ReVoiceError):
+    """Raised when restoration cannot preserve the deterministic edit envelope."""
+
+    code = "revoice_validation_error"
+
+
 class IntegrationError(ApplicationError):
     """Raised when the production workflow cannot cross a subsystem boundary."""
 
