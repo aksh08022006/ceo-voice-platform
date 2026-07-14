@@ -1,0 +1,219 @@
+"""Structured prompt assembly, evidence budgeting, and final rendering."""
+
+from uuid import UUID
+
+from ceo_voice.core.exceptions import PromptBudgetError
+from ceo_voice.generation.contracts import (
+    GenerationInput,
+    GenerationPolicy,
+    PromptSection,
+    RenderedPrompt,
+    StructuredPrompt,
+)
+from ceo_voice.generation.enums import PromptSectionKind
+from ceo_voice.prompts import PROMPT_VERSION, SYSTEM_INSTRUCTIONS, THREAD_SEPARATOR
+from ceo_voice.retrieval.enums import EvidencePurpose
+from ceo_voice.utils.json import dumps_json
+
+
+class TokenBudgetManager:
+    """Fit optional evidence by retrieval rank after reserving all governed guidance."""
+
+    def __init__(self, policy: GenerationPolicy) -> None:
+        self._policy = policy
+
+    def fit(
+        self, mandatory: tuple[PromptSection, ...], evidence: tuple[PromptSection, ...]
+    ) -> tuple[tuple[PromptSection, ...], tuple[str, ...]]:
+        available = self._policy.model_context_tokens - self._policy.maximum_output_tokens
+        selected = list(mandatory)
+        used = sum(self.estimate(item.content) for item in mandatory)
+        if used > available:
+            raise PromptBudgetError(
+                "mandatory generation guidance exceeds model context",
+                details={"estimated_tokens": used, "available_tokens": available},
+            )
+        pruned: list[str] = []
+        for section in evidence:
+            cost = self.estimate(section.content)
+            if used + cost <= available:
+                selected.append(section)
+                used += cost
+            else:
+                pruned.extend(str(item) for item in section.source_ids)
+        return tuple(selected), tuple(pruned)
+
+    def estimate(self, content: str) -> int:
+        return max(1, int(len(content) / self._policy.estimated_characters_per_token) + 1)
+
+
+class PromptBuilder:
+    """Project governed targets into sections without inventing a persona summary."""
+
+    def __init__(self, budget: TokenBudgetManager) -> None:
+        self._budget = budget
+
+    def build(
+        self, value: GenerationInput, *, repair_feedback: tuple[str, ...] = ()
+    ) -> StructuredPrompt:
+        context, bundle = value.context, value.retrieval
+        system = PromptSection(
+            kind=PromptSectionKind.SYSTEM,
+            mandatory=True,
+            priority=100,
+            content=SYSTEM_INSTRUCTIONS,
+        )
+        voice = PromptSection(
+            kind=PromptSectionKind.VOICE,
+            mandatory=True,
+            priority=95,
+            source_ids=tuple(
+                item for feature in bundle.voice_features for item in feature.component_ids
+            ),
+            content=dumps_json(
+                {
+                    "voice_targets": [
+                        {
+                            "feature": item.feature_id,
+                            "dimension": item.dimension.value,
+                            "target": item.target_value,
+                            "confidence": item.confidence.selection_score,
+                        }
+                        for item in bundle.voice_features
+                    ],
+                    "negative_and_user_constraints": [
+                        item.model_dump(mode="json") for item in bundle.constraints.constraints
+                    ],
+                }
+            ),
+        )
+        structure = PromptSection(
+            kind=PromptSectionKind.STRUCTURE,
+            mandatory=True,
+            priority=90,
+            source_ids=tuple(item.pattern_id for item in bundle.structural_guidance),
+            content=dumps_json(
+                {
+                    "structure_targets": [
+                        {
+                            "dimension": item.dimension.value,
+                            "pattern": item.pattern_key,
+                            "label": item.label,
+                        }
+                        for item in bundle.structural_guidance
+                    ]
+                }
+            ),
+        )
+        request = PromptSection(
+            kind=PromptSectionKind.REQUEST,
+            mandatory=True,
+            priority=100,
+            source_ids=(value.request.request_id,),
+            content=dumps_json(
+                {
+                    "topic": value.request.topic,
+                    "objective": value.request.objective,
+                    "audience": value.request.audience,
+                    "platform": value.request.platform.value,
+                    "candidate_number": 1,
+                }
+            ),
+        )
+        output = PromptSection(
+            kind=PromptSectionKind.OUTPUT,
+            mandatory=True,
+            priority=100,
+            content=dumps_json(
+                {
+                    "maximum_characters_per_post": context.platform.maximum_characters,
+                    "thread_supported": context.platform.thread_output_supported,
+                    "maximum_thread_posts": context.platform.maximum_thread_posts,
+                    "thread_separator": THREAD_SEPARATOR,
+                    "format": "plain text only",
+                }
+            ),
+        )
+        mandatory = [system, voice, structure, request, output]
+        if repair_feedback:
+            mandatory.append(
+                PromptSection(
+                    kind=PromptSectionKind.REPAIR,
+                    mandatory=True,
+                    priority=100,
+                    content=dumps_json(
+                        {
+                            "repair_only_these_validation_failures": list(repair_feedback),
+                            "preserve_all_other_requirements": True,
+                        }
+                    ),
+                )
+            )
+        evidence = tuple(
+            PromptSection(
+                kind=PromptSectionKind.EVIDENCE,
+                mandatory=False,
+                priority=item.priority,
+                source_ids=(item.evidence_id,),
+                content=dumps_json(
+                    {
+                        "evidence_id": str(item.evidence_id),
+                        "purposes": [purpose.value for purpose in item.purposes],
+                        "text": item.content,
+                        "why_selected": item.explanation.reason,
+                    }
+                ),
+            )
+            for item in bundle.evidence
+        )
+        required_purposes = {
+            EvidencePurpose.VOICE_SUPPORT,
+            EvidencePurpose.STRUCTURAL_SUPPORT,
+            EvidencePurpose.FACTUAL_SUPPORT,
+        }
+        reserved_ids = {
+            next((item.evidence_id for item in bundle.evidence if purpose in item.purposes), None)
+            for purpose in required_purposes
+        }
+        reserved_ids.discard(None)
+        reserved = tuple(
+            item.model_copy(update={"mandatory": True})
+            for item in evidence
+            if item.source_ids[0] in reserved_ids
+        )
+        optional = tuple(item for item in evidence if item.source_ids[0] not in reserved_ids)
+        selected, pruned = self._budget.fit((*mandatory, *reserved), optional)
+        included = tuple(
+            item.source_ids[0] for item in selected if item.kind is PromptSectionKind.EVIDENCE
+        )
+        return StructuredPrompt(
+            version=PROMPT_VERSION,
+            sections=selected,
+            included_evidence_ids=included,
+            pruned_evidence_ids=tuple(UUID(item) for item in pruned),
+        )
+
+
+class PromptRenderer:
+    """Render sections only after selection and budgeting are complete."""
+
+    def __init__(self, budget: TokenBudgetManager) -> None:
+        self._budget = budget
+
+    def render(self, prompt: StructuredPrompt) -> RenderedPrompt:
+        system = "\n\n".join(
+            item.content for item in prompt.sections if item.kind is PromptSectionKind.SYSTEM
+        )
+        user = "\n\n".join(
+            f"[{item.kind.value.upper()}]\n{item.content}"
+            for item in prompt.sections
+            if item.kind is not PromptSectionKind.SYSTEM
+        )
+        return RenderedPrompt(
+            version=prompt.version,
+            system=system,
+            user=user,
+            estimated_input_tokens=self._budget.estimate(system + "\n" + user),
+            included_evidence_ids=prompt.included_evidence_ids,
+            pruned_evidence_ids=prompt.pruned_evidence_ids,
+        )

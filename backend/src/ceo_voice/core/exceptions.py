@@ -78,6 +78,24 @@ class GenerationError(ApplicationError):
     code = "generation_error"
 
 
+class ProviderError(GenerationError):
+    """Raised when a model provider request or response fails."""
+
+    code = "provider_error"
+
+
+class GenerationValidationError(GenerationError):
+    """Raised when no generated candidate satisfies output policy."""
+
+    code = "generation_validation_error"
+
+
+class PromptBudgetError(GenerationError):
+    """Raised when mandatory prompt content cannot fit the model budget."""
+
+    code = "prompt_budget_error"
+
+
 class ContextCompilationError(ApplicationError):
     """Raised when governed artifacts cannot form a safe generation context."""
 
