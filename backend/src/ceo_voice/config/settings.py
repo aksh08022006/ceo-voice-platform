@@ -38,6 +38,21 @@ class LoggingSettings(BaseModel):
     )
 
 
+class ApiSettings(BaseModel):
+    """HTTP delivery settings for the browser-facing application."""
+
+    host: str = Field(default="127.0.0.1", min_length=1)
+    port: int = Field(default=8000, ge=1, le=65535)
+    allowed_origins: tuple[str, ...] = Field(
+        default=("http://localhost:3000", "http://127.0.0.1:3000"),
+        description="Exact browser origins allowed to call the API.",
+    )
+    showcase_enabled: bool = Field(
+        default=True,
+        description="Enable synthetic, explicitly non-production walkthrough profiles.",
+    )
+
+
 class ModelSettings(BaseModel):
     """Provider-neutral model configuration reserved for later AI integrations.
 
@@ -108,6 +123,7 @@ class Settings(BaseSettings):
 
     application: ApplicationSettings = Field(default_factory=ApplicationSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
+    api: ApiSettings = Field(default_factory=ApiSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
 
     model_config = SettingsConfigDict(
