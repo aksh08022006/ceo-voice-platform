@@ -4,10 +4,11 @@ A production-oriented foundation for an executive voice intelligence platform. T
 system will represent a leader's writing as versioned, evidence-backed micro-patterns and keep
 voice, factual grounding, platform structure, and evaluation as independent concerns.
 
-This repository has completed the **Data Pipeline** and the **Hierarchical Voice Model knowledge
-representation kernel**. It contains an executable, source-independent ingestion framework plus a
-typed, evidence-addressable, release-governed representation for future voice intelligence. It
-does not contain network acquisition, feature extraction, statistical estimation, or generation.
+This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
+representation kernel**, and **Voice Analysis Framework**. It contains an executable,
+source-independent ingestion framework, a typed and release-governed voice representation, and a
+dependency-aware compiler that produces deterministic evidence-backed observations. It does not
+contain network acquisition, statistical inference, LLM behavior, retrieval, or generation.
 
 ## Current scope
 
@@ -40,12 +41,23 @@ Implemented:
 - append-only release lifecycle management with approval, activation, supersession, rollback, and
   point-in-time resolution;
 - provider- and storage-neutral retrieval query contracts, with no retrieval implementation.
+- an immutable analyzer registry with exact feature resolution, version constraints, conflict
+  detection, and dependency-level execution plans;
+- asynchronous same-level analyzer execution with partial recovery, deterministic traces,
+  out-of-band performance metrics, and future cache ports;
+- centralized observation construction that validates the pinned feature registry and emits
+  HVM-native evidence, provenance, context, producer lineage, and confidence;
+- versioned document, paragraph, sentence, and line addressing with exact source offsets;
+- 23 Tier 1 deterministic measurements for document size, structure, punctuation and markers,
+  formatting, whitespace, reading time, and declared thread length;
+- confidence-composition contracts for deterministic, statistical, classifier, LLM, and
+  evidence-weighted strategies, with only declared deterministic confidence implemented.
 
 Intentionally not implemented:
 
 - API endpoints or an application server;
 - real provider connectors, provider credentials, scraping, or network acquisition;
-- voice feature extraction, profile estimation algorithms, or statistical fitting;
+- stylometric inference, profile estimation algorithms, statistical fitting, or learned analyzers;
 - retrieval implementations, RAG, embeddings, or vector storage;
 - prompt assets, prompt assembly, LLM clients, or generation behavior;
 - virality scoring or evaluation behavior;
@@ -80,6 +92,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── schemas/      # Boundary request/response messages
 │       ├── services/     # Future use-case orchestration boundary
 │       ├── ingestion/    # Source-neutral ETL contracts, stages, ports, and orchestration
+│       ├── analysis/     # Analyzer registry, execution, evidence builder, and Tier 1 measurements
 │       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
 │       ├── virality/     # Future platform-performance boundary
 │       ├── retrieval/    # Future evidence-retrieval boundary
@@ -164,6 +177,8 @@ See [.env.example](.env.example) for the complete current surface and
   contract; it intentionally contains no extraction or generation implementation.
 - [HVM Knowledge Representation Kernel](docs/HVM_KERNEL.md) explains the implemented domain graph,
   registry, compiler ports, structural validator, release lifecycle, and extension rules.
+- [Voice Analysis Framework](docs/VOICE_ANALYSIS.md) defines analyzer registration, scheduling,
+  evidence attribution, confidence composition, Tier 1 semantics, failure policy, and extensions.
 - [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
 - [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
 - [Contributing](CONTRIBUTING.md) defines the change and review workflow.

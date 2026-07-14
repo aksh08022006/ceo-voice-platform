@@ -84,6 +84,30 @@ class FeatureRegistryError(VoiceProfileError):
     code = "feature_registry_error"
 
 
+class VoiceAnalysisError(VoiceProfileError):
+    """Raised when a clean document cannot be analyzed safely."""
+
+    code = "voice_analysis_error"
+
+
+class AnalyzerRegistrationError(VoiceAnalysisError):
+    """Raised when analyzer registration is ambiguous or incompatible."""
+
+    code = "analyzer_registration_error"
+
+
+class AnalyzerDependencyError(VoiceAnalysisError):
+    """Raised when an analyzer dependency graph cannot be scheduled."""
+
+    code = "analyzer_dependency_error"
+
+
+class ObservationBuildError(VoiceAnalysisError):
+    """Raised when a measurement cannot become a valid HVM observation."""
+
+    code = "observation_build_error"
+
+
 class HVMValidationError(VoiceProfileError):
     """Raised when an HVM candidate fails mandatory structural validation."""
 
