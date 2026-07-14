@@ -1,0 +1,29 @@
+{
+  "suite_id": "ceo-voice-core-v1",
+  "version": "1.0.0",
+  "data_status": "synthetic_harness_fixture",
+  "cases": [
+    {
+      "case_id": "ali-ghodsi-linkedin-ownership",
+      "leader_label": "Ali Ghodsi",
+      "platform": "linkedin",
+      "artifact_policy": "Supply a legally approved published HVM, VKR, retrieval bundle, and draft at runtime."
+    },
+    {
+      "case_id": "matei-zaharia-x-systems",
+      "leader_label": "Matei Zaharia",
+      "platform": "x",
+      "artifact_policy": "Supply a legally approved published HVM, VKR, retrieval bundle, and draft at runtime."
+    },
+    {
+      "case_id": "jensen-huang-linkedin-leadership",
+      "leader_label": "Jensen Huang",
+      "platform": "linkedin",
+      "artifact_policy": "Supply legally approved held-out artifacts before making a real-person quality claim."
+    }
+  ],
+  "limitations": [
+    "This catalog proves benchmark routing and required cohort breadth; it is not empirical quality evidence.",
+    "No public writing is copied into the repository and no real-person score is claimed without approved corpora."
+  ]
+}

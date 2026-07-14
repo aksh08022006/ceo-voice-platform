@@ -45,9 +45,9 @@ restored, but factual and human-authored intent takes precedence over voice stre
 `ReVoiceReport` records the original diff, editable and protected regions, changed regions, preserved
 categories, constraints that governed the operation, HVM/VKR/context/retrieval lineage, provider
 attempts, validation findings, latency, token usage, and an aggregate confidence value. Voice
-features in the report are explicitly marked as targeted rather than independently verified. This
-phase does not perform evaluation, so it does not make an unsupported claim that a particular
-stylistic feature improved.
+features in the report are explicitly marked as targeted rather than independently verified. The
+independent Evaluation Framework may measure the result afterward; Re-Voice itself does not make an
+unsupported claim that a particular stylistic feature improved.
 
 ## Guarantees and limitations
 
@@ -55,8 +55,8 @@ The engine can deterministically guarantee structural, formatting, protected-tok
 platform, and supported hard-constraint preservation. It cannot prove semantic equivalence or voice
 quality from lexical comparison alone. It mitigates that limitation by editing only human-modified
 lines, protecting factual anchors, bounding total change, and failing closed on observable drift.
-Independent semantic and stylometric scoring belongs to the future Evaluation subsystem and is not
-smuggled into this phase.
+Independent scoring belongs to the Evaluation subsystem and is not smuggled into this phase; its
+current lexical and stylometric measures still do not certify semantic equivalence.
 
 The provider boundary remains vendor-neutral. OpenAI, Anthropic, Gemini, and future adapters can be
 used without changing Re-Voice analysis or validation behavior.

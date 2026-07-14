@@ -24,4 +24,5 @@ Transient provider failures reuse the exact rendered prompt. Validation repair c
 
 Every draft reports prompt and engine versions, retrieval bundle, selected evidence, voice features, structural patterns, provider/model identifiers, attempt types, latency, token usage, validation findings, and constraint disposition. Prompts and API keys are intentionally excluded from the report to avoid storing sensitive context.
 
-Re-Voice, evaluation, frontend workflows, and model-quality claims remain outside this subsystem.
+Re-Voice, evaluation, frontend workflows, and model-quality claims remain outside this subsystem;
+the independent downstream engines consume its sealed draft and report.

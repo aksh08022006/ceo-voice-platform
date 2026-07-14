@@ -6,6 +6,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from ceo_voice.context import create_context_compiler
+from ceo_voice.evaluation import EvaluationEngine, EvaluationInput
 from ceo_voice.generation import (
     GenerationEngine,
     GenerationPolicy,
@@ -405,3 +406,19 @@ def test_generated_draft_can_flow_through_human_edit_and_revoice(tmp_path: Path)
     assert result.report.final_validation.valid
     assert result.report.changed_regions == ("editable.line.2",)
     assert provider.calls == 2
+    evaluation = asyncio.run(
+        EvaluationEngine().evaluate(
+            EvaluationInput(
+                draft=result,
+                context=artifacts.context,
+                retrieval=artifacts.retrieval,
+                voice_profile=artifacts.voice_profile,
+                virality_profile=artifacts.virality_profile,
+                edited_draft=edited,
+                evaluated_at=outcome.completed_at,
+            )
+        )
+    )
+    assert evaluation.retrieval_bundle_id == artifacts.retrieval.bundle_id
+    assert evaluation.dimensions
+    assert provider.calls == 2, "evaluation remains independent and deterministic by default"

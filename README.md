@@ -8,8 +8,10 @@ This repository has completed the **Data Pipeline**, **Hierarchical Voice Model 
 representation kernel**, **Voice Analysis Framework**, first executable **Voice Profile Builder**,
 independent **Virality Structure Library**, deterministic **Context Compilation** and **Retrieval
 Intelligence** engines, governed **Generation Engine**, end-to-end **Integration Harness**, and a
-constraint-preserving **Re-Voice Engine**. Generation and Re-Voice are the only model-calling product
-workflows; all upstream knowledge and selection stages remain deterministic and traceable.
+constraint-preserving **Re-Voice Engine**. Generation and Re-Voice are the only model-calling
+authoring workflows; all upstream knowledge and selection stages remain deterministic and traceable. An
+independent, multi-dimensional **Evaluation Framework** now measures their outputs without feeding
+scores back into generation.
 
 ## Current scope
 
@@ -88,6 +90,10 @@ Implemented:
   retaining artifacts, timing, diagnostics, and profiling metrics;
 - deterministic generated-versus-edited difference analysis, editable-line detection, protected
   factual and formatting regions, conservative Re-Voice restoration, and traceable Re-Voice reports.
+- independent HVM voice, VKR structure, constraint, platform, factual-anchor, edit-preservation,
+  readability, human-review, and optional structured-judge evaluation;
+- repeatable batch, three-leader benchmark, failure-analysis, regression-comparison, machine-report,
+  and human-readable evaluation workflows.
 
 Intentionally not implemented:
 
@@ -96,7 +102,8 @@ Intentionally not implemented:
 - calibrated stylometric inference, cohort baselines, statistical fitting, or learned analyzers;
 - embeddings, vector storage, or semantic retrieval;
 - predictive or causal virality ranking, tactic recommendation, or calibration;
-- independent Re-Voice quality evaluation or semantic-equivalence certification;
+- semantic-equivalence certification, calibrated authenticity claims, or completed real-person
+  benchmark studies;
 - a frontend.
 
 Keeping those absent is a design constraint. Later milestones can add each capability behind the
@@ -136,7 +143,7 @@ cleanup would erase formatting patterns that may later be important voice eviden
 │       ├── retrieval/    # Deterministic evidence selection and traceability
 │       ├── generation/   # Prompt-last provider orchestration and validation
 │       ├── revoice/      # Human-edit analysis and constrained voice restoration
-│       ├── evaluation/   # Future evaluator boundary
+│       ├── evaluation/   # Independent quality metrics, judges, benchmarks, and reports
 │       ├── storage/      # Future persistence ports and adapters
 │       ├── prompts/      # Future versioned prompt assets
 │       └── utils/        # Narrow dependency-free helpers
@@ -250,3 +257,4 @@ external distribution.
 - [Generation engine](docs/generation-engine.md) — prompt-last model orchestration, provider isolation, validation, and reporting.
 - [End-to-end integration](docs/end-to-end-integration.md) — complete workflow wiring, artifacts, profiling, and the generation-authorization finding.
 - [Re-Voice engine](docs/revoice-engine.md) — human-edit analysis, protected-region preservation, constrained restoration, and trace reports.
+- [Evaluation framework](docs/evaluation-framework.md) — independent dimensions, structured review, benchmarks, regressions, and failure analysis.
