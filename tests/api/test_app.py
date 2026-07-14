@@ -77,3 +77,20 @@ def test_unknown_workflow_is_a_transport_level_not_found(tmp_path: Path) -> None
     with client(tmp_path) as api:
         response = api.get("/api/v1/workflows/00000000-0000-0000-0000-000000000001")
     assert response.status_code == 404
+
+
+def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        response = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "jensen-huang",
+                "platform": "x",
+                "content_type": "post",
+                "idea": "Explain why accelerated computing is becoming infrastructure.",
+                "constraints": "Connect the platform shift to builders.",
+            },
+        )
+    assert response.status_code == 200, response.text
+    assert response.json()["platform"] == "x"
+    assert len(response.json()["content"]) <= 280

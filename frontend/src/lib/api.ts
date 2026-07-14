@@ -53,7 +53,7 @@ export type Walkthrough = {
   profile_name: string;
   title: string;
   platform: "linkedin" | "x";
-  content_type: "post" | "thread" | "announcement";
+  content_type: "post" | "announcement";
   idea: string;
   constraints: string;
   human_edit: string;
@@ -78,7 +78,7 @@ export const api = {
   generate: (body: {
     profile_slug: string;
     platform: "linkedin" | "x";
-    content_type: "post" | "thread" | "announcement";
+    content_type: "post" | "announcement";
     idea: string;
     constraints: string;
   }) => request<Workflow>("/api/v1/workflows/generate", { method: "POST", body: JSON.stringify(body) }),

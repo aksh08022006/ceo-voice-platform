@@ -39,7 +39,13 @@ def _digest(number: int) -> str:
     return format(number % 16, "x") * 64
 
 
-def _document(profile: ShowcaseProfile, number: int, content: str) -> CleanDocument:
+def _document(
+    profile: ShowcaseProfile,
+    number: int,
+    content: str,
+    *,
+    platform: Platform = Platform.LINKEDIN,
+) -> CleanDocument:
     leader_id = _uuid(f"leader:{profile.slug}")
     return CleanDocument(
         id=_uuid(f"document:{profile.slug}:{number}"),
@@ -47,10 +53,10 @@ def _document(profile: ShowcaseProfile, number: int, content: str) -> CleanDocum
         tenant_id=TENANT_ID,
         ceo_id=leader_id,
         external_id=f"showcase-{profile.slug}-{number}",
-        source=DocumentSourceType.LINKEDIN,
+        source=(DocumentSourceType.X if platform is Platform.X else DocumentSourceType.LINKEDIN),
         document_type=DocumentType.SOCIAL_POST,
         author=profile.name,
-        platform=Platform.LINKEDIN,
+        platform=platform,
         publication_date=NOW + timedelta(days=number),
         title=f"Synthetic showcase document {number}",
         content=content,
@@ -101,7 +107,12 @@ def profile_manifest(profile: ShowcaseProfile) -> ProfileBuildManifest:
             lineage=lineage,
             documents=tuple(
                 CuratedDocument(
-                    document=_document(profile, number, content),
+                    document=_document(
+                        profile,
+                        number,
+                        content,
+                        platform=Platform.X if number % 2 == 0 else Platform.LINKEDIN,
+                    ),
                     source_modality=SourceModality.AUTHORED_WRITTEN,
                 )
                 for number, content in enumerate(contents, start=1)
@@ -117,7 +128,7 @@ def virality_corpus(profile: ShowcaseProfile) -> ViralityCorpus:
     """Create a multi-author structural corpus scoped to the showcase tenant."""
 
     items = []
-    for number in range(1, 5):
+    for number in range(1, 9):
         document = _document(
             profile,
             20 + number,
@@ -126,7 +137,8 @@ def virality_corpus(profile: ShowcaseProfile) -> ViralityCorpus:
                 "The problem is unclear ownership.\n\n"
                 "Make one decision explicit.\n\nWhat would you change?"
             ),
-        ).model_copy(update={"ceo_id": _uuid(f"benchmark-leader:{number % 2}")})
+            platform=Platform.X if number % 2 == 0 else Platform.LINKEDIN,
+        ).model_copy(update={"ceo_id": _uuid(f"benchmark-leader:{(number // 2) % 2}")})
         items.append(
             ViralityCorpusItem(
                 document=document,

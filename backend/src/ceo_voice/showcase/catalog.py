@@ -75,9 +75,9 @@ WALKTHROUGHS = (
         "jensen-huang",
         "A visionary keynote moment",
         "x",
-        "thread",
+        "post",
         "Explain why accelerated computing is becoming infrastructure for every industry.",
-        "Use a three-part thread. Connect the platform shift to builders without making forecasts.",
+        "Connect the platform shift to builders without making forecasts.",
         "Computing is entering a new platform transition.\n\nAs models become part of every product, accelerated computing becomes infrastructure—not a specialty.\n\nThe next chapter belongs to builders who can turn that infrastructure into useful intelligence for every industry.",
     ),
 )

@@ -20,7 +20,7 @@ import { api, type Evidence } from "@/lib/api";
 const schema = z.object({
   profile_slug: z.string().min(1, "Select a CEO profile."),
   platform: z.enum(["linkedin", "x"]),
-  content_type: z.enum(["post", "thread", "announcement"]),
+  content_type: z.enum(["post", "announcement"]),
   idea: z.string().min(20, "Describe the idea in at least 20 characters.").max(1200),
   constraints: z.string().max(600),
 });
@@ -80,7 +80,7 @@ export function GenerateWorkspace() {
         </Field>
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
           <Field label="Platform"><Select {...form.register("platform")}><option value="linkedin">LinkedIn</option><option value="x">X</option></Select></Field>
-          <Field label="Content type"><Select {...form.register("content_type")}><option value="post">Post</option><option value="thread">Thread</option><option value="announcement">Announcement</option></Select></Field>
+          <Field label="Content type"><Select {...form.register("content_type")}><option value="post">Post</option><option value="announcement">Announcement</option></Select></Field>
         </div>
         <Field label="Idea" error={form.formState.errors.idea?.message}><Textarea rows={7} {...form.register("idea")} /></Field>
         <Field label="Constraints" optional><Input {...form.register("constraints")} /></Field>
