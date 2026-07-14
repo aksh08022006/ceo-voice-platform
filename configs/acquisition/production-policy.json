@@ -1,0 +1,9 @@
+{
+  "minimum_eligible_documents": 20,
+  "minimum_primary_documents": 10,
+  "minimum_primary_platforms": 2,
+  "minimum_documents_per_primary_platform": 5,
+  "maximum_supplementary_fraction": 0.5,
+  "require_publication_dates": true,
+  "require_human_review": true
+}

@@ -12,6 +12,11 @@ from typing import TextIO
 
 from pydantic import ValidationError
 
+from ceo_voice.acquisition import (
+    CorpusAcquisitionAuditor,
+    CorpusAcquisitionPolicy,
+    load_source_catalog,
+)
 from ceo_voice.config import load_settings
 from ceo_voice.core.exceptions import ApplicationError
 from ceo_voice.profiles.composition import create_tier1_profile_builder
@@ -73,6 +78,18 @@ def build_parser() -> argparse.ArgumentParser:
     onboard.add_argument(
         "--workspace", type=Path, required=True, help="Durable local release workspace."
     )
+    audit = commands.add_parser(
+        "audit-corpus",
+        help="Audit a URL-only source catalog before acquiring or analyzing content.",
+    )
+    audit.add_argument("--manifest", type=Path, required=True, help="SourceCatalogManifest JSON.")
+    audit.add_argument(
+        "--policy",
+        type=Path,
+        help="Optional CorpusAcquisitionPolicy JSON; production defaults apply otherwise.",
+    )
+    audit.add_argument("--output", type=Path, help="Optional path receiving the audit report JSON.")
+    audit.add_argument("--pretty", action="store_true", help="Pretty-print the report JSON.")
     commands.add_parser("doctor", help="Validate runtime configuration and package installation.")
     return parser
 
@@ -129,6 +146,25 @@ async def _run_onboard(args: argparse.Namespace) -> int:
     return 0 if report.generation_ready else 3
 
 
+def _run_audit_corpus(args: argparse.Namespace) -> int:
+    """Audit provenance and corpus coverage without downloading source content."""
+
+    manifest = load_source_catalog(args.manifest)
+    policy = None
+    if args.policy is not None:
+        policy = CorpusAcquisitionPolicy.model_validate_json(
+            read_text_limited(args.policy, max_bytes=_MAX_MANIFEST_BYTES)
+        )
+    report = CorpusAcquisitionAuditor(policy).audit(manifest)
+    serialized = report.model_dump_json(indent=2 if args.pretty else None)
+    if args.output is not None:
+        output = args.output.expanduser().resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(serialized, encoding="utf-8")
+    print(serialized)
+    return 0 if report.acquisition_ready else 3
+
+
 def _run_doctor() -> int:
     """Check configuration and emit a container-compatible health result."""
 
@@ -163,6 +199,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return asyncio.run(_run_build(args))
         if args.command == "onboard":
             return asyncio.run(_run_onboard(args))
+        if args.command == "audit-corpus":
+            return _run_audit_corpus(args)
         if args.command == "doctor":
             return _run_doctor()
     except ValidationError as exc:

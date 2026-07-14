@@ -8,6 +8,9 @@ Rules:
 
 - Never commit source documents, transcripts, social posts, model responses, embeddings, or
   evaluation examples containing real leader data.
+- URL-only discovery catalogs may be committed under `configs/source-catalogs` when they contain no
+  source text, credentials, private annotations, or legal conclusions. They are governance inputs,
+  not evidence that acquisition is authorized.
 - Use synthetic or explicitly licensed, de-identified fixtures under `tests/fixtures` when a later
   milestone needs committed test data.
 - Preserve original source bytes separately from derived representations once ingestion exists.

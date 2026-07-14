@@ -1,0 +1,53 @@
+{
+  "schema_version": "1.0",
+  "tenant_id": "10000000-0000-0000-0000-000000000001",
+  "leader_id": "20000000-0000-0000-0000-000000000001",
+  "leader_name": "Ali Ghodsi",
+  "entries": [
+    {
+      "source_id": "ali-databricks-speaker-page",
+      "source": "conference_talk",
+      "platform": "generic",
+      "document_type": "other",
+      "canonical_url": "https://www.databricks.com/dataaisummit/speaker/ali-ghodsi",
+      "title": "Ali Ghodsi — official Databricks speaker page",
+      "publisher": "Databricks",
+      "publication_date": null,
+      "acquisition_method": "public_web",
+      "review_status": "pending",
+      "authorship_basis": "unknown",
+      "content_role": "factual_context",
+      "requires_authentication": false,
+      "requires_payment": false,
+      "eligible_for_voice_analysis": false,
+      "attribution_notes": "Official identity anchor only; page copy is not attributed to the leader.",
+      "access_notes": "Publicly discoverable metadata. Do not ingest page copy as voice evidence.",
+      "content_fingerprint": null,
+      "captured_at": null
+    },
+    {
+      "source_id": "ali-linkedin-profile",
+      "source": "linkedin",
+      "platform": "linkedin",
+      "document_type": "social_post",
+      "canonical_url": "https://www.linkedin.com/in/alighodsi",
+      "title": "Ali Ghodsi — LinkedIn profile",
+      "publisher": "LinkedIn",
+      "publication_date": null,
+      "acquisition_method": "authorized_export",
+      "review_status": "pending",
+      "authorship_basis": "first_party_account",
+      "content_role": "primary_voice",
+      "requires_authentication": true,
+      "requires_payment": false,
+      "eligible_for_voice_analysis": false,
+      "attribution_notes": "Profile identity is cataloged; individual authored posts require separate records.",
+      "access_notes": "Acquire only through an account-authorized export or approved API; never scrape the authenticated experience.",
+      "content_fingerprint": null,
+      "captured_at": null
+    }
+  ],
+  "created_at": "2026-07-14T00:00:00Z",
+  "reviewed_at": null,
+  "reviewer_id": null
+}

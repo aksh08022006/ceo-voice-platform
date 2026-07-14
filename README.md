@@ -150,6 +150,19 @@ data, not code. See [Operations](docs/OPERATIONS.md) for the manifest workflow a
 
 ### Public-data acquisition
 
+Before content acquisition, create a URL-only source catalog and run the governed readiness gate:
+
+```bash
+ceo-voice audit-corpus \
+  --manifest configs/source-catalogs/ali-ghodsi.discovery.json \
+  --policy configs/acquisition/production-policy.json \
+  --pretty
+```
+
+The committed Ali Ghodsi and Matei Zaharia discovery catalogs are deliberately not ready: they
+record official identity anchors and access boundaries without pretending that profile pages are a
+reviewed voice corpus. See [Governed Corpus Acquisition](docs/CORPUS_ACQUISITION.md).
+
 `LocalExportConnector` accepts bounded JSON or JSONL files produced through official exports,
 licensed datasets, or operator-curated transcripts. It supports cursor resumption,
 `modified_after`, source versions, structured metadata, and path confinement. A synthetic schema
@@ -203,7 +216,7 @@ logs and disabled debug mode. See [Operations](docs/OPERATIONS.md).
 
 ```text
 backend/src/ceo_voice/
-  ingestion/   analysis/     voice/        profiles/      virality/
+  acquisition/ ingestion/    analysis/     voice/         profiles/      virality/
   context/     retrieval/    generation/   revoice/       evaluation/
   config/      core/         models/       schemas/       utils/
 frontend/      Next.js App Router product interface and owned UI primitives
