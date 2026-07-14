@@ -17,4 +17,14 @@ Every script must:
 - include tests for parsing and decision logic;
 - avoid accepting secrets as command-line arguments, where process listings can expose them.
 
-No operational scripts are required in the foundation phase.
+The supported release operations are package entry points and Make targets rather than wrapper
+scripts:
+
+- `make doctor` validates installation and configuration;
+- `make demo` runs the offline profile-to-evaluation fixture and retains artifacts;
+- `make benchmark` verifies deterministic benchmark and regression behavior;
+- `ceo-voice build|onboard` runs the durable product workflows.
+
+Keeping orchestration in the installed package ensures containers, CI, and local environments use
+the same implementation. Add a script only when an operation cannot be represented by those public
+interfaces.

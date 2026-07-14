@@ -1,0 +1,26 @@
+name: ceo-voice-platform
+
+services:
+  cli:
+    build:
+      context: .
+      target: runtime
+    image: ceo-voice-platform:local
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      CEO_VOICE_APPLICATION__ENVIRONMENT: production
+      CEO_VOICE_APPLICATION__DEBUG: "false"
+      CEO_VOICE_LOGGING__FORMAT: json
+    volumes:
+      - ./data/runtime:/app/workspace
+      - ./data/exports:/app/exports:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    command: ["doctor"]

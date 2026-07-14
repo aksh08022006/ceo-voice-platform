@@ -36,6 +36,9 @@ htmlcov/
 data/raw/
 data/interim/
 data/processed/
+data/demo/
+data/runtime/
+data/exports/
 logs/
 *.log
 

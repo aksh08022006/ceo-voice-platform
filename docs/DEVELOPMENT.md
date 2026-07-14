@@ -6,8 +6,8 @@ The repository standardizes on CPython 3.13. Pinning one interpreter version kee
 the dependency lock, CI, and typing semantics aligned. A later runtime change should update
 `pyproject.toml`, `requirements.lock`, CI, and this document in the same pull request.
 
-No database, Node.js runtime, provider account, API key, or model access is needed for the current
-foundation and in-memory data-pipeline test adapters.
+No database, Node.js runtime, provider account, API key, or model access is needed for development,
+the quality gate, or the offline integration demonstration.
 
 ## First-time setup
 
@@ -52,14 +52,15 @@ The optional `.env` file is only for local development. Deployed environments sh
 through their secret and configuration system. Never commit `.env`, credentials, tokens, source
 documents, generated personal content, or database snapshots.
 
-Model settings exist as a validated future boundary but access remains disabled:
+Model access is disabled by default:
 
 ```text
 CEO_VOICE_MODEL__ENABLED=false
 ```
 
-If a later phase enables model access, all of `PROVIDER`, `GENERATION_MODEL`, and `API_KEY` become
-required. Model names are configuration, not constants in source code.
+When a deployment enables model access, all of `PROVIDER`, `GENERATION_MODEL`, and `API_KEY` become
+required. Model names are configuration, not constants in source code. The bundled offline demo
+uses deterministic fixture providers and never reads a credential.
 
 Environment policies:
 
@@ -88,6 +89,8 @@ Individual checks:
 make lint
 make typecheck
 make test
+make doctor
+make demo
 ```
 
 Run one test module or test directly:

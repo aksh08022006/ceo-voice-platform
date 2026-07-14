@@ -1,260 +1,218 @@
 # CEO Voice Platform
 
-A production-oriented foundation for an executive voice intelligence platform. The long-term
-system will represent a leader's writing as versioned, evidence-backed micro-patterns and keep
-voice, factual grounding, platform structure, and evaluation as independent concerns.
+An evidence-backed system for modeling an executive's writing micro-patterns, applying independent
+content structure, and producing traceable LinkedIn and X drafts. It is designed to answer a harder
+question than “can an LLM imitate these examples?”: **which measured voice decisions are supported,
+authorized, relevant to this request, and preserved through human editing?**
 
-This repository has completed the **Data Pipeline**, **Hierarchical Voice Model knowledge
-representation kernel**, **Voice Analysis Framework**, first executable **Voice Profile Builder**,
-independent **Virality Structure Library**, deterministic **Context Compilation** and **Retrieval
-Intelligence** engines, governed **Generation Engine**, end-to-end **Integration Harness**, and a
-constraint-preserving **Re-Voice Engine**. Generation and Re-Voice are the only model-calling
-authoring workflows; all upstream knowledge and selection stages remain deterministic and traceable. An
-independent, multi-dimensional **Evaluation Framework** now measures their outputs without feeding
-scores back into generation.
+The platform is a typed Python 3.13 package with immutable HVM (voice) and VKR (structure) releases,
+deterministic context and retrieval, governed model boundaries, constraint-preserving Re-Voice, and
+independent evaluation. It does not reduce a person to a prose prompt and does not let prompt code
+reach into an entire profile.
 
-## Current scope
+> Scientific and governance boundary: the bundled Tier-1 analyzers measure descriptive structure.
+> They do not establish authorship or automatically authorize generation in a real person's voice.
+> Production generation fails closed until an organization supplies reviewed, calibrated evidence.
 
-Implemented:
+## Architecture
 
-- a modular `src`-layout Python package;
-- environment-driven, validated settings with production safety policies;
-- structured JSON and developer-console logging with request-ID context propagation;
-- a common, transport-neutral exception hierarchy;
-- strict contracts for documents, identities, versioned voice profiles, retrieved evidence,
-  generation messages, and evaluation results;
-- bounded file, text, JSON, time, retry, and hashing utilities;
-- deterministic dependency locking, pre-commit hooks, and GitHub Actions quality gates;
-- unit tests with strict configuration and a 95% minimum branch-coverage threshold;
-- a structural async connector contract and connector registry;
-- strict parsing and style-preserving HTML, Markdown, Unicode, control, whitespace, and duplicate-
-  paragraph cleaning;
-- raw, source-envelope, and canonical fingerprints with source-scoped duplicate policy;
-- source and canonical validation, deterministic metadata extraction, and version normalization;
-- async repository ports with concurrency-safe in-memory adapters;
-- incremental new, changed, unchanged, and duplicate decisions;
-- failure-safe pipeline orchestration with raw retention and post-stream checkpoints;
-- a declarative, content-addressed feature registry spanning all independent HVM dimensions;
-- immutable identity, lineage, evidence, observation, aggregate, residual, interaction, prototype,
-  constraint, preference, confidence, drift, release, and retrieval-projection contracts;
-- producer-neutral observations and dependency-inverted ports for future estimators;
-- a compiler that orchestrates injected capabilities without implementing measurement algorithms;
-- exhaustive structural validation across registry, evidence, ownership, version, reference, and
-  confidence boundaries;
-- append-only release lifecycle management with approval, activation, supersession, rollback, and
-  point-in-time resolution;
-- provider- and storage-neutral retrieval query contracts, with no retrieval implementation.
-- an immutable analyzer registry with exact feature resolution, version constraints, conflict
-  detection, and dependency-level execution plans;
-- asynchronous same-level analyzer execution with partial recovery, deterministic traces,
-  out-of-band performance metrics, and future cache ports;
-- centralized observation construction that validates the pinned feature registry and emits
-  HVM-native evidence, provenance, context, producer lineage, and confidence;
-- versioned document, paragraph, sentence, and line addressing with exact source offsets;
-- 23 Tier 1 deterministic measurements for document size, structure, punctuation and markers,
-  formatting, whitespace, reading time, and declared thread length;
-- confidence-composition contracts for deterministic, statistical, classifier, LLM, and
-  evidence-weighted strategies, with only declared deterministic confidence implemented;
-- restartable corpus orchestration with bounded concurrent analysis and per-document isolation;
-- content-addressed observation reuse and immutable incremental profile release lineage;
-- concrete Tier 1 scalar aggregation, explicit versioned baselines, platform conditionals, and
-  evidence-derived support without making unmeasured distinctiveness claims;
-- validation, approval, activation, supersession, and artifact publication in one workflow;
-- corpus-health and human inspection reports plus a machine-readable retrieval projection;
-- in-memory and atomic local JSON workspaces behind one persistence boundary;
-- a manifest-driven `ceo-voice build` CLI with progress events and failure recovery;
-- an independent Virality Knowledge Representation with ten governed structural feature families;
-- transparent impression/audience normalization with explicit confounding and collection lineage;
-- deterministic hook, opening, pacing, transition, paragraph, narrative, CTA, formatting, thread,
-  and announcement-organization extraction without retaining reusable wording;
-- cross-document and cross-leader pattern aggregation with prevalence, standard error, exposure
-  comparability, and observational performance difference;
-- immutable virality releases with validation, atomic activation/supersession, human inspection,
-  exact faceted search, and deterministic release comparison.
-- fail-closed context compilation over exact active HVM/VKR releases, governed identity, registry
-  hash, platform contract, request lineage, and tenant boundary;
-- generation-authorized voice projection with confidence gates, conditional inheritance, explicit
-  preference precedence, interaction dependency checks, compact ranking, and ignored decisions;
-- independent platform-specific structural projection with support, leader-breadth, comparability,
-  descriptive-authority, and per-dimension selection policy;
-- typed hard, soft, negative-space, platform, formatting, user, and safety constraints with
-  conflict detection and source attribution;
-- validation and role partitioning of future retrieved evidence without retrieval behavior;
-- content-addressed immutable `GenerationContext` output with selection, confidence, constraint,
-  and evidence-trace reports.
-- compact, deterministic, confidence-aware retrieval bundles with requirement coverage, evidence
-  diversity, pruning reasons, and immutable HVM/VKR traceability;
-- provider-neutral prompt-last generation with bounded retries, platform validation, token budgets,
-  and complete generation reports;
-- an end-to-end integration harness proving curated corpus through validated generated draft while
-  retaining artifacts, timing, diagnostics, and profiling metrics;
-- deterministic generated-versus-edited difference analysis, editable-line detection, protected
-  factual and formatting regions, conservative Re-Voice restoration, and traceable Re-Voice reports.
-- independent HVM voice, VKR structure, constraint, platform, factual-anchor, edit-preservation,
-  readability, human-review, and optional structured-judge evaluation;
-- repeatable batch, three-leader benchmark, failure-analysis, regression-comparison, machine-report,
-  and human-readable evaluation workflows.
+```mermaid
+flowchart LR
+    A["Lawful exports / curated corpus"] --> B["Ingestion + validation"]
+    B --> C["Voice observations"]
+    C --> D["Immutable HVM release"]
+    B --> E["Structural observations"]
+    E --> F["Immutable VKR release"]
+    D --> G["Context compiler"]
+    F --> G
+    G --> H["Deterministic retrieval bundle"]
+    H --> I["Prompt-last generation"]
+    I --> J["Human edit"]
+    J --> K["Constraint-preserving Re-Voice"]
+    K --> L["Independent evaluation"]
+```
 
-Intentionally not implemented:
+Voice, structure, evidence, user intent, platform rules, and negative constraints remain separately
+typed until the final prompt render. Every selected item retains a reason, confidence, priority,
+release reference, and evidence lineage. Only Generation and Re-Voice may call a model.
 
-- API endpoints or an application server;
-- provider credentials, production HTTP transport, scraping, or network acquisition;
-- calibrated stylometric inference, cohort baselines, statistical fitting, or learned analyzers;
-- embeddings, vector storage, or semantic retrieval;
-- predictive or causal virality ranking, tactic recommendation, or calibration;
-- semantic-equivalence certification, calibrated authenticity claims, or completed real-person
-  benchmark studies;
-- a frontend.
+| Subsystem | Responsibility |
+|---|---|
+| Data pipeline | Bounded acquisition, raw retention, style-preserving cleaning, normalization, validation, incremental checkpoints |
+| HVM + analysis | Evidence-addressed feature observations, confidence, residuals, interactions, constraints, release governance |
+| Voice Profile Builder | Restartable corpus analysis, health checks, immutable publication, inspection and retrieval projection |
+| VKR | Independent structural patterns and observational engagement statistics without copying reusable wording |
+| Context + retrieval | Request-specific, platform-aware, confidence-gated compilation and compact deterministic evidence selection |
+| Generation | Prompt-last provider isolation, token budgeting, retry policy, post-processing, platform validation, full report |
+| Re-Voice | Diff analysis, protected regions, conservative restoration, constraint validation, change report |
+| Evaluation | Voice, structure, compliance, factual/edit preservation, readability, optional judge, benchmark and regression reports |
 
-Keeping those absent is a design constraint. Later milestones can add each capability behind the
-contracts and boundaries established here.
+The detailed dependency rules and failure boundaries are in
+[Architecture Overview](docs/ARCHITECTURE.md). The audited assignment coverage is in
+[Release Gap Analysis](docs/RELEASE_GAP_ANALYSIS.md).
 
-## Why this foundation is not a generic RAG skeleton
+## Quickstart
 
-The shared model deliberately avoids representing voice as a single prose summary. The legacy
-`models.VoiceProfile` remains a compatibility transport contract; the authoritative representation
-is the `ceo_voice.voice` domain. It is a versioned Hierarchical Voice Model with typed distributions,
-leader residuals, conditional inheritance, evidence and counterevidence, structured confidence,
-interactions, constraints, and immutable release lineage. A
-`RetrievedContext` labels every item by role—voice evidence, factual evidence, structural
-reference, or platform reference—so downstream code never has to blend those concerns implicitly.
+Prerequisites: CPython 3.13, Git, and `make` on macOS/Linux.
 
-Canonical text also preserves leading, trailing, line-break, and paragraph whitespace. Generic
-cleanup would erase formatting patterns that may later be important voice evidence.
+```bash
+git clone <repository-url>
+cd "VERY IMPORTANT TASK"
+make setup
+cp .env.example .env
+make doctor
+make check
+```
+
+`make check` runs Ruff, Black verification, strict mypy, and pytest with branch coverage. It needs
+no model credential, database, Node.js runtime, or network service.
+
+### One-command offline demonstration
+
+```bash
+make demo
+```
+
+This executes the full fixture workflow—profile, VKR, compilation, retrieval, prompt rendering,
+generation, human edit, Re-Voice, and evaluation—and writes inspectable JSON/Markdown artifacts
+below `data/demo/latest/`. The provider response and explicit profile approval are deterministic
+test fixtures. This proves orchestration and regression behavior; it is not a real-person quality
+benchmark.
+
+Typical artifact set:
+
+```text
+voice-profile.json          virality-profile.json
+generation-context.json     retrieval-bundle.json
+rendered-prompt.json        generated-draft.json
+generation-report.json      revoiced-draft.json
+evaluation-report.json      evaluation-report.md
+integration-outcome.json
+```
+
+## CLI
+
+```bash
+ceo-voice --help
+ceo-voice doctor
+```
+
+Build or resume an immutable HVM profile:
+
+```bash
+ceo-voice build \
+  --manifest /approved/corpus-manifest.json \
+  --workspace ./data/runtime \
+  --output ./data/runtime/published-profile.json \
+  --pretty
+```
+
+Onboard a reviewed leader corpus into both knowledge systems:
+
+```bash
+ceo-voice onboard \
+  --manifest /approved/onboarding-manifest.json \
+  --workspace ./data/runtime
+```
+
+The onboarding command publishes HVM and VKR releases and writes
+`data/runtime/onboarding/report.json`. Exit `0` means generation-authorized; exit `3` means the
+releases were built successfully but remain descriptive and require review. Adding a leader changes
+data, not code. See [Operations](docs/OPERATIONS.md) for the manifest workflow and exit codes.
+
+### Public-data acquisition
+
+`LocalExportConnector` accepts bounded JSON or JSONL files produced through official exports,
+licensed datasets, or operator-curated transcripts. It supports cursor resumption,
+`modified_after`, source versions, structured metadata, and path confinement. A synthetic schema
+example is at [local-export.jsonl](data/examples/local-export.jsonl).
+
+The repository intentionally does not include credentialless X/LinkedIn scraping. Network source
+adapters must use official APIs or authorized feeds behind the existing connector contract.
+
+## Benchmarks and evaluation
+
+The evaluation engine scores each dimension independently and retains raw metric provenance;
+mandatory deterministic failures cannot be averaged away by an LLM judge. Benchmark and regression
+contracts support fixed suites, thresholds, cohort labels, and report comparison.
+
+- [Benchmark catalog](data/benchmarks/evaluation-suite.json)
+- [Machine-readable fixture report](data/benchmarks/fixture-report.json)
+- [Human-readable fixture report](data/benchmarks/fixture-report.md)
+- [Evaluation design](docs/evaluation-framework.md)
+
+Ali Ghodsi, Matei Zaharia, and Jensen Huang are present only as benchmark routing labels. The
+bundled cases reuse synthetic content and make no fidelity claim. A valid real-person study needs a
+lawfully reviewed corpus, held-out samples, human ratings, agreement statistics, baselines, and
+confidence intervals.
+
+## Containers
+
+Build and run the cloud-neutral, non-root CLI image:
+
+```bash
+docker compose build
+docker compose run --rm cli doctor
+docker compose run --rm cli build \
+  --manifest /app/exports/corpus-manifest.json \
+  --workspace /app/workspace
+```
+
+The image is read-only at runtime, drops Linux capabilities, uses a non-root user, exposes only
+explicit data volumes, and includes a configuration health check. Production defaults require JSON
+logs and disabled debug mode. See [Operations](docs/OPERATIONS.md).
 
 ## Repository map
 
 ```text
-.
-├── backend/
-│   └── src/ceo_voice/
-│       ├── api/          # Future transport adapters; currently no endpoints
-│       ├── config/       # Typed settings and environment validation
-│       ├── core/         # Constants, logging, and application exceptions
-│       ├── models/       # Canonical cross-module domain contracts
-│       ├── schemas/      # Boundary request/response messages
-│       ├── services/     # Future use-case orchestration boundary
-│       ├── ingestion/    # Source-neutral ETL contracts, stages, ports, and orchestration
-│       ├── analysis/     # Analyzer registry, execution, evidence builder, and Tier 1 measurements
-│       ├── voice/        # HVM contracts, registry, compiler, validation, and release governance
-│       ├── profiles/     # Executable profile builds, publication, reports, and local workspace
-│       ├── virality/     # Structural evidence, performance patterns, releases, and search
-│       ├── context/      # Deterministic HVM/VKR/intent compilation into GenerationContext
-│       ├── retrieval/    # Deterministic evidence selection and traceability
-│       ├── generation/   # Prompt-last provider orchestration and validation
-│       ├── revoice/      # Human-edit analysis and constrained voice restoration
-│       ├── evaluation/   # Independent quality metrics, judges, benchmarks, and reports
-│       ├── storage/      # Future persistence ports and adapters
-│       ├── prompts/      # Future versioned prompt assets
-│       └── utils/        # Narrow dependency-free helpers
-├── frontend/             # Reserved frontend boundary; no application yet
-├── data/                 # Local data policy and ignored runtime directories
-├── docs/                 # Architecture and engineering practices
-├── scripts/              # Operational-script policy; no product logic
-├── tests/                # Automated tests mirroring backend concerns
-├── .github/workflows/    # CI quality gate
-├── pyproject.toml        # Package metadata and tool configuration
-└── requirements.lock     # Reviewed Python 3.13 dependency resolution
+backend/src/ceo_voice/
+  ingestion/   analysis/     voice/        profiles/      virality/
+  context/     retrieval/    generation/   revoice/       evaluation/
+  config/      core/         models/       schemas/       utils/
+configs/       environment-safe non-secret examples
+data/          synthetic schemas, benchmark manifests, ignored runtime data
+docs/          architecture, subsystem, operations, and engineering guides
+scripts/       narrow operational entry points; no product logic
+tests/         unit, integration, regression, and contract evidence
 ```
 
-## Quick start
-
-Requirements:
-
-- Python 3.13;
-- Git;
-- `make` on macOS/Linux, or the equivalent commands from
-  [Development Setup](docs/DEVELOPMENT.md).
-
-Create the isolated environment and install the locked dependencies:
+## Development
 
 ```bash
-make setup
-cp .env.example .env
-make check
+make format       # apply Ruff fixes and Black
+make lint         # Ruff and Black verification
+make typecheck    # strict mypy
+make test         # pytest with branch coverage
+make check        # complete release gate
 ```
 
-The setup command installs the reviewed dependency lock, then installs the local package in
-editable mode without resolving a second dependency graph.
+Read [Development Setup](docs/DEVELOPMENT.md), [Coding Guidelines](docs/CODING_GUIDELINES.md), and
+[Contributing](CONTRIBUTING.md) before changing public contracts. The project favors narrow modules,
+explicit composition roots, dependency injection at I/O boundaries, structured errors, content-free
+logs, and backwards-compatible release schemas.
 
-Build a profile from a curated corpus manifest:
+## Limitations and future work
 
-```bash
-ceo-voice build \
-  --manifest data/curated/ali-ghodsi/corpus.json \
-  --workspace data/profile-workspace \
-  --output data/profile-workspace/latest-profile.json
-```
+- Bundled JSON/in-memory workspaces are reference adapters for evaluation and single-node use, not
+  a claim of horizontally scalable storage.
+- Provider adapters exist, but production HTTP transports, credential rotation, rate-limit
+  telemetry, and organization-specific safety review belong to deployment adapters.
+- Tier-1 features are deterministic structural measurements. Calibrated stylometry, cohort
+  baselines, nuisance controls, and real-person human evaluation remain required.
+- Virality statistics are descriptive associations, not causal claims or guaranteed tactics.
+- There is no public HTTP API or frontend. The CLI is the supported release interface.
+- Semantic retrieval, embeddings, and vector storage are deliberately absent; deterministic
+  retrieval remains the auditable baseline.
 
-The CLI writes structured progress to standard error and the completed profile summary to standard
-output. Repeating the same command is idempotent; adding or changing corpus documents creates the
-next immutable release while reusing compatible observation sets.
+See the [Release Checklist](docs/RELEASE_CHECKLIST.md) for the concrete path from this reference
+release to an organization-operated production deployment.
 
-## Quality commands
+## License, contribution, and acknowledgements
 
-```bash
-make format      # Apply Ruff fixes and Black formatting
-make lint        # Ruff plus Black verification
-make typecheck   # Strict mypy analysis
-make test        # Pytest with branch coverage
-make check       # Run the full local quality gate
-```
+The package is currently marked `LicenseRef-Proprietary`. Do not redistribute it until the owner
+adds an explicit license. Contributions follow [CONTRIBUTING.md](CONTRIBUTING.md) and require the
+complete quality gate plus evidence for changed behavior.
 
-Install the local hooks after setup:
-
-```bash
-.venv/bin/pre-commit install
-.venv/bin/pre-commit install --hook-type pre-push
-```
-
-## Configuration
-
-All runtime configuration uses the `CEO_VOICE_` prefix and `__` for nested fields. For example:
-
-```text
-CEO_VOICE_APPLICATION__ENVIRONMENT=development
-CEO_VOICE_LOGGING__LEVEL=INFO
-CEO_VOICE_LOGGING__FORMAT=console
-```
-
-Production configuration rejects debug mode and requires JSON logs. Model integration is disabled
-by default; enabling it requires a provider, generation model, and externally supplied API key.
-Secrets are represented with Pydantic `SecretStr`, excluded from source control, and must never be
-added to log context.
-
-See [.env.example](.env.example) for the complete current surface and
-[Development Setup](docs/DEVELOPMENT.md#configuration) for operational rules.
-
-## Documentation
-
-- [Architecture Overview](docs/ARCHITECTURE.md) explains module ownership and dependency rules.
-- [Data Pipeline](docs/DATA_PIPELINE.md) defines ingestion flow, identity, failure, storage, and
-  connector-extension policies.
-- [Engineering Blueprint](docs/ENGINEERING_BLUEPRINT.md) contains the full product architecture.
-- [Computational Voice Profile Representation](docs/VOICE_PROFILE_REPRESENTATION.md) defines the
-  research-backed Voice DNA ontology, evidence model, confidence, inheritance, and evaluation
-  contract; it intentionally contains no extraction or generation implementation.
-- [HVM Knowledge Representation Kernel](docs/HVM_KERNEL.md) explains the implemented domain graph,
-  registry, compiler ports, structural validator, release lifecycle, and extension rules.
-- [Voice Analysis Framework](docs/VOICE_ANALYSIS.md) defines analyzer registration, scheduling,
-  evidence attribution, confidence composition, Tier 1 semantics, failure policy, and extensions.
-- [Voice Profile Builder](docs/PROFILE_BUILDER.md) documents the executable lifecycle, incremental
-  semantics, recovery model, scientific authority, reports, and corpus manifest contract.
-- [Virality Structure Library](docs/VIRALITY_LIBRARY.md) defines the independent structural
-  representation, deterministic features, performance statistics, release workflow, and limits.
-- [Context Compilation Engine](docs/CONTEXT_COMPILER.md) defines generation-authority gates,
-  voice inheritance, structural selection, constraints, supplied evidence, deterministic sealing,
-  reports, failure modes, and extension policy.
-- [Development Setup](docs/DEVELOPMENT.md) covers environments, dependencies, and commands.
-- [Coding Guidelines](docs/CODING_GUIDELINES.md) defines project-wide engineering standards.
-- [Contributing](CONTRIBUTING.md) defines the change and review workflow.
-
-## License and use
-
-The package is currently marked proprietary. Add an explicit organizational license before any
-external distribution.
-- [Retrieval intelligence](docs/retrieval-intelligence.md) — deterministic HVM/VKR evidence serving, budgets, and traceability.
-- [Generation engine](docs/generation-engine.md) — prompt-last model orchestration, provider isolation, validation, and reporting.
-- [End-to-end integration](docs/end-to-end-integration.md) — complete workflow wiring, artifacts, profiling, and the generation-authorization finding.
-- [Re-Voice engine](docs/revoice-engine.md) — human-edit analysis, protected-region preservation, constrained restoration, and trace reports.
-- [Evaluation framework](docs/evaluation-framework.md) — independent dimensions, structured review, benchmarks, regressions, and failure analysis.
+The design draws on stylometry, hierarchical modeling, retrieval systems, reproducible ML
+evaluation, and safety-by-construction practices. Named leaders are benchmark labels only and do
+not imply participation, endorsement, or verified imitation quality.
