@@ -1,0 +1,34 @@
+{
+  "suite_id": "ceo-voice-core-v1",
+  "version": "1.0.0",
+  "data_status": "synthetic_harness_fixture",
+  "baseline": "deterministic evaluation engine with no LLM judge",
+  "cases": [
+    {
+      "leader_label": "Ali Ghodsi",
+      "fixture_only": true,
+      "overall_score": 0.9074074074074073,
+      "status": "warning",
+      "failures": ["voice_drift", "unsupported_generation"],
+      "report_id": "09123ce9-5545-5194-9a4c-7181d281ecb9"
+    },
+    {
+      "leader_label": "Matei Zaharia",
+      "fixture_only": true,
+      "overall_score": 0.9074074074074073,
+      "status": "warning",
+      "failures": ["voice_drift", "unsupported_generation"],
+      "report_id": "76864312-69c0-50f6-bc33-faaf297dbfe2"
+    },
+    {
+      "leader_label": "Jensen Huang",
+      "fixture_only": true,
+      "overall_score": 0.9074074074074073,
+      "status": "warning",
+      "failures": ["voice_drift", "unsupported_generation"],
+      "report_id": "81fcfb4c-7e6f-5829-9a05-abc318bf9d80"
+    }
+  ],
+  "interpretation": "The named cases verify cohort routing and deterministic reporting only. They reuse synthetic content and cannot measure fidelity to any named person.",
+  "real_person_accuracy_claimed": false
+}

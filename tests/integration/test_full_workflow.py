@@ -6,7 +6,7 @@ from typing import Any, cast
 from uuid import UUID
 
 from ceo_voice.context import create_context_compiler
-from ceo_voice.evaluation import EvaluationEngine, EvaluationInput
+from ceo_voice.evaluation import EvaluationEngine, EvaluationInput, render_evaluation_report
 from ceo_voice.generation import (
     GenerationEngine,
     GenerationPolicy,
@@ -422,3 +422,13 @@ def test_generated_draft_can_flow_through_human_edit_and_revoice(tmp_path: Path)
     assert evaluation.retrieval_bundle_id == artifacts.retrieval.bundle_id
     assert evaluation.dimensions
     assert provider.calls == 2, "evaluation remains independent and deterministic by default"
+    artifact_root = tmp_path / str(outcome.run_id)
+    (artifact_root / "revoiced-draft.json").write_text(
+        result.model_dump_json(indent=2), encoding="utf-8"
+    )
+    (artifact_root / "evaluation-report.json").write_text(
+        evaluation.model_dump_json(indent=2), encoding="utf-8"
+    )
+    (artifact_root / "evaluation-report.md").write_text(
+        render_evaluation_report(evaluation), encoding="utf-8"
+    )
