@@ -60,6 +60,18 @@ class RetrievalError(ApplicationError):
     code = "retrieval_error"
 
 
+class RetrievalValidationError(RetrievalError):
+    """Raised when governed artifacts cannot produce a valid retrieval bundle."""
+
+    code = "retrieval_validation_error"
+
+
+class RetrievalBudgetError(RetrievalError):
+    """Raised when mandatory knowledge cannot fit the configured retrieval budget."""
+
+    code = "retrieval_budget_error"
+
+
 class GenerationError(ApplicationError):
     """Raised when content generation fails or returns an invalid result."""
 

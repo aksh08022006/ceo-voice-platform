@@ -238,3 +238,4 @@ See [.env.example](.env.example) for the complete current surface and
 
 The package is currently marked proprietary. Add an explicit organizational license before any
 external distribution.
+- [Retrieval intelligence](docs/retrieval-intelligence.md) — deterministic HVM/VKR evidence serving, budgets, and traceability.
