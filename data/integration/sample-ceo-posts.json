@@ -1,0 +1,16 @@
+{
+  "leader": "Example CEO",
+  "platform": "linkedin",
+  "documents": [
+    {
+      "external_id": "ceo-1",
+      "published_at": "2026-01-10T09:00:00Z",
+      "content": "Clear ownership creates speed. When one person owns the decision, teams spend less time negotiating the next step and more time learning from it."
+    },
+    {
+      "external_id": "ceo-2",
+      "published_at": "2026-02-10T09:00:00Z",
+      "content": "A useful operating question: who can say yes, who can say no, and who acts next? If those answers are unclear, the process is unclear."
+    }
+  ]
+}

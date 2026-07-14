@@ -96,6 +96,12 @@ class PromptBudgetError(GenerationError):
     code = "prompt_budget_error"
 
 
+class IntegrationError(ApplicationError):
+    """Raised when the production workflow cannot cross a subsystem boundary."""
+
+    code = "integration_error"
+
+
 class ContextCompilationError(ApplicationError):
     """Raised when governed artifacts cannot form a safe generation context."""
 

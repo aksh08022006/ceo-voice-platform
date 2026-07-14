@@ -240,3 +240,4 @@ The package is currently marked proprietary. Add an explicit organizational lice
 external distribution.
 - [Retrieval intelligence](docs/retrieval-intelligence.md) — deterministic HVM/VKR evidence serving, budgets, and traceability.
 - [Generation engine](docs/generation-engine.md) — prompt-last model orchestration, provider isolation, validation, and reporting.
+- [End-to-end integration](docs/end-to-end-integration.md) — complete workflow wiring, artifacts, profiling, and the generation-authorization finding.

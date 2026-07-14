@@ -1,0 +1,9 @@
+{
+  "platform": "linkedin",
+  "documents": [
+    {"external_id": "vkr-1", "leader": "Leader A", "content": "A direct claim.\n\nThree supporting points.\n\nA practical close.", "reactions": 120, "comments": 18, "shares": 12, "impressions": 9000},
+    {"external_id": "vkr-2", "leader": "Leader B", "content": "A question-led opening?\n\nA short explanation.\n\nOne takeaway.", "reactions": 95, "comments": 22, "shares": 8, "impressions": 7600},
+    {"external_id": "vkr-3", "leader": "Leader C", "content": "A direct claim.\n\nEvidence.\n\nA practical close.", "reactions": 140, "comments": 20, "shares": 15, "impressions": 9800},
+    {"external_id": "vkr-4", "leader": "Leader D", "content": "A concise observation.\n\nContext.\n\nOne takeaway.", "reactions": 88, "comments": 11, "shares": 6, "impressions": 7000}
+  ]
+}
