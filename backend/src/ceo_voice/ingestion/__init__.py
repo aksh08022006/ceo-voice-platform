@@ -1,6 +1,11 @@
 """Heterogeneous source ingestion contracts and pipeline boundaries."""
 
-from ceo_voice.ingestion.connectors import ConnectorRegistry, SourceConnector
+from ceo_voice.ingestion.connectors import (
+    ConnectorRegistry,
+    ExportRecord,
+    LocalExportConnector,
+    SourceConnector,
+)
 from ceo_voice.ingestion.contracts import (
     CleanDocument,
     CleanedContent,
@@ -63,6 +68,7 @@ __all__ = [
     "DocumentCleaner",
     "DocumentNormalizer",
     "DocumentValidator",
+    "ExportRecord",
     "ExtractedMetadata",
     "FetchRequest",
     "InMemoryCheckpointRepository",
@@ -77,6 +83,7 @@ __all__ = [
     "IngestionRepositories",
     "IngestionRunResult",
     "IngestionRunStatus",
+    "LocalExportConnector",
     "MetadataExtractor",
     "MetadataRepository",
     "ParsedContent",
