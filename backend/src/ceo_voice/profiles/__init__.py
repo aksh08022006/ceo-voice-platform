@@ -26,6 +26,12 @@ from ceo_voice.profiles.enums import (
     ProfileAuthority,
     ProgressKind,
 )
+from ceo_voice.profiles.onboarding import (
+    CEOOnboardingService,
+    OnboardingManifest,
+    OnboardingReport,
+    write_onboarding_report,
+)
 from ceo_voice.profiles.ports import NullProgressSink, ProfileWorkspace, ProgressSink
 from ceo_voice.profiles.tier1 import Tier1Runtime, build_tier1_runtime
 from ceo_voice.profiles.workspace import InMemoryProfileWorkspace, JsonProfileWorkspace
@@ -33,6 +39,7 @@ from ceo_voice.profiles.workspace import InMemoryProfileWorkspace, JsonProfileWo
 __all__ = [
     "BuildCheckpoint",
     "BuildStage",
+    "CEOOnboardingService",
     "CorpusAnalyzer",
     "CorpusHealthIssue",
     "CorpusHealthReport",
@@ -46,6 +53,8 @@ __all__ = [
     "JsonProfileWorkspace",
     "NullProgressSink",
     "ObservationCacheKey",
+    "OnboardingManifest",
+    "OnboardingReport",
     "ProfileAuthority",
     "ProfileBuildManifest",
     "ProfileBuildPolicy",
@@ -61,4 +70,5 @@ __all__ = [
     "VoiceProfileBuilder",
     "build_tier1_runtime",
     "create_tier1_profile_builder",
+    "write_onboarding_report",
 ]

@@ -17,6 +17,7 @@ from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
     JsonProfileWorkspace,
     ObservationCacheKey,
+    OnboardingManifest,
     ProgressEvent,
     ProgressKind,
     ScalarBaselineSnapshot,
@@ -27,6 +28,7 @@ from ceo_voice.profiles.cli import ConsoleProgressSink, main
 from ceo_voice.profiles.enums import BuildStage
 from ceo_voice.voice import ReleaseChange
 from tests.unit.profiles.factories import IDENTITY_ID, document, identity, lineage, manifest
+from tests.unit.virality.factories import corpus
 
 
 def test_json_workspace_persists_profiles_observations_and_release_catalog(
@@ -116,6 +118,36 @@ def test_cli_reports_invalid_manifest_without_traceback(
 
     assert main(["build", "--manifest", str(path), "--workspace", str(tmp_path)]) == 2
     assert json.loads(capsys.readouterr().err)["code"] == "invalid_manifest"
+
+
+def test_cli_onboards_both_releases_and_reports_authorization_honestly(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    manifest_path = tmp_path / "onboarding.json"
+    manifest_path.write_text(
+        OnboardingManifest(profile=manifest(1, 2), virality=corpus(1, 2, 3)).model_dump_json(
+            indent=2
+        ),
+        encoding="utf-8",
+    )
+
+    exit_code = main(
+        ["onboard", "--manifest", str(manifest_path), "--workspace", str(tmp_path / "workspace")]
+    )
+
+    result = json.loads(capsys.readouterr().out)
+    assert exit_code == 3
+    assert result["leader_name"] == "Example CEO"
+    assert result["generation_ready"] is False
+    assert Path(result["report_path"]).exists()
+    assert (tmp_path / "workspace" / "virality" / "catalog.json").exists()
+
+
+def test_cli_doctor_reports_installation_health(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["doctor"]) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "ok"
+    assert result["package"] == "ceo-voice-platform"
 
 
 def test_console_progress_sink_emits_machine_readable_event() -> None:
