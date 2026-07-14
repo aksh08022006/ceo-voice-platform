@@ -101,7 +101,9 @@ the observation builder.
 
 ## Tier 1 deterministic scope
 
-Four small analyzers currently emit 23 scalar observations:
+Seven small analyzers currently emit 38 scalar observations. Registry version `1.1.0` adds the
+distributional and rhetorical-position families without changing the semantic version of the 23
+existing feature definitions:
 
 | Analyzer | Measurements |
 | --- | --- |
@@ -109,11 +111,34 @@ Four small analyzers currently emit 23 scalar observations:
 | Structural | Sentence and paragraph counts/mean word lengths, line breaks, list items, Markdown headings |
 | Symbol usage | Emoji code points, Unicode punctuation, question/exclamation marks per sentence, links, hashtags, mentions |
 | Formatting | Uppercase character/word ratios, blank lines, repeated horizontal-whitespace runs |
+| Distributional stylometry | Per-document sentence p25/median/p75, population dispersion, short/long ratios, paragraph median/dispersion, single-sentence paragraph ratio |
+| Rhetorical position | Opening length, opening/closing question use, normalized mean question position |
+| English opening stance | Explicit first-/second-person tokens in the opening sentence |
 
 Feature references are constructor-injected bindings. The analyzer implementations contain no HVM
 feature IDs, so registry evolution and alternative feature namespaces do not require editing the
 measurement rules. Thread length is read only from a configured metadata field; it becomes an
 explicit `missing` observation when absent or invalid rather than being guessed from prose.
+
+Distributional summaries are intentionally calculated within each document before HVM aggregation.
+This gives documents equal weight: a long transcript or article cannot dominate many short social
+posts merely because it contains more sentences. Sentence percentiles use deterministic linear
+interpolation; dispersion is population standard deviation; short sentences contain at most five
+words and long sentences at least twenty. These thresholds and algorithms are pinned in the
+analyzer configuration hash.
+
+Rhetorical-position rules do not claim semantic understanding. They measure visible question marks
+and normalized sentence positions. English pronoun stance is isolated in a separate English-only
+analyzer rather than silently applying an English lexicon to every language. These are useful
+micro-patterns but cannot determine whether a question is genuinely rhetorical, whether a
+grammatical fragment is intentional, or whether a pronoun refers to the intended audience. Those
+higher-order claims require separately calibrated analyzers and must not be inferred from these
+deterministic features.
+
+New measurements retain both the document evidence unit required by the current scalar HVM compiler
+and the exact sentence or paragraph units used in the calculation. Retrieval and inspection can
+therefore trace an aggregate back to its structural opportunities rather than only to whole source
+documents.
 
 The versioned sentence splitter is deliberately dependency-free and conservative. It handles
 punctuation boundaries, line boundaries, URLs, list markers, and trailing symbols deterministically,

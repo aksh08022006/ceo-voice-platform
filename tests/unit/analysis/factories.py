@@ -8,12 +8,19 @@ from ceo_voice.analysis import (
     ComposedConfidence,
     DeclaredConfidenceComposer,
     DeterministicAnalyzerConfig,
+    DistributionalStylometryAnalyzer,
+    DistributionalStylometryFeatures,
     DocumentStatisticsAnalyzer,
     DocumentStatisticsFeatures,
     FormattingAnalyzer,
     FormattingFeatures,
+    OpeningStanceAnalyzer,
+    OpeningStanceFeatures,
+    RhetoricalPositionAnalyzer,
+    RhetoricalPositionFeatures,
     StructuralAnalyzer,
     StructuralFeatures,
+    StylometryAnalyzerConfig,
     SymbolUsageAnalyzer,
     SymbolUsageFeatures,
 )
@@ -75,6 +82,21 @@ FEATURE_IDS = (
     "analysis.uppercase-word-ratio",
     "analysis.blank-line-count",
     "analysis.repeated-whitespace-count",
+    "analysis.sentence-p25-words",
+    "analysis.sentence-median-words",
+    "analysis.sentence-p75-words",
+    "analysis.sentence-length-stddev",
+    "analysis.short-sentence-ratio",
+    "analysis.long-sentence-ratio",
+    "analysis.paragraph-median-words",
+    "analysis.paragraph-length-stddev",
+    "analysis.single-sentence-paragraph-ratio",
+    "analysis.opening-sentence-words",
+    "analysis.opening-question-indicator",
+    "analysis.opening-first-person-indicator",
+    "analysis.opening-second-person-indicator",
+    "analysis.closing-question-indicator",
+    "analysis.question-position-mean",
 )
 
 
@@ -197,10 +219,11 @@ def feature_map() -> dict[str, FeatureReference]:
 
 
 def analyzers() -> tuple[Analyzer, ...]:
-    """Return all four Tier 1 analyzers with registry-injected bindings."""
+    """Return all Tier 1 analyzers with registry-injected bindings."""
 
     values = feature_map()
     config = DeterministicAnalyzerConfig(configuration_hash=CONFIG_HASH)
+    stylometry_config = StylometryAnalyzerConfig(configuration_hash=CONFIG_HASH)
     return (
         DocumentStatisticsAnalyzer(
             features=DocumentStatisticsFeatures(
@@ -225,6 +248,24 @@ def analyzers() -> tuple[Analyzer, ...]:
                 **{key: values[key] for key in FormattingFeatures.model_fields}
             ),
             config=config,
+        ),
+        DistributionalStylometryAnalyzer(
+            features=DistributionalStylometryFeatures(
+                **{key: values[key] for key in DistributionalStylometryFeatures.model_fields}
+            ),
+            config=stylometry_config,
+        ),
+        RhetoricalPositionAnalyzer(
+            features=RhetoricalPositionFeatures(
+                **{key: values[key] for key in RhetoricalPositionFeatures.model_fields}
+            ),
+            config=stylometry_config,
+        ),
+        OpeningStanceAnalyzer(
+            features=OpeningStanceFeatures(
+                **{key: values[key] for key in OpeningStanceFeatures.model_fields}
+            ),
+            config=stylometry_config,
         ),
     )
 

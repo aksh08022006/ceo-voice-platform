@@ -8,7 +8,10 @@ from ceo_voice.analysis import (
     AnalysisRequest,
     AnalyzerContext,
     DeterministicDocumentAnalyzer,
+    DistributionalStylometryAnalyzer,
+    DistributionalStylometryFeatures,
     MeasurementCandidate,
+    StylometryAnalyzerConfig,
 )
 from ceo_voice.voice import ObservationState, ScalarValue, SourceModality
 from tests.unit.analysis.factories import (
@@ -154,14 +157,101 @@ def test_formatting_analyzer_handles_casing_and_whitespace() -> None:
     assert values["analysis.repeated-whitespace-count"] == 1
 
 
+def test_distributional_analyzer_measures_document_balanced_shape() -> None:
+    content = (
+        "We build? You can ship this now.\n\n"
+        "This sentence has exactly eight simple words for testing today. Is this ending?"
+    )
+    candidates = asyncio.run(analyzers()[4].analyze(context_for(content=content)))
+    values = value_map(candidates)
+
+    assert values["analysis.sentence-p25-words"] == pytest.approx(2.75)
+    assert values["analysis.sentence-median-words"] == 4
+    assert values["analysis.sentence-p75-words"] == pytest.approx(6.25)
+    assert values["analysis.sentence-length-stddev"] == pytest.approx(3.082207)
+    assert values["analysis.short-sentence-ratio"] == 0.75
+    assert values["analysis.long-sentence-ratio"] == 0
+    assert values["analysis.paragraph-median-words"] == 10
+    assert values["analysis.paragraph-length-stddev"] == 3
+    assert values["analysis.single-sentence-paragraph-ratio"] == 0
+    analyzed = context_for(content=content).analyzed_document
+    sentence_ids = {span.id for span in analyzed.sentences}
+    assert set(candidates[0].evidence_span_ids) == {analyzed.document_span.id, *sentence_ids}
+
+
+def test_rhetorical_position_analyzer_measures_opening_and_question_placement() -> None:
+    content = "We build? You can ship this now.\n\nA final statement. Is this ending?"
+    context = context_for(content=content)
+    candidates = asyncio.run(analyzers()[5].analyze(context))
+    stance_candidates = asyncio.run(analyzers()[6].analyze(context))
+    values = {**value_map(candidates), **value_map(stance_candidates)}
+
+    assert values["analysis.opening-sentence-words"] == 2
+    assert values["analysis.opening-question-indicator"] == 1
+    assert values["analysis.opening-first-person-indicator"] == 1
+    assert values["analysis.opening-second-person-indicator"] == 0
+    assert values["analysis.closing-question-indicator"] == 1
+    assert values["analysis.question-position-mean"] == 0.5
+    assert candidates[0].evidence_span_ids == (
+        context.analyzed_document.document_span.id,
+        context.analyzed_document.sentences[0].id,
+    )
+    assert candidates[-1].evidence_span_ids == (
+        context.analyzed_document.document_span.id,
+        context.analyzed_document.sentences[0].id,
+        context.analyzed_document.sentences[-1].id,
+    )
+    assert stance_candidates[0].evidence_span_ids == candidates[0].evidence_span_ids
+
+
+def test_stylometry_handles_singleton_and_absent_rhetorical_markers() -> None:
+    context = context_for(content="You ship")
+    distribution = value_map(asyncio.run(analyzers()[4].analyze(context)))
+    rhetorical = {
+        **value_map(asyncio.run(analyzers()[5].analyze(context))),
+        **value_map(asyncio.run(analyzers()[6].analyze(context))),
+    }
+
+    assert distribution["analysis.sentence-p25-words"] == 2
+    assert distribution["analysis.sentence-length-stddev"] == 0
+    assert distribution["analysis.single-sentence-paragraph-ratio"] == 1
+    assert rhetorical["analysis.opening-second-person-indicator"] == 1
+    assert rhetorical["analysis.opening-first-person-indicator"] == 0
+    assert rhetorical["analysis.question-position-mean"] == 0
+
+
+def test_distributional_analyzer_rejects_overlapping_length_thresholds() -> None:
+    values = dict(
+        zip(
+            DistributionalStylometryFeatures.model_fields,
+            analyzers()[4].specification.supported_features,
+            strict=True,
+        )
+    )
+    with pytest.raises(ValueError, match="threshold"):
+        DistributionalStylometryAnalyzer(
+            features=DistributionalStylometryFeatures(**values),
+            config=StylometryAnalyzerConfig(
+                configuration_hash="a" * 64,
+                short_sentence_max_words=10,
+                long_sentence_min_words=10,
+            ),
+        )
+
+
 def test_analyzers_handle_zero_denominators_without_non_finite_values() -> None:
     context = context_for(content="🚀")
     structural = value_map(asyncio.run(analyzers()[1].analyze(context)))
     formatting = value_map(asyncio.run(analyzers()[3].analyze(context)))
+    distribution = value_map(asyncio.run(analyzers()[4].analyze(context)))
+    rhetorical = value_map(asyncio.run(analyzers()[5].analyze(context)))
 
     assert structural["analysis.mean-sentence-words"] == 0
     assert formatting["analysis.capitalization-ratio"] == 0
     assert formatting["analysis.uppercase-word-ratio"] == 0
+    assert distribution["analysis.sentence-median-words"] == 0
+    assert distribution["analysis.paragraph-length-stddev"] == 0
+    assert rhetorical["analysis.opening-sentence-words"] == 0
 
 
 def test_analyzer_specifications_expose_all_required_capabilities() -> None:
@@ -170,6 +260,9 @@ def test_analyzer_specifications_expose_all_required_capabilities() -> None:
         assert specification.supported_features
         assert specification.required_inputs
         assert specification.all_platforms
-        assert specification.all_languages
         assert specification.measurement_class.value == "deterministic"
         assert specification.dependencies == ()
+    assert all(analyzer.specification.all_languages for analyzer in analyzers()[:6])
+    assert analyzers()[6].specification.supported_languages == ("en",)
+    assert analyzers()[6].specification.supports(clean_document(language="en"))
+    assert not analyzers()[6].specification.supports(clean_document(language="fr"))

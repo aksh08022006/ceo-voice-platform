@@ -42,10 +42,10 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
     assert profile.managed_release.status is ReleaseStatus.ACTIVE
     assert profile.validation_report.is_valid()
     assert release.version == 1
-    assert len(profile.observations) == 46
-    assert len(release.components.aggregates) == 23
-    assert len(release.components.residuals) == 23
-    assert len(release.components.conditional_residuals) == 23
+    assert len(profile.observations) == 76
+    assert len(release.components.aggregates) == 38
+    assert len(release.components.residuals) == 38
+    assert len(release.components.conditional_residuals) == 38
     assert {
         item.confidence.independent_cluster_count for item in release.components.aggregates
     } == {2}
@@ -54,12 +54,12 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
         for item in release.components.conditional_residuals
     } == {2}
     assert profile.corpus_health.successful_documents == 2
-    assert profile.corpus_health.observed_feature_count == 23
+    assert profile.corpus_health.observed_feature_count == 38
     assert profile.corpus_health.generation_ready is False
     assert profile.inspection.authority.value == "descriptive"
     assert "not an empirically calibrated" in profile.inspection.summary
-    assert len(profile.retrieval_projection.indexed_features) == 23
-    assert len(profile.retrieval_projection.indexed_component_ids) == 46
+    assert len(profile.retrieval_projection.indexed_features) == 38
+    assert len(profile.retrieval_projection.indexed_component_ids) == 76
     assert {event.kind for event in progress.events} >= {
         ProgressKind.BUILD_STARTED,
         ProgressKind.DOCUMENT_ANALYZED,
@@ -68,6 +68,22 @@ def test_builder_publishes_complete_hvm_profile_and_reports() -> None:
         ProgressKind.BUILD_COMPLETED,
     }
     assert asyncio.run(workspace.get_published(IDENTITY_ID, profile.corpus_hash)) == profile
+
+
+def test_tier1_registry_evolves_additively_and_scopes_english_stance_features() -> None:
+    runtime = build_tier1_runtime()
+
+    assert (runtime.registry.version.major, runtime.registry.version.minor) == (1, 1)
+    assert len(runtime.registry.definitions) == 38
+    assert {
+        (definition.semantic_version.major, definition.semantic_version.minor)
+        for definition in runtime.registry.definitions
+    } == {(1, 0)}
+    first_person = runtime.registry.resolve_latest("analysis.opening-first-person-indicator")
+    second_person = runtime.registry.resolve_latest("analysis.opening-second-person-indicator")
+    assert first_person.supported_languages.languages == ("en",)
+    assert second_person.supported_languages.languages == ("en",)
+    assert first_person.supported_languages.all_languages is False
 
 
 def test_identical_build_is_idempotent_and_incremental_build_reuses_documents() -> None:
