@@ -77,7 +77,7 @@ class ModelSettings(BaseModel):
     generation_model: str | None = Field(
         default=None,
         min_length=1,
-        description="Provider model identifier used for future generation workloads.",
+        description="Provider model identifier used for generation workloads.",
     )
     embedding_model: str | None = Field(
         default=None,
@@ -107,13 +107,13 @@ class ModelSettings(BaseModel):
         default=30.0,
         gt=0,
         le=300,
-        description="Upper bound for a future provider request.",
+        description="Upper bound for one provider request.",
     )
     max_retries: int = Field(
         default=3,
         ge=0,
         le=10,
-        description="Maximum retry count available to a future provider adapter.",
+        description="Maximum retry count available to the configured provider adapter.",
     )
 
     @model_validator(mode="after")
