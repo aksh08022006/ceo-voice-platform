@@ -2,15 +2,19 @@
 
 ## Runtime modes
 
-The release is a CLI package, not a continuously running web service. `ceo-voice doctor` is the
-startup/readiness check used by local setup and the container image. A scheduler may invoke build
-or onboarding commands as jobs; it must retain the workspace volume between retries.
+The release contains two process roles: governed CLI jobs build immutable knowledge releases, and a
+FastAPI process serves validated deployment bundles to the browser product. `ceo-voice doctor` is
+the CLI/container readiness check. A scheduler may invoke build or onboarding jobs and must retain
+their workspace between retries; the API must be restarted against a newly reviewed catalog to
+admit a new immutable profile deployment.
 
 | Mode | Configuration | Persistence | Intended use |
 |---|---|---|---|
 | Development | `configs/development.env` | local JSON/in-memory | engineering and inspection |
 | Offline demo | deterministic test configuration | `data/demo/` | wiring and regression evidence |
 | Production CLI | `configs/production.env` plus injected secrets | mounted workspace or organization adapter | governed batch jobs |
+| Showcase API | default development settings | in-process sessions, synthetic corpora | browser workflow and integration testing only |
+| Published API | validated bundle catalog plus model secrets | immutable profile files; in-process sessions | controlled single-instance review deployment |
 
 Do not put API keys in Compose files, manifests, logs, or images. Inject them with the deployment's
 secret manager. `SecretStr` prevents routine representation but does not make an exposed secret
@@ -47,6 +51,43 @@ safe after logging or serialization.
 
 Onboarding is idempotent for an unchanged content-addressed corpus. A changed corpus creates the next
 immutable release and retains predecessor lineage.
+
+## Published API runbook
+
+1. Package each approved leader as a `PublishedProfileBundle` containing the published HVM profile,
+   exact voice corpus, VKR release, exact structural analysis and corpus, profile lineage, and the
+   pinned feature registry. Keep source content in protected runtime storage rather than Git.
+2. Write a catalog beside those files using confined relative paths:
+
+   ```json
+   {"schema_version":"1.0","bundles":["ali-ghodsi.json","matei-zaharia.json"]}
+   ```
+
+3. Configure exact frontend origins, the catalog, and one supported provider through environment
+   variables or a secret manager:
+
+   ```bash
+   CEO_VOICE_APPLICATION__ENVIRONMENT=production
+   CEO_VOICE_LOGGING__FORMAT=json
+   CEO_VOICE_API__ALLOWED_ORIGINS='["https://voice.example.com"]'
+   CEO_VOICE_API__PUBLISHED_PROFILE_CATALOG=/srv/voice/catalog.json
+   CEO_VOICE_MODEL__ENABLED=true
+   CEO_VOICE_MODEL__PROVIDER=openai
+   CEO_VOICE_MODEL__GENERATION_MODEL=<approved-model-id>
+   CEO_VOICE_MODEL__API_KEY=<injected-secret>
+   .venv/bin/python -m uvicorn ceo_voice.api.app:app --host 0.0.0.0 --port 8000
+   ```
+
+4. Check `/api/v1/health`. A reviewed deployment reports `mode: "published"`, the configured
+   provider, and the exact number of loaded profiles. Treat `mode: "showcase"` as a failed
+   production rollout even when the endpoint is otherwise healthy.
+5. Point the frontend build at the API with `NEXT_PUBLIC_API_BASE_URL`. Validate Generate → Re-Voice
+   → Evaluation against a non-public review environment before routing external traffic.
+
+Catalog loading is fail-closed and content bounded. The reference session repository remains
+in-process; use one API instance for review or provide a durable tenant-aware repository before
+horizontal scaling. Model credentials must never appear in a bundle, report, prompt artifact, or
+frontend environment variable.
 
 ## Container operation
 

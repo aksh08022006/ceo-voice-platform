@@ -66,11 +66,11 @@ The detailed dependency rules and failure boundaries are in
 
 ## Quickstart
 
-Prerequisites: CPython 3.13, Git, and `make` on macOS/Linux.
+Prerequisites: CPython 3.13, Node.js 20+, Git, and `make` on macOS/Linux.
 
 ```bash
-git clone <repository-url>
-cd "VERY IMPORTANT TASK"
+git clone https://github.com/aksh08022006/ceo-voice-platform.git
+cd ceo-voice-platform
 make setup
 cp .env.example .env
 make doctor
@@ -78,8 +78,8 @@ make check-all
 ```
 
 `make check-all` runs the Python and frontend quality gates: Ruff, Black, strict mypy, pytest with
-branch coverage, ESLint, TypeScript, and a production Next.js build. It needs
-no model credential, database, Node.js runtime, or network service.
+branch coverage, ESLint, TypeScript, and a production Next.js build. It needs no model credential,
+database, or network service after the locked Python and Node dependencies are installed.
 
 ### Launch the product
 
@@ -177,6 +177,40 @@ adapters must use official APIs or authorized feeds behind the existing connecto
 The exact current inclusion/exclusion decision for X, LinkedIn, YouTube, Databricks, SEC EDGAR, and
 operator-provided exports is maintained in [Public Data and API Register](docs/PUBLIC_DATA_SOURCES.md).
 
+Convert a reviewed source catalog plus confined JSON/JSONL exports into the exact build manifest
+consumed by the profile engine:
+
+```bash
+ceo-voice prepare-corpus \
+  --manifest /approved/corpus-preparation.json \
+  --export-root /approved/exports \
+  --output ./data/runtime/profile-build-manifest.json \
+  --pretty
+```
+
+The adjacent `.preparation.json` report records every admitted, rejected, unchanged, and failed
+document without copying source content into logs. The command does not grant generation authority;
+it preserves the catalog authorization receipt so later review remains auditable.
+
+### Serve reviewed published profiles
+
+Production serving requires both a validated deployment catalog and an explicitly configured model
+provider. It fails closed if either is missing:
+
+```bash
+CEO_VOICE_API__PUBLISHED_PROFILE_CATALOG=./data/published/catalog.json \
+CEO_VOICE_MODEL__ENABLED=true \
+CEO_VOICE_MODEL__PROVIDER=openai \
+CEO_VOICE_MODEL__GENERATION_MODEL=<approved-model-id> \
+CEO_VOICE_MODEL__API_KEY=<injected-by-secret-manager> \
+make api
+```
+
+The catalog contains relative paths to self-validating `PublishedProfileBundle` files. Startup
+rejects path traversal, duplicate leaders, tenant or lineage mismatches, unpinned corpora, and
+cross-release assembly. In published mode, the API lists only those bundles and every generation
+uses their exact HVM, VKR, corpus snapshots, feature registry, and analysis artifacts.
+
 ## Demo and walkthroughs
 
 The Generate page includes three backend-served walkthroughs: an Ali Ghodsi AI feature launch, a
@@ -254,8 +288,10 @@ logs, and backwards-compatible release schemas.
 
 - Bundled JSON/in-memory workspaces are reference adapters for evaluation and single-node use, not
   a claim of horizontally scalable storage.
-- Provider adapters exist, but production HTTP transports, credential rotation, rate-limit
-  telemetry, and organization-specific safety review belong to deployment adapters.
+- OpenAI, Anthropic, and Gemini adapters use a pooled asynchronous HTTP transport with bounded
+  timeouts, retry classification, and provider-neutral reports. Credential rotation, organization
+  policy, provider allowlists, cost controls, and fleet-wide rate-limit telemetry remain deployment
+  responsibilities.
 - Tier-1 features are deterministic structural measurements. Calibrated stylometry, cohort
   baselines, nuisance controls, and real-person human evaluation remain required.
 - Virality statistics are descriptive associations, not causal claims or guaranteed tactics.
