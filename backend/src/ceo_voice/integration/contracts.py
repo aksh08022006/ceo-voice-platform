@@ -10,10 +10,11 @@ from ceo_voice.context import GenerationContext
 from ceo_voice.generation import GeneratedDraft
 from ceo_voice.generation.contracts import RenderedPrompt
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
-from ceo_voice.profiles import ProfileBuildManifest, PublishedVoiceProfile
+from ceo_voice.profiles import CuratedCorpus, ProfileBuildManifest, PublishedVoiceProfile
 from ceo_voice.retrieval import RetrievalBundle
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.virality import ViralityCorpus, ViralityProfile
+from ceo_voice.virality.contracts import CorpusAnalysis
 
 
 class IntegrationStage(StrEnum):
@@ -35,6 +36,20 @@ class IntegrationStatus(StrEnum):
 class IntegrationInput(ContractModel):
     run_id: UUID
     profile_manifest: ProfileBuildManifest
+    virality_corpus: ViralityCorpus
+    request: GenerationRequest
+    output_directory: Path
+    started_at: UtcDatetime
+
+
+class PublishedIntegrationInput(ContractModel):
+    """Pinned published artifacts required to serve without rebuilding knowledge releases."""
+
+    run_id: UUID
+    profile: PublishedVoiceProfile
+    profile_corpus: CuratedCorpus
+    virality_profile: ViralityProfile
+    virality_analysis: CorpusAnalysis
     virality_corpus: ViralityCorpus
     request: GenerationRequest
     output_directory: Path

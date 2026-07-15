@@ -6,6 +6,14 @@ The integration harness executes the real dependency chain and writes inspectabl
 
 `create_local_integration_runner` is the local composition root. It shares one VKR workspace between publication and evidence resolution, uses the production Tier-1 profile runtime, and injects one configured model provider. `IntegrationInput` is a fully pinned, JSON-loadable command; no environment-specific IDs or dates are invented during execution.
 
+Production request serving is a distinct path. `PublishedIntegrationRunner` accepts a
+`PublishedIntegrationInput` containing the active HVM profile, exact curated voice corpus, active
+VKR profile, content-addressed VKR analysis snapshot, exact structural corpus, and generation
+request. It begins at authorization and never invokes either builder. Before context compilation it
+verifies generation readiness and reconstructs the VKR analysis snapshot hash; evidence spans are
+then resolved against the exact clean documents and checked by checksum. This prevents a browser
+request from silently rebuilding or promoting knowledge.
+
 ## Artifacts and diagnostics
 
 Each run writes to `<output_directory>/<run_id>/`:
@@ -26,7 +34,10 @@ The outcome contains stage offsets and durations, corpus sizes, evidence and pro
 
 The unmodified Tier-1 builder deliberately publishes descriptive statistics. Its feature registry does not grant `GENERATE`, its components have `DESCRIPTIVE` authority, confidence placeholders are non-authoritative, and corpus health sets `generation_ready=false`. The harness therefore stops before context compilation with `profile_not_generation_ready`. This is correct fail-closed behavior—not an orchestration bug.
 
-The full-system regression also proves every downstream boundary using a test-only approval fixture that explicitly changes permissions, authority, and confidence. This fixture is conspicuously isolated under `tests/integration`; it is not exported, used by the production composition root, or represented as scientific validation.
+The full-system regression also proves every downstream boundary using a test-only approval fixture that explicitly changes permissions, authority, and confidence. It then serves a second request
+from those already-published artifacts and asserts that the timeline contains no profile or
+virality build stage. This fixture is conspicuously isolated under `tests/integration`; it is not
+exported, used by the production composition root, or represented as scientific validation.
 
 Production generation requires a separately governed profile-promotion milestone: calibrated confidence, nuisance robustness, distinctiveness evidence, and an auditable approval decision. The integration phase does not fabricate those claims.
 

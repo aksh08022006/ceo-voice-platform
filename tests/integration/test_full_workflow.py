@@ -20,6 +20,8 @@ from ceo_voice.generation.enums import ProviderName
 from ceo_voice.integration import (
     IntegrationInput,
     IntegrationRunner,
+    PublishedIntegrationInput,
+    PublishedIntegrationRunner,
     create_local_integration_runner,
 )
 from ceo_voice.integration.config import load_integration_input
@@ -432,3 +434,130 @@ def test_generated_draft_can_flow_through_human_edit_and_revoice(tmp_path: Path)
     (artifact_root / "evaluation-report.md").write_text(
         render_evaluation_report(evaluation), encoding="utf-8"
     )
+
+
+def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> None:
+    runtime = build_tier1_runtime()
+    registry = FeatureRegistry.build(
+        registry_id=runtime.registry.id,
+        version=runtime.registry.version,
+        definitions=tuple(
+            item.model_copy(
+                update={
+                    "downstream_permissions": (
+                        *item.downstream_permissions,
+                        DownstreamPermission.GENERATE,
+                    )
+                }
+            )
+            for item in runtime.registry.definitions
+        ),
+        created_at=runtime.registry.created_at,
+    )
+    virality_workspace = InMemoryViralityWorkspace()
+    provider = NeverCalledProvider()
+    policy = GenerationPolicy(
+        provider=ProviderName.OPENAI,
+        model="integration-model",
+        model_context_tokens=30_000,
+    )
+    budget = TokenBudgetManager(policy)
+    prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
+    builder_runner = IntegrationRunner(
+        profile_builder=cast(
+            VoiceProfileBuilder,
+            ApprovedFixtureBuilder(
+                create_tier1_profile_builder(workspace=InMemoryProfileWorkspace(), runtime=runtime),
+                registry,
+            ),
+        ),
+        virality_builder=create_virality_builder(workspace=virality_workspace),
+        virality_workspace=virality_workspace,
+        feature_registry=registry,
+        context_compiler=create_context_compiler(),
+        prompt_builder=prompts,
+        prompt_renderer=renderer,
+        generation_engine=GenerationEngine(
+            provider, prompts, renderer, OutputValidator(), policy=policy
+        ),
+    )
+    command = integration_input(tmp_path)
+    built = asyncio.run(builder_runner.run(command))
+    assert built.artifacts.voice_profile is not None
+    assert built.artifacts.virality_profile is not None
+    analysis = asyncio.run(
+        virality_workspace.get_analysis(
+            built.artifacts.virality_profile.publication.release.analysis_snapshot
+        )
+    )
+    assert analysis is not None
+
+    served = asyncio.run(
+        PublishedIntegrationRunner(
+            feature_registry=registry,
+            context_compiler=create_context_compiler(),
+            prompt_builder=prompts,
+            prompt_renderer=renderer,
+            generation_engine=GenerationEngine(
+                provider, prompts, renderer, OutputValidator(), policy=policy
+            ),
+        ).run(
+            PublishedIntegrationInput(
+                run_id=UUID(int=9002),
+                profile=built.artifacts.voice_profile,
+                profile_corpus=command.profile_manifest.corpus,
+                virality_profile=built.artifacts.virality_profile,
+                virality_analysis=analysis,
+                virality_corpus=command.virality_corpus,
+                request=command.request,
+                output_directory=tmp_path,
+                started_at=command.started_at,
+            )
+        )
+    )
+
+    assert served.status is IntegrationStatus.SUCCEEDED, served.failure
+    assert [item.stage for item in served.timeline] == [
+        IntegrationStage.AUTHORIZATION,
+        IntegrationStage.CONTEXT,
+        IntegrationStage.RETRIEVAL,
+        IntegrationStage.PROMPT,
+        IntegrationStage.GENERATION,
+    ]
+    assert served.artifacts.draft is not None
+    assert provider.calls == 2
+
+    unready = built.artifacts.voice_profile.model_copy(
+        update={
+            "corpus_health": built.artifacts.voice_profile.corpus_health.model_copy(
+                update={"generation_ready": False}
+            )
+        }
+    )
+    blocked = asyncio.run(
+        PublishedIntegrationRunner(
+            feature_registry=registry,
+            context_compiler=create_context_compiler(),
+            prompt_builder=prompts,
+            prompt_renderer=renderer,
+            generation_engine=GenerationEngine(
+                provider, prompts, renderer, OutputValidator(), policy=policy
+            ),
+        ).run(
+            PublishedIntegrationInput(
+                run_id=UUID(int=9003),
+                profile=unready,
+                profile_corpus=command.profile_manifest.corpus,
+                virality_profile=built.artifacts.virality_profile,
+                virality_analysis=analysis,
+                virality_corpus=command.virality_corpus,
+                request=command.request,
+                output_directory=tmp_path,
+                started_at=command.started_at,
+            )
+        )
+    )
+    assert blocked.status is IntegrationStatus.BLOCKED
+    assert blocked.failure is not None
+    assert blocked.failure.details["reason"] == "profile_not_generation_ready"
+    assert provider.calls == 2
