@@ -68,10 +68,42 @@ The detailed dependency rules and failure boundaries are in
 
 Prerequisites: CPython 3.13, Node.js 20+, Git, and `make` on macOS/Linux.
 
+### Run an existing checkout
+
+From the repository root, update the project, install both runtimes, create local configuration,
+and verify the complete backend and frontend:
+
+```bash
+git pull origin main
+make setup
+make frontend-setup
+cp .env.example .env
+make doctor
+make check-all
+```
+
+After the checks pass, start the API and frontend in two separate terminals:
+
+```bash
+# Terminal 1
+make api
+```
+
+```bash
+# Terminal 2
+make frontend-dev
+```
+
+Open `http://127.0.0.1:3000` for the product and `http://127.0.0.1:8000/api/docs` for the
+interactive API documentation. Keep both terminal processes running while testing.
+
+### Fresh clone
+
 ```bash
 git clone https://github.com/aksh08022006/ceo-voice-platform.git
 cd ceo-voice-platform
 make setup
+make frontend-setup
 cp .env.example .env
 make doctor
 make check-all
@@ -83,7 +115,7 @@ database, or network service after the locked Python and Node dependencies are i
 
 ### Launch the product
 
-Run these in separate terminals after `make setup` and `make frontend-setup`:
+Run these in separate terminals after completing the quickstart:
 
 ```bash
 make api
