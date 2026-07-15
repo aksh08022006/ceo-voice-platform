@@ -1,0 +1,75 @@
+{
+  "schema_version": "1.0",
+  "reviewed_at": "2026-07-15T00:00:00Z",
+  "assignment_policy": {
+    "public_only": true,
+    "authentication_allowed": false,
+    "payment_allowed": false,
+    "terms_bypass_allowed": false
+  },
+  "sources": [
+    {
+      "id": "x-api-v2",
+      "channel": "x",
+      "official_url": "https://docs.x.com/x-api/overview",
+      "access": "authenticated_pay_per_use",
+      "voice_role": "primary",
+      "current_use": "excluded",
+      "reason": "All endpoints require authentication and current read access is pay-per-use."
+    },
+    {
+      "id": "linkedin-posts-api",
+      "channel": "linkedin",
+      "official_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
+      "access": "oauth_restricted_permission",
+      "voice_role": "primary",
+      "current_use": "excluded",
+      "reason": "Member data requires OAuth and post retrieval permission is restricted to approved applications."
+    },
+    {
+      "id": "youtube-data-api-captions",
+      "channel": "youtube",
+      "official_url": "https://developers.google.com/youtube/v3/docs/captions/list",
+      "access": "oauth_content_owner",
+      "voice_role": "supplementary",
+      "current_use": "excluded",
+      "reason": "Caption listing and download require OAuth and sufficient content-owner permission."
+    },
+    {
+      "id": "databricks-event-archive",
+      "channel": "conference_talk",
+      "official_url": "https://www.databricks.com/dataaisummit/event-archive",
+      "access": "public_web_metadata",
+      "voice_role": "discovery_only",
+      "current_use": "catalog_only",
+      "reason": "First-party event metadata identifies speakers, but no speaker-attributed transcript is exposed for automatic ingestion."
+    },
+    {
+      "id": "matei-berkeley-homepage",
+      "channel": "authored_web_and_publications",
+      "official_url": "https://people.eecs.berkeley.edu/~matei/",
+      "access": "public_web",
+      "voice_role": "supplementary",
+      "current_use": "catalog_only",
+      "reason": "First-party identity and publication discovery; multi-author papers must not be treated as social voice."
+    },
+    {
+      "id": "sec-edgar-data-api",
+      "channel": "regulatory_filing",
+      "official_url": "https://www.sec.gov/search-filings/edgar-application-programming-interfaces",
+      "access": "public_api_no_key",
+      "voice_role": "supplementary",
+      "current_use": "not_applicable",
+      "reason": "The public API is admissible, but Databricks is private and does not provide public-company earnings-call filings for these leaders."
+    },
+    {
+      "id": "operator-reviewed-local-export",
+      "channel": "all_supported_sources",
+      "official_url": "https://github.com/aksh08022006/ceo-voice-platform/blob/main/docs/CORPUS_ACQUISITION.md",
+      "access": "authorized_export_or_manual_curation",
+      "voice_role": "primary_or_supplementary",
+      "current_use": "supported",
+      "reason": "The production import path for lawfully obtained post exports and speaker-attributed transcripts; every item must match a reviewed catalog entry."
+    }
+  ]
+}

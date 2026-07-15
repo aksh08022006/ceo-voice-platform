@@ -174,6 +174,8 @@ content-free authorization receipt. The matching synthetic catalog is at
 
 The repository intentionally does not include credentialless X/LinkedIn scraping. Network source
 adapters must use official APIs or authorized feeds behind the existing connector contract.
+The exact current inclusion/exclusion decision for X, LinkedIn, YouTube, Databricks, SEC EDGAR, and
+operator-provided exports is maintained in [Public Data and API Register](docs/PUBLIC_DATA_SOURCES.md).
 
 ## Demo and walkthroughs
 
