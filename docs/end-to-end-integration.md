@@ -14,6 +14,14 @@ verifies generation readiness and reconstructs the VKR analysis snapshot hash; e
 then resolved against the exact clean documents and checked by checksum. This prevents a browser
 request from silently rebuilding or promoting knowledge.
 
+Deployment packages use `PublishedProfileBundle`, a single validated contract containing the
+profile descriptor, complete published HVM, exact clean voice corpus, published VKR, exact VKR
+analysis, structural corpus, and matching feature registry. A small catalog contains only confined
+relative bundle paths. Startup loading rejects absolute/traversing paths, duplicate slugs,
+cross-tenant assembly, registry mismatches, lineage mismatches, and reconstructed analysis-snapshot
+hash mismatches. Raw acquisition data is still excluded; the clean evidence corpus is included
+because retrieval must verify every published span checksum without reading arbitrary source files.
+
 ## Artifacts and diagnostics
 
 Each run writes to `<output_directory>/<run_id>/`:

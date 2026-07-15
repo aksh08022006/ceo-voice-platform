@@ -35,6 +35,7 @@ from ceo_voice.profiles import (
 from ceo_voice.profiles.builder import VoiceProfileBuilder
 from ceo_voice.revoice import EditedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
+from ceo_voice.services import PublishedProfileBundle, load_published_profile_catalog
 from ceo_voice.virality import InMemoryViralityWorkspace, create_virality_builder
 from ceo_voice.voice import DecisionState, DownstreamPermission, FeatureRegistry
 from tests.unit.profiles.factories import manifest
@@ -491,6 +492,29 @@ def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> 
         )
     )
     assert analysis is not None
+    deployment = PublishedProfileBundle(
+        slug="integration-leader",
+        name=command.profile_manifest.corpus.identity.display_name,
+        role="Integration fixture",
+        summary="Pinned deployment bundle used only by the full-system regression.",
+        voice_profile=built.artifacts.voice_profile,
+        voice_corpus=command.profile_manifest.corpus,
+        virality_profile=built.artifacts.virality_profile,
+        virality_analysis=analysis,
+        virality_corpus=command.virality_corpus,
+        feature_registry=registry,
+    )
+    deployment_root = tmp_path / "deployment"
+    deployment_root.mkdir()
+    (deployment_root / "integration-leader.json").write_text(
+        deployment.model_dump_json(), encoding="utf-8"
+    )
+    catalog_path = deployment_root / "catalog.json"
+    catalog_path.write_text(
+        '{"schema_version":"1.0","bundles":["integration-leader.json"]}',
+        encoding="utf-8",
+    )
+    deployed = load_published_profile_catalog(catalog_path)[0]
 
     served = asyncio.run(
         PublishedIntegrationRunner(
@@ -504,11 +528,11 @@ def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> 
         ).run(
             PublishedIntegrationInput(
                 run_id=UUID(int=9002),
-                profile=built.artifacts.voice_profile,
-                profile_corpus=command.profile_manifest.corpus,
-                virality_profile=built.artifacts.virality_profile,
-                virality_analysis=analysis,
-                virality_corpus=command.virality_corpus,
+                profile=deployed.voice_profile,
+                profile_corpus=deployed.voice_corpus,
+                virality_profile=deployed.virality_profile,
+                virality_analysis=deployed.virality_analysis,
+                virality_corpus=deployed.virality_corpus,
                 request=command.request,
                 output_directory=tmp_path,
                 started_at=command.started_at,
