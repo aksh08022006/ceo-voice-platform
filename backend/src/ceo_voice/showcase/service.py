@@ -17,7 +17,7 @@ from ceo_voice.generation import (
     PromptRenderer,
     TokenBudgetManager,
 )
-from ceo_voice.generation.enums import ProviderName
+from ceo_voice.generation.ports import ModelProvider
 from ceo_voice.integration import IntegrationInput, IntegrationOutcome, IntegrationRunner
 from ceo_voice.models.enums import Platform
 from ceo_voice.profiles import (
@@ -53,9 +53,23 @@ class WorkflowSession:
 class ShowcaseWorkflowService:
     """Execute end-to-end local workflows without bypassing domain boundaries."""
 
-    def __init__(self, output_directory: Path | None = None) -> None:
+    def __init__(
+        self,
+        output_directory: Path | None = None,
+        *,
+        provider: ModelProvider | None = None,
+        model: str = "showcase-deterministic-v1",
+        model_context_tokens: int = 30_000,
+        maximum_output_tokens: int = 800,
+        maximum_provider_retries: int = 2,
+    ) -> None:
         self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
         self._sessions: dict[UUID, WorkflowSession] = {}
+        self._provider = provider
+        self._model = model
+        self._model_context_tokens = model_context_tokens
+        self._maximum_output_tokens = maximum_output_tokens
+        self._maximum_provider_retries = maximum_provider_retries
 
     async def generate(
         self,
@@ -83,7 +97,9 @@ class ShowcaseWorkflowService:
             audience="executive and technical readers",
             constraints=constraints,
         )
-        provider = ShowcaseProvider(self._draft(profile_slug, platform, idea, content_type))
+        provider = self._provider or ShowcaseProvider(
+            self._draft(profile_slug, platform, idea, content_type)
+        )
         runner = self._runner(provider)
         outcome = await runner.run(
             IntegrationInput(
@@ -116,10 +132,10 @@ class ShowcaseWorkflowService:
             content=edited_content,
             edited_at=session.outcome.completed_at,
         )
-        provider = ShowcaseProvider(self._restore(edited_content))
+        provider = self._provider or ShowcaseProvider(self._restore(edited_content))
         revoiced = await ReVoiceEngine(
             provider,
-            policy=ReVoicePolicy(provider=ProviderName.OPENAI, model="showcase-deterministic-v1"),
+            policy=ReVoicePolicy(provider=provider.name, model=self._model),
         ).restore(
             ReVoiceInput(
                 edited_draft=edited,
@@ -208,8 +224,7 @@ class ShowcaseWorkflowService:
         # A configured model adapter may propose changes inside the same sealed edit envelope.
         return content
 
-    @staticmethod
-    def _runner(provider: ShowcaseProvider) -> IntegrationRunner:
+    def _runner(self, provider: ModelProvider) -> IntegrationRunner:
         runtime = build_tier1_runtime()
         registry = FeatureRegistry.build(
             registry_id=runtime.registry.id,
@@ -234,9 +249,11 @@ class ShowcaseWorkflowService:
         )
         virality_workspace = InMemoryViralityWorkspace()
         policy = GenerationPolicy(
-            provider=ProviderName.OPENAI,
-            model="showcase-deterministic-v1",
-            model_context_tokens=30_000,
+            provider=provider.name,
+            model=self._model,
+            model_context_tokens=self._model_context_tokens,
+            maximum_output_tokens=self._maximum_output_tokens,
+            maximum_provider_retries=self._maximum_provider_retries,
         )
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)

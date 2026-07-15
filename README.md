@@ -92,8 +92,9 @@ make frontend-dev
 
 Open `http://127.0.0.1:3000`. The browser can select a showcase profile, generate, edit, Re-Voice,
 evaluate, and inspect every report. The local provider is deterministic and credential-free; the
-same engine boundaries accept a production provider adapter. API documentation is available at
-`http://127.0.0.1:8000/api/docs`.
+same workflow uses the configured OpenAI, Anthropic, or Gemini HTTP adapter when model access is
+explicitly enabled. This changes the provider, not the corpus authority: bundled named profiles
+remain synthetic demonstrations. API documentation is available at `http://127.0.0.1:8000/api/docs`.
 
 ### One-command offline demonstration
 

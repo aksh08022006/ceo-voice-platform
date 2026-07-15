@@ -29,6 +29,8 @@ def test_health_catalog_and_request_trace_are_available(tmp_path: Path) -> None:
     assert health.status_code == 200
     assert health.headers["X-Request-ID"] == "browser-test"
     assert health.json()["showcase_enabled"] is True
+    assert health.json()["model_enabled"] is False
+    assert health.json()["model_provider"] is None
     assert {item["slug"] for item in profiles.json()} == {
         "ali-ghodsi",
         "matei-zaharia",

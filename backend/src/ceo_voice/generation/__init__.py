@@ -6,6 +6,7 @@ from ceo_voice.generation.postprocessing import PostProcessor
 from ceo_voice.generation.prompting import PromptBuilder, PromptRenderer, TokenBudgetManager
 from ceo_voice.generation.providers import AnthropicProvider, GeminiProvider, OpenAIProvider
 from ceo_voice.generation.retry import RetryStrategy
+from ceo_voice.generation.transport import HttpxJsonTransport
 from ceo_voice.generation.validation import OutputValidator, ThreadGenerator
 
 __all__ = [
@@ -15,6 +16,7 @@ __all__ = [
     "GenerationEngine",
     "GenerationInput",
     "GenerationPolicy",
+    "HttpxJsonTransport",
     "OpenAIProvider",
     "OutputValidator",
     "PostProcessor",

@@ -83,6 +83,21 @@ class ModelSettings(BaseModel):
         default=None,
         description="Provider credential loaded only from an external configuration source.",
     )
+    base_url: str | None = Field(
+        default=None,
+        min_length=1,
+        description="Optional provider-compatible API base URL for controlled deployments.",
+    )
+    context_window_tokens: int = Field(
+        default=30_000,
+        ge=512,
+        description="Context window enforced by the prompt budget manager.",
+    )
+    maximum_output_tokens: int = Field(
+        default=800,
+        ge=32,
+        description="Maximum generated tokens requested from the provider.",
+    )
     request_timeout_seconds: float = Field(
         default=30.0,
         gt=0,
@@ -115,6 +130,8 @@ class ModelSettings(BaseModel):
         if missing:
             missing_fields = ", ".join(missing)
             raise ValueError(f"model access is enabled but fields are missing: {missing_fields}")
+        if self.maximum_output_tokens >= self.context_window_tokens:
+            raise ValueError("maximum output tokens must be smaller than the context window")
         return self
 
 

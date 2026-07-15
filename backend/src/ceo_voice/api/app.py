@@ -9,8 +9,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from ceo_voice.config import Settings, get_settings
-from ceo_voice.core.exceptions import ApplicationError
+from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
+from ceo_voice.generation import HttpxJsonTransport
+from ceo_voice.services import create_model_provider
 from ceo_voice.showcase import PROFILES, WALKTHROUGHS, ShowcaseWorkflowService
 from ceo_voice.showcase.catalog import profile_by_slug
 from ceo_voice.showcase.service import WorkflowSession
@@ -28,8 +30,9 @@ from .schemas import (
 )
 
 DISCLAIMER = (
-    "Showcase mode uses synthetic corpora and a deterministic local provider. "
-    "Named profiles demonstrate workflow behavior; they are not verified identity simulations."
+    "Showcase mode uses synthetic corpora. Model-disabled runs use a deterministic local provider; "
+    "model-enabled runs use the configured external provider. Named profiles demonstrate workflow "
+    "behavior and are not verified identity simulations."
 )
 
 
@@ -40,7 +43,24 @@ def create_app(
     """Create an isolated application with injected configuration and workflow service."""
 
     resolved = settings or get_settings()
-    workflows = service or ShowcaseWorkflowService()
+    transport: HttpxJsonTransport | None = None
+    if service is not None:
+        workflows = service
+    elif resolved.model.enabled:
+        if resolved.model.generation_model is None:
+            raise ConfigurationError("enabled model configuration has no generation model")
+        transport = HttpxJsonTransport(
+            timeout_seconds=resolved.model.request_timeout_seconds,
+        )
+        workflows = ShowcaseWorkflowService(
+            provider=create_model_provider(resolved.model, transport),
+            model=resolved.model.generation_model,
+            model_context_tokens=resolved.model.context_window_tokens,
+            maximum_output_tokens=resolved.model.maximum_output_tokens,
+            maximum_provider_retries=resolved.model.max_retries,
+        )
+    else:
+        workflows = ShowcaseWorkflowService()
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -50,6 +70,8 @@ def create_app(
             service_name=resolved.application.service_name,
         )
         yield
+        if transport is not None:
+            await transport.aclose()
 
     application = FastAPI(
         title="CEO Voice Platform API",
@@ -88,6 +110,8 @@ def create_app(
             status="ok",
             service=resolved.application.service_name,
             showcase_enabled=resolved.api.showcase_enabled,
+            model_enabled=resolved.model.enabled,
+            model_provider=resolved.model.provider if resolved.model.enabled else None,
         )
 
     @application.get("/api/v1/profiles", response_model=tuple[ProfileResponse, ...])

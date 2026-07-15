@@ -59,8 +59,25 @@ CEO_VOICE_MODEL__ENABLED=false
 ```
 
 When a deployment enables model access, all of `PROVIDER`, `GENERATION_MODEL`, and `API_KEY` become
-required. Model names are configuration, not constants in source code. The bundled offline demo
-uses deterministic fixture providers and never reads a credential.
+required. Supported provider values are `openai`, `anthropic`, and `gemini`. Model names, context
+windows, output limits, retry counts, request timeouts, and optional compatible base URLs are
+configuration—not constants in source code. The API constructs one pooled async transport and
+closes it during application shutdown. The bundled offline demo uses deterministic fixture
+providers and never reads a credential.
+
+```text
+CEO_VOICE_MODEL__ENABLED=true
+CEO_VOICE_MODEL__PROVIDER=openai
+CEO_VOICE_MODEL__GENERATION_MODEL=<approved-model-id>
+CEO_VOICE_MODEL__API_KEY=<injected-secret>
+CEO_VOICE_MODEL__CONTEXT_WINDOW_TOKENS=30000
+CEO_VOICE_MODEL__MAXIMUM_OUTPUT_TOKENS=800
+CEO_VOICE_MODEL__REQUEST_TIMEOUT_SECONDS=30
+CEO_VOICE_MODEL__MAX_RETRIES=3
+```
+
+Do not enable model access merely to bypass profile readiness. The browser showcase still labels
+its named profiles as synthetic until a reviewed corpus and published production profile are wired.
 
 Environment policies:
 

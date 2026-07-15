@@ -12,6 +12,7 @@ license = "LicenseRef-Proprietary"
 authors = [{ name = "CEO Voice Platform Engineering" }]
 dependencies = [
     "fastapi>=0.116,<1",
+    "httpx>=0.28,<1",
     "pydantic>=2.12,<3",
     "pydantic-settings>=2.14,<3",
     "uvicorn[standard]>=0.35,<1",

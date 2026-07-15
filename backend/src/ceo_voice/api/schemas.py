@@ -92,3 +92,5 @@ class HealthResponse(BaseModel):
     status: str
     service: str
     showcase_enabled: bool
+    model_enabled: bool
+    model_provider: str | None = None

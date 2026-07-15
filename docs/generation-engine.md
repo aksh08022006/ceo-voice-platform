@@ -12,7 +12,16 @@ The token manager reserves all instructions, voice and structure targets, output
 
 `ModelProvider` is the application port. OpenAI, Anthropic, and Gemini adapters translate the same provider-neutral request through an injected JSON transport. Provider credentials never enter reports or prompt contracts. The adapters follow the providers' documented text-generation APIs: [OpenAI Responses](https://developers.openai.com/api/docs/guides/text), [Anthropic Messages](https://platform.claude.com/docs/en/api/messages), and [Gemini generateContent](https://ai.google.dev/api/generate-content).
 
-No vendor SDK type crosses the adapter boundary. A production transport owns HTTP timeouts, connection pooling, status-code mapping, rate-limit parsing, and secret-safe telemetry.
+No vendor SDK type crosses the adapter boundary. `HttpxJsonTransport` now provides the production
+HTTP implementation: a reusable async connection pool, bounded timeouts, redirect refusal,
+retry-aware status classification, object-only JSON validation, and content-free errors. It never
+copies provider response bodies or authorization headers into diagnostics. Application composition
+selects the adapter from validated settings; domain engines still depend only on `ModelProvider`.
+
+When model access is enabled, Generation and Re-Voice use the configured adapter. Model-disabled
+showcase runs retain the deterministic provider so installation and orchestration can be tested
+without credentials. Enabling a provider changes model execution only; it does not promote a
+synthetic or unreviewed voice profile to verified real-person evidence.
 
 ## Validation and retries
 

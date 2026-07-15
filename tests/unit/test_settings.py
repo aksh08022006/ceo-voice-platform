@@ -79,5 +79,17 @@ def test_enabled_model_configuration_keeps_api_key_secret() -> None:
     assert model.api_key.get_secret_value() == "not-a-real-key"
 
 
+def test_enabled_model_configuration_validates_token_budget() -> None:
+    with pytest.raises(ValidationError, match="smaller than the context window"):
+        ModelSettings(
+            enabled=True,
+            provider="openai",
+            generation_model="model",
+            api_key=SecretStr("secret"),
+            context_window_tokens=512,
+            maximum_output_tokens=512,
+        )
+
+
 def test_get_settings_is_cached() -> None:
     assert get_settings() is get_settings()
