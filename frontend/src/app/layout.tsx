@@ -28,6 +28,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html
       className={`${inter.variable} ${interTight.variable} ${jetbrains.variable}`}
+      data-scroll-behavior="smooth"
       lang="en"
       suppressHydrationWarning
     >
