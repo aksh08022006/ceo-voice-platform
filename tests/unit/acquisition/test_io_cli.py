@@ -98,17 +98,55 @@ def test_cli_accepts_explicit_discovery_policy(
 
 
 @pytest.mark.parametrize(
-    ("filename", "leader_name"),
+    ("filename", "leader_name", "required_source_ids"),
     (
-        ("ali-ghodsi.discovery.json", "Ali Ghodsi"),
-        ("matei-zaharia.discovery.json", "Matei Zaharia"),
+        (
+            "ali-ghodsi.discovery.json",
+            "Ali Ghodsi",
+            {
+                "ali-databricks-speaker-page",
+                "ali-x-profile",
+                "ali-linkedin-profile",
+                "ali-stanford-ecorner-2024-transcript",
+            },
+        ),
+        (
+            "matei-zaharia.discovery.json",
+            "Matei Zaharia",
+            {
+                "matei-databricks-speaker-page",
+                "matei-berkeley-homepage",
+                "matei-x-profile",
+                "matei-linkedin-profile",
+                "matei-acm-bytecast-episode-32-transcript",
+            },
+        ),
     ),
 )
 def test_committed_discovery_catalogs_remain_valid_and_honestly_unready(
     filename: str,
     leader_name: str,
+    required_source_ids: set[str],
 ) -> None:
     manifest = load_source_catalog(Path("configs/source-catalogs") / filename)
 
     assert manifest.leader_name == leader_name
+    assert {entry.source_id for entry in manifest.entries} == required_source_ids
     assert all(not entry.eligible_for_voice_analysis for entry in manifest.entries)
+    assert all(entry.review_status is SourceReviewStatus.PENDING for entry in manifest.entries)
+
+
+def test_public_data_register_keeps_unlicensed_sources_out_of_training() -> None:
+    register = json.loads(Path("configs/public-data-source-register.json").read_text())
+    sources = {source["id"]: source for source in register["sources"]}
+
+    for source_id in (
+        "x-oembed",
+        "stanford-ecorner-transcripts",
+        "acm-bytecast-transcripts",
+    ):
+        assert sources[source_id]["current_use"] == "excluded"
+        assert sources[source_id]["voice_role"] in {"discovery_only", "supplementary"}
+
+    assert sources["databricks-event-archive"]["current_use"] == "catalog_only"
+    assert "terms_url" in sources["databricks-event-archive"]

@@ -11,6 +11,12 @@ A public URL is not, by itself, permission to scrape or evidence of authorship. 
 catalog therefore contains URLs and governance metadata only. Source text, transcripts, exports,
 and fingerprints tied to retained content live in the ignored, access-controlled data workspace.
 
+HTTP accessibility, `robots.txt`, an embed endpoint, and a visible download button are discovery
+signals—not analytical reuse grants. Before approval, the reviewer must record the controlling
+terms or license and confirm that it permits retention and the intended model-analysis workflow.
+Where publisher terms and an older license link conflict or the license target is unavailable, the
+entry remains pending.
+
 ## Workflow
 
 ```text
@@ -52,6 +58,8 @@ An entry is eligible for voice acquisition only when all of the following hold:
 - a human reviewer approved it and the manifest records that reviewer;
 - authorship is supported by a first-party account, named byline, or verified speaker segment;
 - acquisition does not bypass authentication or payment;
+- the controlling terms, license, account authorization, or written permission allow retention and
+  analytical use; public display permission alone is insufficient;
 - the entry is explicitly marked eligible for voice analysis;
 - a publication timestamp is available for drift and recency analysis;
 - the content role is primary or supplementary voice, not factual context.

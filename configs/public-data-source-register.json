@@ -18,6 +18,15 @@
       "reason": "All endpoints require authentication and current read access is pay-per-use."
     },
     {
+      "id": "x-oembed",
+      "channel": "x",
+      "official_url": "https://docs.x.com/x-for-websites/oembed-api",
+      "access": "public_display_endpoint_no_authentication",
+      "voice_role": "discovery_only",
+      "current_use": "excluded",
+      "reason": "oEmbed is an official rendering mechanism for known post URLs, not a historical post API or a license to analyze user content. X states that permission from the original creator may still be required."
+    },
+    {
       "id": "linkedin-posts-api",
       "channel": "linkedin",
       "official_url": "https://learn.microsoft.com/en-us/linkedin/marketing/community-management/shares/posts-api",
@@ -42,7 +51,28 @@
       "access": "public_web_metadata",
       "voice_role": "discovery_only",
       "current_use": "catalog_only",
-      "reason": "First-party event metadata identifies speakers, but no speaker-attributed transcript is exposed for automatic ingestion."
+      "terms_url": "https://www.databricks.com/legal/terms-of-use",
+      "reason": "First-party event metadata identifies speakers, but no speaker-attributed transcript is exposed for automatic ingestion. Databricks terms prohibit scraper, crawler, automated acquisition, data-mining, and systematic database collection, so these pages are never scraped."
+    },
+    {
+      "id": "stanford-ecorner-transcripts",
+      "channel": "interview_transcript",
+      "official_url": "https://ecorner.stanford.edu/wp-content/uploads/sites/2/2024/05/lessons-from-a-large-founding-team-entire-talk-transcript.pdf",
+      "access": "public_download_reuse_permission_unresolved",
+      "voice_role": "supplementary",
+      "current_use": "excluded",
+      "terms_url": "https://www.stanford.edu/terms",
+      "reason": "The Ali Ghodsi transcript is downloadable, but its interviewer and speaker turns require verified segmentation. An older STVP article links a Creative Commons license that now returns 404; current Stanford terms limit downloads to personal, non-commercial use, so the transcript is not admitted without written or machine-verifiable license confirmation."
+    },
+    {
+      "id": "acm-bytecast-transcripts",
+      "channel": "podcast_transcript",
+      "official_url": "https://learning.acm.org/bytecast/ep32-matei-zaharia",
+      "access": "public_download_reuse_permission_unresolved",
+      "voice_role": "supplementary",
+      "current_use": "excluded",
+      "terms_url": "https://www.acm.org/publications/policies/usage-old",
+      "reason": "The Matei Zaharia transcript has explicit speaker labels and a public download, but ACM restricts copying and automated collection and requires permission for republication or redistribution. It remains catalog-only until the operator records permission for analytical use."
     },
     {
       "id": "matei-berkeley-homepage",
