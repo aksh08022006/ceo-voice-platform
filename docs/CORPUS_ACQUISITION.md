@@ -84,8 +84,15 @@ interface. The decorator checks:
 
 Successful items receive an `authorization_receipt` in provider-neutral metadata. The receipt
 contains no source text. It records the catalog entry, schema, acquisition method, authorship basis,
-evidence role, review identity, and observed content hash. The normal ingestion pipeline preserves
-this receipt through raw and clean storage, making later curation and release decisions traceable.
+evidence role, analytical reuse permission basis, review identity, and observed content hash. The
+normal ingestion pipeline preserves this receipt through raw and clean storage, making later
+curation and release decisions traceable.
+
+`reuse_permission_basis` is mandatory for every voice-eligible record. Accepted values distinguish
+account authorization, a provider agreement, an explicit license, written permission, public-domain
+material, and synthetic fixtures. `unknown` fails both catalog audit and item authorization. Optional
+`terms_url` and `license_url` fields pin the evidence reviewed for that decision without storing
+publisher content in Git.
 
 `LocalExportConnector` exposes `catalog_source_id` as a typed top-level export field and rejects
 attempts to forge reserved governance keys inside free-form metadata. The synthetic pair at

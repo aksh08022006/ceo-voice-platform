@@ -9,6 +9,7 @@ from ceo_voice.acquisition import (
     CorpusAcquisitionAuditor,
     CorpusAcquisitionPolicy,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceCatalogEntry,
     SourceCatalogManifest,
     SourceReviewStatus,
@@ -37,6 +38,7 @@ def _entry(
         "authorship_basis": AuthorshipBasis.FIRST_PARTY_ACCOUNT,
         "content_role": CorpusContentRole.PRIMARY_VOICE,
         "eligible_for_voice_analysis": True,
+        "reuse_permission_basis": ReusePermissionBasis.ACCOUNT_AUTHORIZATION,
         "access_notes": "Authorized account export supplied by the operator.",
     }
     values.update(updates)
@@ -74,6 +76,7 @@ def test_balanced_reviewed_catalog_is_acquisition_ready() -> None:
 def test_audit_exposes_access_attribution_duplicate_and_coverage_failures() -> None:
     pending = _entry(1, Platform.X, review_status=SourceReviewStatus.PENDING)
     unknown = _entry(2, Platform.X, authorship_basis=AuthorshipBasis.UNKNOWN)
+    unlicensed = _entry(7, Platform.X, reuse_permission_basis=ReusePermissionBasis.UNKNOWN)
     authenticated = _entry(3, Platform.X, requires_authentication=True)
     paid = _entry(4, Platform.X, requires_payment=True)
     context = _entry(5, Platform.X, content_role=CorpusContentRole.FACTUAL_CONTEXT)
@@ -87,7 +90,15 @@ def test_audit_exposes_access_attribution_duplicate_and_coverage_failures() -> N
 
     report = CorpusAcquisitionAuditor().audit(
         _manifest(
-            pending, unknown, authenticated, paid, context, undated, duplicate, reviewed=False
+            pending,
+            unknown,
+            unlicensed,
+            authenticated,
+            paid,
+            context,
+            undated,
+            duplicate,
+            reviewed=False,
         ),
         audited_at=NOW,
     )
@@ -100,6 +111,7 @@ def test_audit_exposes_access_attribution_duplicate_and_coverage_failures() -> N
     assert {
         "source_not_approved",
         "unknown_authorship",
+        "reuse_permission_missing",
         "authentication_required",
         "payment_required",
         "context_marked_as_voice",

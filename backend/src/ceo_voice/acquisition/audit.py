@@ -15,6 +15,7 @@ from ceo_voice.acquisition.enums import (
     AuditSeverity,
     AuthorshipBasis,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceReviewStatus,
 )
 from ceo_voice.models.enums import Platform
@@ -118,6 +119,7 @@ class CorpusAcquisitionAuditor:
             and not entry.requires_authentication
             and not entry.requires_payment
             and entry.authorship_basis is not AuthorshipBasis.UNKNOWN
+            and entry.reuse_permission_basis is not ReusePermissionBasis.UNKNOWN
             and entry.content_role is not CorpusContentRole.FACTUAL_CONTEXT
             and (entry.publication_date is not None or not self._policy.require_publication_dates)
         )
@@ -151,6 +153,18 @@ class CorpusAcquisitionAuditor:
                         "unknown_authorship",
                         AuditSeverity.BLOCKING,
                         "Voice evidence requires attributable authorship or speech.",
+                        (entry,),
+                    )
+                )
+            if (
+                entry.eligible_for_voice_analysis
+                and entry.reuse_permission_basis is ReusePermissionBasis.UNKNOWN
+            ):
+                findings.append(
+                    _finding(
+                        "reuse_permission_missing",
+                        AuditSeverity.BLOCKING,
+                        "Voice evidence requires a recorded analytical reuse permission basis.",
                         (entry,),
                     )
                 )

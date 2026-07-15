@@ -21,6 +21,7 @@ from ceo_voice.acquisition.enums import (
     AuditSeverity,
     AuthorshipBasis,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceReviewStatus,
 )
 from ceo_voice.acquisition.io import load_source_catalog
@@ -40,6 +41,7 @@ __all__ = [
     "CorpusAcquisitionReport",
     "CorpusAuditFinding",
     "CorpusContentRole",
+    "ReusePermissionBasis",
     "SourceCatalogEntry",
     "SourceCatalogManifest",
     "SourceReviewStatus",

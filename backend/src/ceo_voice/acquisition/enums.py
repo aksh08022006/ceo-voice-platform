@@ -21,6 +21,18 @@ class SourceReviewStatus(StrEnum):
     REJECTED = "rejected"
 
 
+class ReusePermissionBasis(StrEnum):
+    """Recorded authority for retaining and analyzing source content."""
+
+    UNKNOWN = "unknown"
+    ACCOUNT_AUTHORIZATION = "account_authorization"
+    PROVIDER_AGREEMENT = "provider_agreement"
+    EXPLICIT_LICENSE = "explicit_license"
+    WRITTEN_PERMISSION = "written_permission"
+    PUBLIC_DOMAIN = "public_domain"
+    SYNTHETIC = "synthetic"
+
+
 class AuthorshipBasis(StrEnum):
     """Evidence supporting attribution of words to the target leader."""
 

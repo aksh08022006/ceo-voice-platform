@@ -16,6 +16,7 @@ from ceo_voice.acquisition import (
     CatalogAuthorizedConnector,
     CatalogItemAuthorizer,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceCatalogEntry,
     SourceCatalogManifest,
     SourceReviewStatus,
@@ -61,6 +62,7 @@ def _entry(**updates: object) -> SourceCatalogEntry:
         "authorship_basis": AuthorshipBasis.FIRST_PARTY_ACCOUNT,
         "content_role": CorpusContentRole.PRIMARY_VOICE,
         "eligible_for_voice_analysis": True,
+        "reuse_permission_basis": ReusePermissionBasis.ACCOUNT_AUTHORIZATION,
         "access_notes": "Account-authorized export.",
         "content_fingerprint": sha256_bytes(CONTENT),
         "captured_at": NOW,
@@ -113,6 +115,7 @@ def test_authorizer_attaches_content_free_review_receipt() -> None:
     assert receipt["source_id"] == "catalog-post-1"
     assert receipt["content_sha256"] == sha256_bytes(CONTENT)
     assert receipt["content_role"] == "primary_voice"
+    assert receipt["reuse_permission_basis"] == "account_authorization"
     assert "raw_content" not in receipt
 
 
@@ -204,6 +207,11 @@ def test_committed_catalog_and_export_execute_the_authorized_import_contract() -
         (_manifest(_entry(requires_authentication=True)), _item(), "access boundary"),
         (_manifest(_entry(requires_payment=True)), _item(), "access boundary"),
         (_manifest(_entry(authorship_basis=AuthorshipBasis.UNKNOWN)), _item(), "authorship"),
+        (
+            _manifest(_entry(reuse_permission_basis=ReusePermissionBasis.UNKNOWN)),
+            _item(),
+            "reuse permission",
+        ),
         (
             _manifest(_entry(content_role=CorpusContentRole.FACTUAL_CONTEXT)),
             _item(),

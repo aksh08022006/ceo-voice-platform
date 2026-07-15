@@ -11,6 +11,7 @@ from ceo_voice.acquisition.enums import (
     AuditSeverity,
     AuthorshipBasis,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceReviewStatus,
 )
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
@@ -39,6 +40,9 @@ class SourceCatalogEntry(ContractModel):
     requires_authentication: bool = False
     requires_payment: bool = False
     eligible_for_voice_analysis: bool = False
+    reuse_permission_basis: ReusePermissionBasis = ReusePermissionBasis.UNKNOWN
+    terms_url: HttpUrl | None = None
+    license_url: HttpUrl | None = None
     attribution_notes: NonEmptyStr | None = None
     access_notes: NonEmptyStr
     content_fingerprint: NonEmptyStr | None = Field(
@@ -91,6 +95,7 @@ class AuthorizedImportReceipt(ContractModel):
     acquisition_method: AcquisitionMethod
     authorship_basis: AuthorshipBasis
     content_role: CorpusContentRole
+    reuse_permission_basis: ReusePermissionBasis
     content_sha256: NonEmptyStr = Field(pattern=r"^[a-f0-9]{64}$")
     reviewed_at: UtcDatetime | None
     reviewer_id: UUID | None

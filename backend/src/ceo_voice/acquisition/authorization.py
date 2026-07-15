@@ -13,6 +13,7 @@ from ceo_voice.acquisition.contracts import (
 from ceo_voice.acquisition.enums import (
     AuthorshipBasis,
     CorpusContentRole,
+    ReusePermissionBasis,
     SourceReviewStatus,
 )
 from ceo_voice.core.exceptions import DataIngestionError
@@ -81,6 +82,7 @@ class CatalogItemAuthorizer:
             acquisition_method=entry.acquisition_method,
             authorship_basis=entry.authorship_basis,
             content_role=entry.content_role,
+            reuse_permission_basis=entry.reuse_permission_basis,
             content_sha256=content_sha256,
             reviewed_at=self._manifest.reviewed_at,
             reviewer_id=self._manifest.reviewer_id,
@@ -126,6 +128,12 @@ class CatalogItemAuthorizer:
             )
         if entry.authorship_basis is AuthorshipBasis.UNKNOWN:
             self._reject("Catalog entry has no supported authorship basis.", item, entry.source_id)
+        if entry.reuse_permission_basis is ReusePermissionBasis.UNKNOWN:
+            self._reject(
+                "Catalog entry has no analytical reuse permission basis.",
+                item,
+                entry.source_id,
+            )
         if entry.content_role is CorpusContentRole.FACTUAL_CONTEXT:
             self._reject("Factual context cannot enter the voice corpus.", item, entry.source_id)
         if item.source is not entry.source:
