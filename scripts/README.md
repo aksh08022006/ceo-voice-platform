@@ -23,7 +23,7 @@ scripts:
 - `make doctor` validates installation and configuration;
 - `make demo` runs the offline profile-to-evaluation fixture and retains artifacts;
 - `make benchmark` verifies deterministic benchmark and regression behavior;
-- `ceo-voice build|onboard` runs the durable product workflows.
+- `ceo-voice prepare-corpus|build|onboard` runs the governed product workflows.
 
 Keeping orchestration in the installed package ensures containers, CI, and local environments use
 the same implementation. Add a script only when an operation cannot be represented by those public

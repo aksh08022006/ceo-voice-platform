@@ -33,6 +33,12 @@ from ceo_voice.profiles.onboarding import (
     write_onboarding_report,
 )
 from ceo_voice.profiles.ports import NullProgressSink, ProfileWorkspace, ProgressSink
+from ceo_voice.profiles.preparation import (
+    CorpusImportSource,
+    CorpusPreparationManifest,
+    CorpusPreparationResult,
+    CorpusPreparationService,
+)
 from ceo_voice.profiles.tier1 import Tier1Runtime, build_tier1_runtime
 from ceo_voice.profiles.workspace import InMemoryProfileWorkspace, JsonProfileWorkspace
 
@@ -44,7 +50,11 @@ __all__ = [
     "CorpusHealthIssue",
     "CorpusHealthReport",
     "CorpusHealthStatus",
+    "CorpusImportSource",
     "CorpusObservationBatch",
+    "CorpusPreparationManifest",
+    "CorpusPreparationResult",
+    "CorpusPreparationService",
     "CuratedCorpus",
     "CuratedDocument",
     "DocumentAnalysisFailure",

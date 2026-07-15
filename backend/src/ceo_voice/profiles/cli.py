@@ -26,6 +26,7 @@ from ceo_voice.profiles.onboarding import (
     OnboardingManifest,
     write_onboarding_report,
 )
+from ceo_voice.profiles.preparation import CorpusPreparationManifest, CorpusPreparationService
 from ceo_voice.profiles.workspace import JsonProfileWorkspace
 from ceo_voice.utils.files import read_text_limited
 from ceo_voice.virality import JsonViralityWorkspace, create_virality_builder
@@ -90,6 +91,22 @@ def build_parser() -> argparse.ArgumentParser:
     )
     audit.add_argument("--output", type=Path, help="Optional path receiving the audit report JSON.")
     audit.add_argument("--pretty", action="store_true", help="Pretty-print the report JSON.")
+    prepare = commands.add_parser(
+        "prepare-corpus",
+        help="Authorize reviewed exports and produce a profile-build manifest.",
+    )
+    prepare.add_argument(
+        "--manifest", type=Path, required=True, help="CorpusPreparationManifest JSON."
+    )
+    prepare.add_argument(
+        "--export-root",
+        type=Path,
+        required=True,
+        help="Confined directory containing private JSON/JSONL source exports.",
+    )
+    prepare.add_argument(
+        "--output", type=Path, required=True, help="Destination ProfileBuildManifest JSON."
+    )
     commands.add_parser("doctor", help="Validate runtime configuration and package installation.")
     return parser
 
@@ -165,6 +182,33 @@ def _run_audit_corpus(args: argparse.Namespace) -> int:
     return 0 if report.acquisition_ready else 3
 
 
+async def _run_prepare_corpus(args: argparse.Namespace) -> int:
+    """Convert reviewed exports into clean, authorized profile input."""
+
+    manifest = CorpusPreparationManifest.model_validate_json(
+        read_text_limited(args.manifest, max_bytes=_MAX_MANIFEST_BYTES)
+    )
+    result = await CorpusPreparationService(args.export_root).prepare(manifest)
+    output = args.output.expanduser().resolve()
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output.write_text(result.profile_manifest.model_dump_json(indent=2), encoding="utf-8")
+    report_path = output.with_suffix(".preparation.json")
+    report_path.write_text(result.model_dump_json(indent=2), encoding="utf-8")
+    print(
+        json.dumps(
+            {
+                "profile_manifest": str(output),
+                "preparation_report": str(report_path),
+                "documents": len(result.profile_manifest.corpus.documents),
+                "sources": len(result.ingestion_runs),
+                "rejected": sum(item.rejected_count for item in result.ingestion_runs),
+            },
+            separators=(",", ":"),
+        )
+    )
+    return 0
+
+
 def _run_doctor() -> int:
     """Check configuration and emit a container-compatible health result."""
 
@@ -201,6 +245,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return asyncio.run(_run_onboard(args))
         if args.command == "audit-corpus":
             return _run_audit_corpus(args)
+        if args.command == "prepare-corpus":
+            return asyncio.run(_run_prepare_corpus(args))
         if args.command == "doctor":
             return _run_doctor()
     except ValidationError as exc:

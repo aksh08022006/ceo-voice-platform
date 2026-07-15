@@ -85,6 +85,26 @@ attempts to forge reserved governance keys inside free-form metadata. The synthe
 [`data/examples/local-export.jsonl`](../data/examples/local-export.jsonl) demonstrates the matching
 contract. Production adapters use the same decorator; only their transport implementation changes.
 
+## Preparing a profile build
+
+`ceo-voice prepare-corpus` is the executable bridge between authorized exports and the profile
+builder. Its manifest pins the reviewed source catalog, governed voice identity, stable profile
+lineage, one confined export per source family, and the modality assigned to those records. The
+command runs every record through authorization, raw retention, cleaning, normalization,
+validation, and metadata extraction, then writes both a `ProfileBuildManifest` and a preparation
+report containing every ingestion outcome.
+
+```bash
+ceo-voice prepare-corpus \
+  --manifest data/runtime/ali/preparation-manifest.json \
+  --export-root data/runtime/ali/exports \
+  --output data/runtime/ali/profile-build-manifest.json
+```
+
+The source export remains the operator-controlled raw artifact. The emitted profile manifest
+contains clean documents and immutable raw checksums, but no provider credentials. Rejected or
+unauthorized items never enter the curated corpus and remain visible in the preparation report.
+
 The fingerprint policy defaults to migration-compatible mode: if a reviewed fingerprint exists it
 must match, while a missing fingerprint is allowed for a first authorized capture. High-assurance
 imports set `require_catalog_fingerprint=true`, which rejects every entry without a pre-reviewed
