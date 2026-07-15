@@ -22,6 +22,11 @@ cross-tenant assembly, registry mismatches, lineage mismatches, and reconstructe
 hash mismatches. Raw acquisition data is still excluded; the clean evidence corpus is included
 because retrieval must verify every published span checksum without reading arbitrary source files.
 
+Set `CEO_VOICE_API__PUBLISHED_PROFILE_CATALOG` to that catalog to activate production serving.
+The API validates every bundle at startup, lists only deployed profiles, and routes requests through
+`PublishedIntegrationRunner`. This mode fails configuration unless an external model provider is
+enabled; the deterministic showcase provider is never used with published identity artifacts.
+
 ## Artifacts and diagnostics
 
 Each run writes to `<output_directory>/<run_id>/`:

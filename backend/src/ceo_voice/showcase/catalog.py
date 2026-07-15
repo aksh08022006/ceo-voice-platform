@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True, slots=True)
 class ShowcaseProfile:
-    """A selectable synthetic demonstration profile."""
+    """A selectable browser profile projection, independent of its artifact source."""
 
     slug: str
     name: str

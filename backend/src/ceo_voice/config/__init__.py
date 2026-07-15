@@ -1,6 +1,7 @@
 """Validated application configuration."""
 
 from ceo_voice.config.settings import (
+    ApiSettings,
     ApplicationSettings,
     LoggingSettings,
     ModelSettings,
@@ -11,6 +12,7 @@ from ceo_voice.config.settings import (
 )
 
 __all__ = [
+    "ApiSettings",
     "ApplicationSettings",
     "LoggingSettings",
     "ModelSettings",

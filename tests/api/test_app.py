@@ -2,10 +2,12 @@
 
 from pathlib import Path
 
+import pytest
 from fastapi.testclient import TestClient
 
 from ceo_voice.api import create_app
-from ceo_voice.config import Settings
+from ceo_voice.config import ApiSettings, Settings
+from ceo_voice.core.exceptions import ConfigurationError
 from ceo_voice.showcase import ShowcaseWorkflowService
 
 
@@ -31,6 +33,8 @@ def test_health_catalog_and_request_trace_are_available(tmp_path: Path) -> None:
     assert health.json()["showcase_enabled"] is True
     assert health.json()["model_enabled"] is False
     assert health.json()["model_provider"] is None
+    assert health.json()["mode"] == "showcase"
+    assert health.json()["profile_count"] == 3
     assert {item["slug"] for item in profiles.json()} == {
         "ali-ghodsi",
         "matei-zaharia",
@@ -96,3 +100,34 @@ def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path:
     assert response.status_code == 200, response.text
     assert response.json()["platform"] == "x"
     assert len(response.json()["content"]) <= 280
+
+
+def test_published_catalog_requires_enabled_model_access(tmp_path: Path) -> None:
+    settings = Settings(
+        api=ApiSettings(published_profile_catalog=tmp_path / "deployment" / "catalog.json")
+    )
+
+    with pytest.raises(ConfigurationError, match="requires model access"):
+        create_app(settings)
+
+
+def test_disabled_showcase_keeps_catalog_visible_but_blocks_generation(tmp_path: Path) -> None:
+    with TestClient(
+        create_app(
+            Settings(api=ApiSettings(showcase_enabled=False)),
+            ShowcaseWorkflowService(output_directory=tmp_path / "artifacts"),
+        )
+    ) as api:
+        profiles = api.get("/api/v1/profiles")
+        generated = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "linkedin",
+                "content_type": "post",
+                "idea": "Explain why clear ownership helps technical teams execute.",
+            },
+        )
+
+    assert profiles.status_code == 200
+    assert generated.status_code == 404

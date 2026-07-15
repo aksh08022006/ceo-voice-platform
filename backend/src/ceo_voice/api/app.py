@@ -12,9 +12,8 @@ from ceo_voice.config import Settings, get_settings
 from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
-from ceo_voice.services import create_model_provider
-from ceo_voice.showcase import PROFILES, WALKTHROUGHS, ShowcaseWorkflowService
-from ceo_voice.showcase.catalog import profile_by_slug
+from ceo_voice.services import create_model_provider, load_published_profile_catalog
+from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.showcase.service import WorkflowSession
 
 from .schemas import (
@@ -34,6 +33,10 @@ DISCLAIMER = (
     "model-enabled runs use the configured external provider. Named profiles demonstrate workflow "
     "behavior and are not verified identity simulations."
 )
+PUBLISHED_DISCLAIMER = (
+    "Generated from a governed immutable profile release and its traceable evidence. "
+    "Human review remains required before publication."
+)
 
 
 def create_app(
@@ -46,6 +49,8 @@ def create_app(
     transport: HttpxJsonTransport | None = None
     if service is not None:
         workflows = service
+    elif resolved.api.published_profile_catalog is not None and not resolved.model.enabled:
+        raise ConfigurationError("published profile serving requires model access to be enabled")
     elif resolved.model.enabled:
         if resolved.model.generation_model is None:
             raise ConfigurationError("enabled model configuration has no generation model")
@@ -58,6 +63,11 @@ def create_app(
             model_context_tokens=resolved.model.context_window_tokens,
             maximum_output_tokens=resolved.model.maximum_output_tokens,
             maximum_provider_retries=resolved.model.max_retries,
+            published_bundles=(
+                load_published_profile_catalog(resolved.api.published_profile_catalog)
+                if resolved.api.published_profile_catalog is not None
+                else ()
+            ),
         )
     else:
         workflows = ShowcaseWorkflowService()
@@ -112,11 +122,12 @@ def create_app(
             showcase_enabled=resolved.api.showcase_enabled,
             model_enabled=resolved.model.enabled,
             model_provider=resolved.model.provider if resolved.model.enabled else None,
+            mode=workflows.mode,
+            profile_count=len(workflows.profiles),
         )
 
     @application.get("/api/v1/profiles", response_model=tuple[ProfileResponse, ...])
     async def profiles() -> tuple[ProfileResponse, ...]:
-        _ensure_showcase(resolved)
         return tuple(
             ProfileResponse(
                 slug=item.slug,
@@ -125,12 +136,11 @@ def create_app(
                 summary=item.summary,
                 status=item.status,
             )
-            for item in PROFILES
+            for item in workflows.profiles
         )
 
     @application.get("/api/v1/walkthroughs", response_model=tuple[WalkthroughResponse, ...])
     async def walkthroughs() -> tuple[WalkthroughResponse, ...]:
-        _ensure_showcase(resolved)
         return tuple(
             WalkthroughResponse(
                 slug=item.slug,
@@ -141,14 +151,18 @@ def create_app(
                 idea=item.idea,
                 constraints=item.constraints,
                 human_edit=item.human_edit,
-                profile_name=profile_by_slug(item.profile_slug).name,
+                profile_name=next(
+                    profile.name
+                    for profile in workflows.profiles
+                    if profile.slug == item.profile_slug
+                ),
             )
-            for item in WALKTHROUGHS
+            for item in workflows.walkthroughs
         )
 
     @application.post("/api/v1/workflows/generate", response_model=WorkflowResponse)
     async def generate(value: GenerateWorkflowRequest) -> WorkflowResponse:
-        _ensure_showcase(resolved)
+        _ensure_available(resolved, workflows)
         try:
             session = await workflows.generate(
                 profile_slug=value.profile_slug,
@@ -180,8 +194,8 @@ def create_app(
     return application
 
 
-def _ensure_showcase(settings: Settings) -> None:
-    if not settings.api.showcase_enabled:
+def _ensure_available(settings: Settings, service: ShowcaseWorkflowService) -> None:
+    if service.mode == "showcase" and not settings.api.showcase_enabled:
         raise HTTPException(status_code=404, detail="showcase mode is disabled")
 
 
@@ -273,7 +287,7 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
             else ()
         ),
         recommendations=evaluation.recommended_improvements if evaluation else (),
-        disclaimer=DISCLAIMER,
+        disclaimer=PUBLISHED_DISCLAIMER if session.profile.status == "published" else DISCLAIMER,
     )
 
 

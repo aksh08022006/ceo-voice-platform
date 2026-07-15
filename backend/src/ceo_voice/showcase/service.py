@@ -18,7 +18,13 @@ from ceo_voice.generation import (
     TokenBudgetManager,
 )
 from ceo_voice.generation.ports import ModelProvider
-from ceo_voice.integration import IntegrationInput, IntegrationOutcome, IntegrationRunner
+from ceo_voice.integration import (
+    IntegrationInput,
+    IntegrationOutcome,
+    IntegrationRunner,
+    PublishedIntegrationInput,
+    PublishedIntegrationRunner,
+)
 from ceo_voice.models.enums import Platform
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
@@ -30,10 +36,12 @@ from ceo_voice.profiles.builder import VoiceProfileBuilder
 from ceo_voice.prompts import THREAD_SEPARATOR
 from ceo_voice.revoice import EditedDraft, ReVoicedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
+from ceo_voice.services.published_profiles import PublishedProfileBundle
+from ceo_voice.utils import utc_now
 from ceo_voice.virality import InMemoryViralityWorkspace, ViralityProfile, create_virality_builder
 from ceo_voice.voice import DownstreamPermission, FeatureRegistry
 
-from .catalog import ShowcaseProfile, profile_by_slug
+from .catalog import PROFILES, WALKTHROUGHS, ShowcaseProfile, Walkthrough, profile_by_slug
 from .fixtures import NOW, ReviewedShowcaseProfileBuilder, profile_manifest, virality_corpus
 from .provider import ShowcaseProvider
 
@@ -62,6 +70,7 @@ class ShowcaseWorkflowService:
         model_context_tokens: int = 30_000,
         maximum_output_tokens: int = 800,
         maximum_provider_retries: int = 2,
+        published_bundles: tuple[PublishedProfileBundle, ...] = (),
     ) -> None:
         self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
         self._sessions: dict[UUID, WorkflowSession] = {}
@@ -70,6 +79,42 @@ class ShowcaseWorkflowService:
         self._model_context_tokens = model_context_tokens
         self._maximum_output_tokens = maximum_output_tokens
         self._maximum_provider_retries = maximum_provider_retries
+        self._bundles = {bundle.slug: bundle for bundle in published_bundles}
+        if self._bundles and provider is None:
+            raise IntegrationError("published profile serving requires a configured model provider")
+
+    @property
+    def mode(self) -> str:
+        """Return the active artifact source exposed by this service."""
+
+        return "published" if self._bundles else "showcase"
+
+    @property
+    def profiles(self) -> tuple[ShowcaseProfile, ...]:
+        """Project selectable profiles without exposing deployment artifacts over HTTP."""
+
+        if not self._bundles:
+            return PROFILES
+        return tuple(
+            ShowcaseProfile(
+                slug=bundle.slug,
+                name=bundle.name,
+                role=bundle.role,
+                summary=bundle.summary,
+                status=(
+                    "published"
+                    if bundle.voice_profile.corpus_health.generation_ready
+                    else "not-ready"
+                ),
+            )
+            for bundle in self._bundles.values()
+        )
+
+    @property
+    def walkthroughs(self) -> tuple[Walkthrough, ...]:
+        """Return synthetic walkthroughs only when showcase artifacts are active."""
+
+        return () if self._bundles else WALKTHROUGHS
 
     async def generate(
         self,
@@ -82,6 +127,14 @@ class ShowcaseWorkflowService:
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
 
+        if self._bundles:
+            return await self._generate_published(
+                profile_slug=profile_slug,
+                platform=platform,
+                content_type=content_type,
+                idea=idea,
+                constraints=constraints,
+            )
         profile = profile_by_slug(profile_slug)
         manifest = profile_manifest(profile)
         request_id, run_id = uuid4(), uuid4()
@@ -117,6 +170,62 @@ class ShowcaseWorkflowService:
                 "showcase workflow did not produce a draft",
                 details={"reason": failure.code if failure else "unknown"},
             )
+        session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
+        self._sessions[run_id] = session
+        return session
+
+    async def _generate_published(
+        self,
+        *,
+        profile_slug: str,
+        platform: Platform,
+        content_type: str,
+        idea: str,
+        constraints: tuple[str, ...],
+    ) -> WorkflowSession:
+        """Serve one request from exact immutable release artifacts without rebuilding them."""
+
+        try:
+            bundle = self._bundles[profile_slug]
+        except KeyError as exc:
+            raise KeyError(profile_slug) from exc
+        provider = self._require(self._provider, "model provider")
+        assert isinstance(provider, ModelProvider)
+        release = bundle.voice_profile.managed_release.release
+        run_id = uuid4()
+        started_at = utc_now()
+        request = GenerationRequest(
+            request_id=uuid4(),
+            tenant_id=bundle.voice_corpus.identity.tenant_id,
+            ceo_id=bundle.voice_corpus.identity.leader_id,
+            voice_profile_id=release.lineage_id,
+            voice_profile_version=release.version,
+            platform=platform,
+            topic=idea,
+            objective=f"Create a {content_type} that communicates the idea clearly",
+            audience="executive and technical readers",
+            constraints=constraints,
+        )
+        outcome = await self._published_runner(bundle, provider).run(
+            PublishedIntegrationInput(
+                run_id=run_id,
+                profile=bundle.voice_profile,
+                profile_corpus=bundle.voice_corpus,
+                virality_profile=bundle.virality_profile,
+                virality_analysis=bundle.virality_analysis,
+                virality_corpus=bundle.virality_corpus,
+                request=request,
+                output_directory=self._output,
+                started_at=started_at,
+            )
+        )
+        if outcome.artifacts.draft is None:
+            failure = outcome.failure
+            raise IntegrationError(
+                "published workflow did not produce a draft",
+                details={"reason": failure.code if failure else "unknown"},
+            )
+        profile = next(item for item in self.profiles if item.slug == profile_slug)
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
         self._sessions[run_id] = session
         return session
@@ -262,6 +371,32 @@ class ShowcaseWorkflowService:
             virality_builder=create_virality_builder(workspace=virality_workspace),
             virality_workspace=virality_workspace,
             feature_registry=registry,
+            context_compiler=create_context_compiler(),
+            prompt_builder=prompts,
+            prompt_renderer=renderer,
+            generation_engine=GenerationEngine(
+                provider,
+                prompts,
+                renderer,
+                OutputValidator(),
+                policy=policy,
+            ),
+        )
+
+    def _published_runner(
+        self, bundle: PublishedProfileBundle, provider: ModelProvider
+    ) -> PublishedIntegrationRunner:
+        policy = GenerationPolicy(
+            provider=provider.name,
+            model=self._model,
+            model_context_tokens=self._model_context_tokens,
+            maximum_output_tokens=self._maximum_output_tokens,
+            maximum_provider_retries=self._maximum_provider_retries,
+        )
+        budget = TokenBudgetManager(policy)
+        prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
+        return PublishedIntegrationRunner(
+            feature_registry=bundle.feature_registry,
             context_compiler=create_context_compiler(),
             prompt_builder=prompts,
             prompt_renderer=renderer,

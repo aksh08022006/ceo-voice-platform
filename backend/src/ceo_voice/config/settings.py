@@ -1,6 +1,7 @@
 """Strongly typed, environment-driven application settings."""
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Self
 
 from pydantic import BaseModel, Field, SecretStr, ValidationError, model_validator
@@ -50,6 +51,10 @@ class ApiSettings(BaseModel):
     showcase_enabled: bool = Field(
         default=True,
         description="Enable synthetic, explicitly non-production walkthrough profiles.",
+    )
+    published_profile_catalog: Path | None = Field(
+        default=None,
+        description="Validated immutable profile catalog served instead of showcase fixtures.",
     )
 
 

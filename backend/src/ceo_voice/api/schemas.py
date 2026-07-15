@@ -94,3 +94,5 @@ class HealthResponse(BaseModel):
     showcase_enabled: bool
     model_enabled: bool
     model_provider: str | None = None
+    mode: str
+    profile_count: int

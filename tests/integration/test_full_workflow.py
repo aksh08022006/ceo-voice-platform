@@ -36,6 +36,7 @@ from ceo_voice.profiles.builder import VoiceProfileBuilder
 from ceo_voice.revoice import EditedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.services import PublishedProfileBundle, load_published_profile_catalog
+from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.virality import InMemoryViralityWorkspace, create_virality_builder
 from ceo_voice.voice import DecisionState, DownstreamPermission, FeatureRegistry
 from tests.unit.profiles.factories import manifest
@@ -551,6 +552,36 @@ def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> 
     assert served.artifacts.draft is not None
     assert provider.calls == 2
 
+    browser_service = ShowcaseWorkflowService(
+        output_directory=tmp_path / "browser",
+        provider=provider,
+        model="integration-model",
+        published_bundles=(deployed,),
+    )
+    assert browser_service.mode == "published"
+    assert [(item.slug, item.status) for item in browser_service.profiles] == [
+        ("integration-leader", "published")
+    ]
+    assert browser_service.walkthroughs == ()
+    browser_session = asyncio.run(
+        browser_service.generate(
+            profile_slug="integration-leader",
+            platform=Platform.LINKEDIN,
+            content_type="post",
+            idea="Explain why clear ownership improves technical execution.",
+            constraints=("Avoid unsupported claims.",),
+        )
+    )
+    assert browser_session.outcome.status is IntegrationStatus.SUCCEEDED
+    assert [item.stage for item in browser_session.outcome.timeline] == [
+        IntegrationStage.AUTHORIZATION,
+        IntegrationStage.CONTEXT,
+        IntegrationStage.RETRIEVAL,
+        IntegrationStage.PROMPT,
+        IntegrationStage.GENERATION,
+    ]
+    assert provider.calls == 3
+
     unready = built.artifacts.voice_profile.model_copy(
         update={
             "corpus_health": built.artifacts.voice_profile.corpus_health.model_copy(
@@ -584,4 +615,4 @@ def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> 
     assert blocked.status is IntegrationStatus.BLOCKED
     assert blocked.failure is not None
     assert blocked.failure.details["reason"] == "profile_not_generation_ready"
-    assert provider.calls == 2
+    assert provider.calls == 3
