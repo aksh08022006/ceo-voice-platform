@@ -1,210 +1,137 @@
-# Architecture Overview
+# Architecture overview
 
-## Current architectural increment
+This document explains the current product architecture in plain language. The deeper research,
+feature taxonomy, and original decision record remain in
+[Engineering Blueprint](ENGINEERING_BLUEPRINT.md) and
+[Voice Profile Representation](VOICE_PROFILE_REPRESENTATION.md).
 
-The foundation establishes stable boundaries before an AI or provider integration is selected.
-It makes later feature decisions reversible: an embedding provider, database, LLM, web framework,
-or workflow engine can be replaced without rewriting canonical contracts or cross-cutting policy.
-
-The ingestion package is the first functional subsystem. It is intentionally provider-neutral:
-real parsing, cleaning, normalization, validation, incremental decisions, persistence ports, and
-orchestration exist, while network acquisition remains an adapter concern. The `voice` package is
-the second domain increment: an immutable HVM knowledge graph, declarative feature registry,
-compiler ports, structural validation, release governance, and retrieval contracts. It contains no
-statistical estimator, persistence adapter, or retrieval implementation. The `analysis` package is
-the third increment: it compiles clean documents into HVM-native observations through registered,
-independent analyzers. It does not mutate profiles or perform stylometric inference. The `profiles`
-package is the application workflow increment: it composes those stable subsystems into restartable
-corpus builds, conservative Tier 1 compilation, release publication, inspection, health reporting,
-and retrieval-projection materialization. It adds orchestration, not a second domain model. The
-`virality` package is the first structure-intelligence increment. It independently converts
-authorized outcome corpora into evidence-backed structural observations and reusable
-platform-aware pattern releases; it has no dependency on `voice` or `profiles`. The `context`
-package is the first generation-enabling increment: it validates and projects exact active HVM and
-VKR releases into an immutable `GenerationContext` while preserving separate voice, structure,
-constraint, intent, and evidence planes. It performs no retrieval, prompt rendering, or model call.
-
-## Dependency direction
+## System at a glance
 
 ```mermaid
-flowchart TD
-    A["Future transport adapters"] --> B["Boundary schemas"]
-    A --> S["Future application services"]
-    S --> F["Future feature modules"]
-    B --> M["Canonical models"]
-    F --> M
-    F --> C["Core primitives"]
-    F --> U["Utilities"]
-    B --> C
-    M --> C
-    CFG["Configuration"] --> C
-    BOOT["Future composition root"] --> CFG
-    BOOT --> A
-    BOOT --> S
-    ST["Future storage adapters"] --> M
-    S -. "depends on storage ports, not adapters" .-> ST
+flowchart LR
+    A["Public content"] --> B["Ingestion"]
+    B --> C["Voice analysis"]
+    C --> D["HVM voice profile"]
+    D --> E["Profile Builder"]
+    S["Performance corpus"] --> V["VKR structure library"]
+    E --> F["Context Compiler"]
+    V --> F
+    F --> G["Deterministic retrieval"]
+    G --> H["Generation"]
+    H --> I["Human edit"]
+    I --> J["Re-Voice"]
+    J --> K["Evaluation"]
 ```
 
-The arrows mean “may import.” Lower layers never import transport, orchestration, feature, or
-storage implementations. The eventual composition root will be the only place that constructs
-concrete adapters and injects them into application services.
+The HVM answers **how this leader communicates**. The VKR answers **which content structures may
+work well on this platform**. They remain independent until one request is compiled. This prevents
+popular formatting from being mistaken for personal voice.
 
-Cross-feature imports are prohibited by default. If generation needs retrieval, it should depend
-on a retrieval port owned by the application boundary, not instantiate a retriever or import a
-database client directly.
+## Why this is more than ordinary RAG
 
-## Module ownership
+A conventional RAG system embeds old posts, retrieves similar examples, and places them in a
+prompt. That is useful for topical similarity, but it cannot reliably distinguish vocabulary,
+cadence, rhetoric, formatting, facts, and reusable structure.
 
-| Module | Purpose now | Future inputs and outputs | Allowed dependencies | Design rationale |
-| --- | --- | --- | --- | --- |
-| `api` | Reserves the transport boundary; contains no routes | Validated boundary schemas in, use-case responses out | schemas, services, core | HTTP is one adapter, not the application architecture |
-| `config` | Loads and validates environment settings | Environment and `.env` values in, immutable typed settings out | core | Prevents feature modules from reading ad-hoc environment variables |
-| `core` | Owns constants, logging, and expected failures | Primitive configuration in, reusable policies out | Python standard library | Keeps cross-cutting behavior dependency-light and stable |
-| `models` | Defines canonical cross-module data contracts | Validated domain data in, immutable snapshots out | core constants, Pydantic | Contracts are not ORM entities and do not inherit persistence concerns |
-| `schemas` | Defines use-case request and response messages | External values in, typed boundary messages out | models, Pydantic | Callers do not see prompts, provider parameters, or database structures |
-| `services` | Reserves use-case orchestration | Future commands in, results out | ports, models, schemas, core | Orchestration belongs outside domain engines and transports |
-| `ingestion` | Implements provider-neutral ETL, validation, incremental identity, and persistence ports | Connector `SourceItem` streams in, raw artifacts, clean documents, metadata, checkpoints, and run outcomes out | models, core, utilities | Provider adapters, transformation policy, and storage implementations evolve independently |
-| `analysis` | Implements structural addressing, analyzer registration and scheduling, confidence dispatch, and HVM observation construction | Immutable `CleanDocument` plus governed identity and registry in, canonical `ObservationSet` out | ingestion contracts, HVM contracts/ports, core, utilities | Analyzers emit measurements only; one builder owns evidence, provenance, confidence, and HVM schema enforcement |
-| `voice` | Implements the HVM representation kernel and governance | Versioned evidence and observations in, validated sealed releases and typed retrieval contracts out | models, core exceptions, deterministic utilities, injected analysis/storage ports | Voice is a traceable graph of typed behavior, context, evidence, uncertainty, and lineage rather than a prose summary |
-| `profiles` | Executes the end-to-end Voice Profile Builder | Curated corpus manifest in, published immutable HVM, reports, and retrieval projection out | analysis, voice, ingestion contracts, core, utilities | One composition boundary owns workflow state, incremental reuse, publication, and recovery while the analysis and HVM kernels remain independently testable |
-| `virality` | Implements deterministic structure intelligence and observational engagement patterns | Canonical social posts plus pinned performance snapshots in, validated immutable structural pattern releases out | ingestion contracts, shared models, core, utilities | Structural tactics remain evidence-backed, platform-aware, searchable, and completely independent from personal voice |
-| `context` | Implements deterministic generation-context compilation | Active pinned HVM/VKR, identity, intent, policy, constraints, and supplied evidence in; sealed model-neutral `GenerationContext` out | voice and virality contracts, shared models/schemas, core, deterministic utilities | One fail-closed boundary owns authority, inheritance, compact selection, constraint conflicts, and traceability before any prompt or provider exists |
-| `retrieval` | Reserves evidence selection | Typed intent and filters in, role-labeled context out | models, future storage ports | Voice, facts, structure, and platform evidence remain distinguishable |
-| `generation` | Reserves draft orchestration | Pinned request and context in, candidates out | service ports, models, schemas | Provider calls and prompt assembly will remain replaceable collaborators |
-| `evaluation` | Reserves offline and online quality measurement | Candidate plus references in, versioned metrics out | models | Evaluation is a first-class release gate, not a logging afterthought |
-| `storage` | Reserves persistence ports and concrete adapters | Typed records in and out | models, core | Domain models do not import ORM or vector-database types |
-| `prompts` | Reserves versioned prompt assets | Structured variables in, rendered artifacts out | future prompt contracts | Prompts are reviewed artifacts with versions, not strings inside services |
-| `utils` | Owns small technical helpers | Primitive values in and out | standard library, core constants | Utilities remain domain-neutral and must not become a miscellaneous layer |
+This platform retrieves from structured knowledge instead:
 
-## Foundation components
+- HVM features describe measured voice behavior with confidence and evidence.
+- VKR features describe structure without claiming it belongs to the leader.
+- The Context Compiler turns three product inputs into explicit targets and constraints.
+- Retrieval selects the minimum relevant evidence and explains every selection.
+- The Prompt Builder consumes only that compact Retrieval Bundle. It never reads an entire profile.
 
-### Configuration
+Embeddings can later improve candidate ranking behind the retrieval interface. They are not the
+architecture and cannot bypass feature, authority, platform, or context-budget checks.
 
-`Settings` is composed of typed application, logging, and provider-neutral model sections. Values
-come from environment variables or a local `.env` file. The environment prefix and nested
-delimiter give every setting one unambiguous name.
+## Complete workflow
 
-Validation happens before consumers receive settings. Production rejects console logging and
-debug mode. Model access is disabled by default and cannot be enabled without the minimum provider,
-model, and credential fields. The model section chooses no vendor; it exists so future adapters
-receive injected configuration instead of reading process state themselves.
+| Stage | Receives | Produces | Main responsibility |
+|---|---|---|---|
+| Ingestion | Authorized public-content exports or transcripts | Raw artifacts and clean documents | Preserve source text, provenance, checksums, metadata, and incremental state |
+| Voice analysis | Clean leader corpus | Evidence-backed observations | Measure lexical, structural, rhetorical, tonal, and platform patterns |
+| HVM | Observations and evidence | Structured voice knowledge | Represent behavior, confidence, scope, exceptions, and lineage |
+| Profile Builder | Curated corpus and analyzer registry | Published immutable HVM release | Orchestrate analysis, validate health, recover failures, and publish |
+| VKR | Authorized structural examples and performance snapshots | Published immutable structure release | Model hooks, pacing, post shapes, and calls to action separately from voice |
+| Context Compiler | CEO, platform, idea, policies, active HVM and VKR | Generation Context | Resolve exact release versions, voice targets, structure targets, intent, and constraints |
+| Retrieval | Generation Context and retrieval-ready releases | Retrieval Bundle | Select compact, diverse, confidence-aware evidence with reasons and budgets |
+| Generation | Generation Context and Retrieval Bundle | Draft and Generation Report | Build the prompt last, call one provider, validate, post-process, and report |
+| Re-Voice | Original draft, human edit, and existing context | Re-Voiced Draft and change report | Strengthen voice only where meaning, facts, order, formatting, and intent remain safe |
+| Evaluation | Draft, reports, context, and evidence | Dimension scores and disposition | Measure voice, structure, platform fit, readability, constraints, and evidence use independently |
 
-`get_settings()` is cached for normal process use. Tests and controlled reload tooling can clear
-that cache explicitly. Importing a module never loads configuration, which avoids import-time
-side effects.
+## Product request and result
 
-### Logging
+The Generate page intentionally exposes only the three assignment inputs:
 
-The logging layer uses the Python standard library to avoid forcing an observability vendor on
-every module. `configure_logging()` accepts validated primitives rather than importing `Settings`,
-which prevents a configuration/logging cycle.
+1. CEO identity
+2. Platform: X or LinkedIn
+3. Idea and narrative angle
 
-JSON records include UTC timestamp, severity, service, logger, module, message, request ID, safe
-structured fields, and exception data. Development console logs retain the same request
-correlation. A `ContextVar` makes request IDs safe across future asynchronous HTTP requests, queue
-jobs, and workflows. Transport middleware will set this context later; no transport dependency is
-present now.
+Internal controls are resolved by policy. The result contains the draft and an explainability report:
+active releases, selected features, selected evidence, structural guidance, provider and model,
+latency and token usage, validation findings, constraints, and execution timeline.
 
-### Exceptions
+## Module boundaries
 
-`ApplicationError` provides stable code, safe message, structured details, and retryability. Each
-major future subsystem owns a named subclass. Transport adapters can map these errors without
-knowing whether a failure came from a provider SDK, database driver, parser, or evaluator.
+| Module | Owns | Must not own |
+|---|---|---|
+| `ingestion` | connectors, parsing, cleaning, normalization, validation, repositories, checkpoints | analysis or generation decisions |
+| `analysis` | analyzer registry, observation construction, confidence dispatch | profile mutation or provider calls |
+| `voice` | HVM contracts, validation, evidence, feature and release rules | storage SDKs, prompts, or virality |
+| `profiles` | end-to-end corpus builds, incremental reuse, publication, inspection, health reports | a second voice representation |
+| `virality` | independent structural observations, patterns, releases, and platform rules | personal voice claims |
+| `context` | request-specific targets, constraints, authority, and release pinning | retrieval or prompt rendering |
+| `retrieval` | deterministic selection, scoring, diversity, budgets, explanations | raw-document access by default or LLM calls |
+| `generation` | prompt rendering, provider adapters, retries, validation, reports | direct HVM/VKR access |
+| `revoice` | edit diff, protected regions, conservative restoration, change report | changing intended meaning or structure |
+| `evaluation` | independent dimensions, hard gates, reports, benchmarks | hiding failures in one blended score |
+| `api` | HTTP contracts, request correlation, dependency wiring, workflow sessions | domain logic |
+| `frontend` | the reviewer and editor workflow | duplicate business rules or secret access |
 
-Unexpected programming errors are not converted into expected application failures inside lower
-layers. They should retain stack traces, be logged once at a process boundary, and fail loudly.
+Dependencies point inward toward typed contracts. Vendor SDK types stay inside adapters, and the
+composition root is the only place that constructs concrete dependencies. Cross-feature imports
+are rejected unless the owning contract explicitly allows them.
 
-### Shared contracts
+## Data and release model
 
-Pydantic models provide runtime validation and static typing without introducing an ORM. Canonical
-models are frozen and reject unknown fields. Boundary schemas remain constructible request and
-response messages but also reject unknown input.
+Raw content, clean documents, observations, evidence, HVM releases, VKR releases, retrieval bundles,
+and reports are separate artifacts. Each durable artifact has a stable identifier, checksum,
+version, ownership context, and lineage where applicable.
 
-Important representation decisions:
+Published knowledge releases are immutable. An update creates a successor release; rollback selects
+an older release rather than editing history. Generation pins exact HVM and VKR release identifiers,
+so a report remains reproducible even after new content is ingested.
 
-- Every durable artifact carries tenant and leader identifiers where ownership matters.
-- Documents and voice profiles are versioned; generation requests pin a profile version.
-- Timestamps must be timezone-aware and are normalized to UTC.
-- Checksums and evidence identifiers make provenance auditable.
-- A voice feature records layer, scope, platform condition, value, confidence, and evidence.
-- Retrieved items carry an explicit context role instead of becoming an undifferentiated text bag.
-- Voice-significant text is validated for non-blank content but is not stripped or whitespace-
-  collapsed.
-- Evaluation metrics and evaluator versions are part of the output contract, enabling regression
-  comparisons later.
+## Failure behavior
 
-These models are canonical application contracts, not database schemas. Persistence adapters will
-map them to relational, object, or vector representations at the storage boundary.
+The system fails before a provider call when it cannot support an accountable request. Examples
+include an unknown leader, incompatible platform evidence, an unpublished release, insufficient
+required evidence, conflicting constraints, unsupported features, or an exceeded context budget.
 
-### Utilities
+Provider retries are bounded and limited to classified transient failures. Output validation and
+constraint failures use controlled repair attempts. Unexpected programming errors keep their stack
+traces and are logged once at the process boundary with a request identifier.
 
-Utilities are deliberately narrow:
+## Scale and replacement points
 
-- text helpers normalize line-ending encodings or remove null bytes without collapsing style;
-- file reads are bounded and path containment can be enforced;
-- JSON output is deterministic;
-- time helpers reject naive timestamps;
-- hashes support integrity and deduplication without loading large files into memory;
-- retry helpers are bounded, exception-selective, synchronous or asynchronous, and accept an
-  injected sleep function for deterministic tests.
+The domain is designed for hundreds and later thousands of leaders: tenant and leader identifiers
+exist at durable boundaries, immutable versions form cache keys, batch profile builds are
+restartable, and storage/provider interfaces are injected. Reference JSON and in-memory adapters
+support local evaluation; production deployments can replace them with object storage, relational
+metadata, queues, caches, and distributed workers without changing the domain contracts.
 
-Retries are not enabled implicitly. A future adapter must decide which operation is idempotent and
-which exception is transient before selecting a retry policy.
+Semantic ranking is also an extension point. A future embedding or reranking adapter may propose
+candidates, but deterministic policy remains responsible for authority, platform compatibility,
+diversity, confidence, evidence lineage, and final budget selection.
 
-## Voice, structure, facts, and performance remain separate
+## Current trust boundary
 
-The central product risk is accidental entanglement. A system that stores examples in one vector
-index and asks a model to imitate them cannot explain whether an output copied topic, structure,
-facts, or voice.
+The local Ali Ghodsi and Matei Zaharia development profiles are built from operator-transcribed
+public posts. They demonstrate the complete workflow but have incomplete timestamps, URL
+provenance, reuse authority, and independent identity-fidelity review. They must not be described as
+production impersonation models or as proof that generated text was written or endorsed by either
+person.
 
-The foundation therefore establishes four distinct concepts:
-
-1. `VoiceFeature` represents an observed identity pattern with evidence and confidence.
-2. `ContextRole.VOICE_EVIDENCE` carries exemplars selected to realize those patterns.
-3. `ContextRole.STRUCTURAL_REFERENCE` and `PLATFORM_REFERENCE` carry shape conventions that are not
-   asserted to be identity traits.
-4. `ContextRole.FACTUAL_EVIDENCE` carries claims that may ground content but must not redefine voice.
-
-Tier 1 deterministic measurements now create HVM observations through the analysis compiler;
-statistical and learned feature implementations remain later milestones. This separation prevents
-a conventional RAG interface from becoming the de facto architecture.
-
-## Scalability implications
-
-Tenant and CEO identifiers are mandatory at durable boundaries, allowing partitioning and policy
-enforcement when the system grows from hundreds to thousands of leaders. Versioned artifacts make
-cache keys and rollback explicit. Provider-neutral configuration and transport-neutral messages
-allow workers, batch evaluators, and APIs to share the same use cases.
-
-This phase does not claim that Pydantic objects or in-process settings solve distributed scale.
-They define stable seams at which databases, queues, caches, workflows, and observability backends
-can later be introduced without leaking their SDK types across the codebase.
-
-## Failure modes guarded in this phase
-
-| Failure mode | Foundation control |
-| --- | --- |
-| Secret committed or hardcoded | `.env` exclusion, example-only config, `SecretStr` |
-| Production emits unstructured logs | environment validation requires JSON |
-| Concurrent work loses correlation | context-local request identifiers |
-| Naive timestamps create ordering bugs | aware-only UTC normalization |
-| Schema drift silently enters modules | strict models and unknown-field rejection |
-| Cleanup erases writing-style evidence | non-blank validation without text stripping |
-| Voice profile cannot be audited | versions, evidence IDs, confidence, snapshot digest |
-| Retrieval collapses unlike evidence | explicit context roles |
-| Retry storms or non-idempotent replay | bounded opt-in policy with selected exceptions |
-| Toolchain drift changes results | committed lock, formatter/linter/type/test CI gate |
-
-## Extension rules
-
-Before a later phase adds behavior:
-
-1. Define or review the port and typed contract at the owning boundary.
-2. Keep vendor SDK types inside concrete adapters.
-3. Inject adapters through a composition root; do not construct them in domain code.
-4. Add deterministic unit tests for decisions and contract tests for adapters.
-5. Add evaluation fixtures when output quality can change without a type or unit-test failure.
-6. Update this document if ownership or dependency direction changes.
-
-Any exception to these rules requires an architecture decision record explaining the constraint,
-alternatives, consequences, and reversal plan.
+Likewise, VKR engagement relationships are observational. They can guide subtle structural choices;
+they do not prove causality or guarantee virality. Human review remains part of the intended
+workflow.

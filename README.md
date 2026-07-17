@@ -11,9 +11,10 @@ deterministic context and retrieval, governed model boundaries, constraint-prese
 independent evaluation. It does not reduce a person to a prose prompt and does not let prompt code
 reach into an entire profile.
 
-> Scientific and governance boundary: the bundled Tier-1 analyzers measure descriptive structure.
-> They do not establish authorship or automatically authorize generation in a real person's voice.
-> Production generation fails closed until an organization supplies reviewed, calibrated evidence.
+> Scientific and governance boundary: Tier-1 analyzers measure descriptive structure; they do not
+> establish authorship or automatically authorize generation in a real person's voice. The local
+> Ali Ghodsi and Matei Zaharia development profiles use operator-transcribed public posts and require
+> provenance, rights, calibration, and independent fidelity review before production use.
 
 ## Problem
 
@@ -62,7 +63,8 @@ release reference, and evidence lineage. Only Generation and Re-Voice may call a
 
 The detailed dependency rules and failure boundaries are in
 [Architecture Overview](docs/ARCHITECTURE.md). The audited assignment coverage is in
-[Release Gap Analysis](docs/RELEASE_GAP_ANALYSIS.md).
+[Release Gap Analysis](docs/RELEASE_GAP_ANALYSIS.md). A reviewer-ready narrative and recording plan
+is in the [Product Walkthrough](docs/DEMO_RUNBOOK.md).
 
 ## Quickstart
 
@@ -122,11 +124,12 @@ make api
 make frontend-dev
 ```
 
-Open `http://127.0.0.1:3000`. The browser can select a showcase profile, generate, edit, Re-Voice,
-evaluate, and inspect every report. The local provider is deterministic and credential-free; the
-same workflow uses the configured OpenAI, Anthropic, or Gemini HTTP adapter when model access is
-explicitly enabled. This changes the provider, not the corpus authority: bundled named profiles
-remain synthetic demonstrations. API documentation is available at `http://127.0.0.1:8000/api/docs`.
+Open `http://127.0.0.1:3000`. The browser can select an available profile, generate, edit, Re-Voice,
+evaluate, and inspect every report. Without a published catalog or model credential, deterministic
+fixtures keep orchestration testable. With the development catalog and an explicitly enabled
+provider, the same workflow serves the operator-transcribed Ali and Matei corpora. Provider choice
+does not upgrade corpus authority. API documentation is available at
+`http://127.0.0.1:8000/api/docs`.
 
 ### One-command offline demonstration
 
@@ -182,6 +185,13 @@ releases were built successfully but remain descriptive and require review. Addi
 data, not code. See [Operations](docs/OPERATIONS.md) for the manifest workflow and exit codes.
 
 ### Public-data acquisition
+
+If an external collector is producing X or LinkedIn data, follow the exact JSONL contract in
+[Public-content dataset handoff](docs/DATASET_HANDOFF.md) and validate it before corpus review:
+
+```bash
+ceo-voice validate-dataset --input data/runtime/incoming/public-content.jsonl
+```
 
 Before content acquisition, create a URL-only source catalog and run the governed readiness gate:
 
@@ -243,12 +253,35 @@ rejects path traversal, duplicate leaders, tenant or lineage mismatches, unpinne
 cross-release assembly. In published mode, the API lists only those bundles and every generation
 uses their exact HVM, VKR, corpus snapshots, feature registry, and analysis artifacts.
 
-## Demo and walkthroughs
+### Build the reviewed Ali and Matei corpora
 
-The Generate page includes three backend-served walkthroughs: an Ali Ghodsi AI feature launch, a
-Matei Zaharia technical announcement, and a Jensen Huang keynote thread. Their corpora and outputs
-are synthetic, explicitly labelled, and make no identity-fidelity claim. Selecting one carries its
-human edit through the full browser workflow.
+The ignored screenshot batches can be converted into development-only HVM/VKR serving bundles:
+
+```bash
+make profiles
+```
+
+Use `make ali-profile` or `make matei-profile` to rebuild only one leader. The targets upsert both
+leaders into `data/runtime/ali/published/catalog.json`. Point the local API at that catalog without
+touching provider secrets by creating the ignored `.env.local` file:
+
+```bash
+CEO_VOICE_API__PUBLISHED_PROFILE_CATALOG=data/runtime/ali/published/catalog.json
+```
+
+Restart `make api`, then open the Generate page. The API exposes Ali Ghodsi and Matei Zaharia,
+reports mode `development`, and uses the configured model provider for generation. Each bundle
+admits complete authored text, retains authored repost commentary with explicit provenance,
+excludes quoted third-party previews, and does not invent missing URLs or publication timestamps.
+Development bundles are rejected when the application environment is `production`; they make no
+verified identity-fidelity or reuse-authority claim.
+
+## Demo fixtures
+
+The Generate page intentionally accepts exactly three product inputs: idea/angle, CEO identity,
+and platform. Content form, structural influence, output bounds, and other technical controls are
+resolved internally. Synthetic Ali Ghodsi, Matei Zaharia, and Jensen Huang walkthrough fixtures
+remain available to automated regression tests, but are not exposed as additional Generate inputs.
 
 For a 3–5 minute submission recording, follow [Demo Runbook](docs/DEMO_RUNBOOK.md).
 

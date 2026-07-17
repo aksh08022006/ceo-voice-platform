@@ -1,18 +1,47 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320" role="img" aria-labelledby="title desc">
-  <title id="title">CEO Voice Platform architecture</title>
-  <desc id="desc">The production flow from ingestion through evaluation.</desc>
-  <rect width="1440" height="320" fill="#ffffff"/>
-  <g fill="none" stroke="#e5e7eb" stroke-width="2">
-    <path d="M155 160H220M360 160H425M565 160H630M770 160H835M975 160H1040M1180 160H1245"/>
-    <path d="m208 150 12 10-12 10M413 150l12 10-12 10M618 150l12 10-12 10M823 150l12 10-12 10M1028 150l12 10-12 10M1233 150l12 10-12 10"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 380" role="img" aria-labelledby="title desc">
+  <title id="title">CEO Voice Platform workflow</title>
+  <desc id="desc">Public content moves through ingestion, analysis, the HVM voice profile, profile publication, context compilation, retrieval, generation, Re-Voice, and evaluation. An independent VKR structure library enters only at context compilation.</desc>
+  <rect width="1800" height="380" fill="#ffffff"/>
+
+  <g fill="none" stroke="#d1d5db" stroke-width="2">
+    <path d="M180 150H215M375 150H410M570 150H605M765 150H800M960 150H995M1155 150H1190M1350 150H1385M1545 150H1580"/>
+    <path d="m203 141 12 9-12 9M398 141l12 9-12 9M593 141l12 9-12 9M788 141l12 9-12 9M983 141l12 9-12 9M1178 141l12 9-12 9M1373 141l12 9-12 9M1568 141l12 9-12 9"/>
+    <path d="M520 287H880V207" stroke-dasharray="6 7"/>
+    <path d="m871 219 9-12 9 12"/>
   </g>
-  <g font-family="Inter, Arial, sans-serif" text-anchor="middle">
-    <g fill="#111111" font-size="18" font-weight="600">
-      <text x="85" y="150">Ingestion</text><text x="290" y="150">Analysis</text><text x="495" y="150">HVM</text><text x="700" y="145">Profile</text><text x="700" y="169">Builder</text><text x="905" y="145">Context</text><text x="905" y="169">Compiler</text><text x="1110" y="150">Retrieval</text><text x="1315" y="150">Generation</text>
-      <text x="905" y="270">Re-Voice</text><text x="1110" y="270">Evaluation</text>
+
+  <g font-family="Inter, Arial, sans-serif">
+    <g fill="#ffffff" stroke="#e5e7eb" stroke-width="2">
+      <rect x="20" y="95" width="160" height="110" rx="12"/>
+      <rect x="215" y="95" width="160" height="110" rx="12"/>
+      <rect x="410" y="95" width="160" height="110" rx="12"/>
+      <rect x="605" y="95" width="160" height="110" rx="12"/>
+      <rect x="800" y="95" width="160" height="110" rx="12"/>
+      <rect x="995" y="95" width="160" height="110" rx="12"/>
+      <rect x="1190" y="95" width="160" height="110" rx="12"/>
+      <rect x="1385" y="95" width="160" height="110" rx="12"/>
+      <rect x="1580" y="95" width="160" height="110" rx="12"/>
+      <rect x="360" y="250" width="160" height="74" rx="12"/>
     </g>
-    <g fill="#2563eb"><circle cx="85" cy="185" r="4"/><circle cx="290" cy="185" r="4"/><circle cx="495" cy="185" r="4"/><circle cx="700" cy="185" r="4"/><circle cx="905" cy="185" r="4"/><circle cx="1110" cy="185" r="4"/><circle cx="1315" cy="185" r="4"/><circle cx="905" cy="290" r="4"/><circle cx="1110" cy="290" r="4"/></g>
+
+    <g fill="#2563eb" font-size="12" font-weight="700">
+      <text x="42" y="122">01</text><text x="237" y="122">02</text><text x="432" y="122">03</text>
+      <text x="627" y="122">04</text><text x="822" y="122">05</text><text x="1017" y="122">06</text>
+      <text x="1212" y="122">07</text><text x="1407" y="122">08</text><text x="1602" y="122">09</text>
+    </g>
+
+    <g fill="#111111" font-size="17" font-weight="650">
+      <text x="42" y="153">Ingestion</text><text x="237" y="153">Analysis</text><text x="432" y="153">HVM</text>
+      <text x="627" y="153">Profile Builder</text><text x="822" y="153">Context Compiler</text><text x="1017" y="153">Retrieval</text>
+      <text x="1212" y="153">Generation</text><text x="1407" y="153">Re-Voice</text><text x="1602" y="153">Evaluation</text>
+      <text x="383" y="280">VKR structure</text>
+    </g>
+
+    <g fill="#6b7280" font-size="12">
+      <text x="42" y="177">clean documents</text><text x="237" y="177">measure patterns</text><text x="432" y="177">voice knowledge</text>
+      <text x="627" y="177">publish release</text><text x="822" y="177">request targets</text><text x="1017" y="177">minimum evidence</text>
+      <text x="1212" y="177">draft + report</text><text x="1407" y="177">preserve edits</text><text x="1602" y="177">score quality</text>
+      <text x="383" y="302">independent from voice</text>
+    </g>
   </g>
-  <path d="M1315 190v80h-140M1045 270H970" fill="none" stroke="#e5e7eb" stroke-width="2"/>
-  <path d="m1187 260-12 10 12 10M982 260l-12 10 12 10" fill="none" stroke="#e5e7eb" stroke-width="2"/>
 </svg>

@@ -5,7 +5,17 @@ import Link from "next/link";
 import { Reveal } from "@/components/motion/reveal";
 import { buttonStyles } from "@/components/ui/button";
 
-const stages = ["Data", "Voice Analysis", "Voice Profile", "Generation", "Re-Voice", "Evaluation"];
+const stages = [
+  "Ingestion",
+  "Voice Analysis",
+  "HVM Voice Profile",
+  "Profile Builder",
+  "Context Compiler",
+  "Retrieval",
+  "Generation",
+  "Re-Voice",
+  "Evaluation",
+];
 
 export default function LandingPage() {
   return (

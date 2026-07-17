@@ -29,6 +29,9 @@ export type Workflow = {
   profile_slug: string;
   profile_name: string;
   platform: string;
+  content_type: "post" | "thread" | "announcement";
+  virality_influence: number;
+  thread: string[];
   content: string;
   edited_content: string | null;
   revoiced_content: string | null;
@@ -53,7 +56,11 @@ export type Walkthrough = {
   profile_name: string;
   title: string;
   platform: "linkedin" | "x";
-  content_type: "post" | "announcement";
+  content_type: "post" | "thread" | "announcement";
+  thread_post_count: number | null;
+  virality_influence: number;
+  minimum_words: number | null;
+  maximum_words: number | null;
   idea: string;
   constraints: string;
   human_edit: string;
@@ -78,9 +85,7 @@ export const api = {
   generate: (body: {
     profile_slug: string;
     platform: "linkedin" | "x";
-    content_type: "post" | "announcement";
     idea: string;
-    constraints: string;
   }) => request<Workflow>("/api/v1/workflows/generate", { method: "POST", body: JSON.stringify(body) }),
   revoice: (id: string, content: string) =>
     request<Workflow>(`/api/v1/workflows/${id}/revoice`, {

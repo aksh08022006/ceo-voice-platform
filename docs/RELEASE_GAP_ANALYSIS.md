@@ -24,7 +24,7 @@ work is limited to making implemented capabilities safe, reproducible, and evalu
 | Testing and engineering quality | Strict typing, Ruff, Black, 95% branch-coverage gate, pre-commit, CI, unit and integration tests | Satisfied | Keep the complete gate as the release acceptance check. |
 | Reproducible setup and deployment | Locked dependencies, environment templates, rootless container, doctor command, FastAPI health endpoint, and production frontend build | Satisfied for a single-instance reference deployment | Supply organization storage, authentication, secrets, and telemetry before horizontal production scaling. |
 | Evaluator usability | Product-oriented README, demo/operations runbooks, one-command checks, browser workflow, reports, and benchmark fixtures | Satisfied | Preserve the distinction between integration evidence and real-person quality evidence. |
-| User interface | Editorial Next.js product surface backed by FastAPI covers generation, Re-Voice, evaluation, profiles, benchmarks, and documentation | Satisfied | Showcase mode remains conspicuously synthetic; published mode lists only validated deployment bundles. |
+| User interface | Editorial Next.js product surface backed by FastAPI covers generation, Re-Voice, evaluation, profiles, benchmarks, and documentation | Satisfied | The UI distinguishes synthetic benchmark fixtures, operator-transcribed development profiles, and reviewed published profiles. |
 
 ## Completed release actions
 
