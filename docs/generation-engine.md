@@ -25,7 +25,11 @@ synthetic or unreviewed voice profile to verified real-person evidence.
 
 ## Validation and retries
 
-The engine rejects mismatched request, tenant, leader, platform, context ID, or context hash before calling a provider. Output validation enforces platform and thread limits, required-phrase constraints, a conservative safety blocklist, and the minimum governed voice-confidence threshold.
+The engine rejects mismatched request, tenant, leader, content type, thread count, platform, context
+ID, or context hash before calling a provider. Output validation enforces platform, exact thread,
+optional word-count, required-phrase, safety, and governed voice-confidence limits. Structural
+guidance carries a bounded 0–25% influence value with a 12.5% default; it never replaces voice
+targets.
 
 Transient provider failures reuse the exact rendered prompt. Validation repair creates a new prompt version instance containing only the blocking findings; it preserves the original governed targets. Retry counts are bounded independently. Validated thread output is split only after validation.
 

@@ -27,7 +27,9 @@ class ViralityCompiler:
     def __init__(self, *, policy: StructuralSelectionPolicy | None = None) -> None:
         self._policy = policy or StructuralSelectionPolicy()
 
-    def compile(self, profile: ViralityProfile, *, platform: Platform) -> ViralityCompilationResult:
+    def compile(
+        self, profile: ViralityProfile, *, platform: Platform, influence: float = 0.125
+    ) -> ViralityCompilationResult:
         """Compile the strongest descriptive patterns for each structural dimension."""
 
         publication = profile.publication
@@ -117,6 +119,7 @@ class ViralityCompiler:
                 release_version=release.version,
                 release_content_hash=release.content_hash,
                 platform=platform,
+                influence=influence,
                 guidance=tuple(guidance),
                 causal_claims_permitted=False,
             ),

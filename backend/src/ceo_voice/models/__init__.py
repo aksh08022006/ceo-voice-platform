@@ -3,6 +3,7 @@
 from ceo_voice.models.document import Document, Metadata
 from ceo_voice.models.enums import (
     ContentFormat,
+    ContentType,
     ContextRole,
     DocumentSourceType,
     DocumentStatus,
@@ -22,6 +23,7 @@ from ceo_voice.models.voice import VoiceFeature, VoiceProfile
 __all__ = [
     "CEOIdentity",
     "ContentFormat",
+    "ContentType",
     "ContextRole",
     "Document",
     "DocumentSourceType",

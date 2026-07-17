@@ -15,7 +15,9 @@ from pydantic import ValidationError
 from ceo_voice.acquisition import (
     CorpusAcquisitionAuditor,
     CorpusAcquisitionPolicy,
+    PublicContentRecord,
     load_source_catalog,
+    validate_public_dataset,
 )
 from ceo_voice.config import load_settings
 from ceo_voice.core.exceptions import ApplicationError
@@ -97,6 +99,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prepare.add_argument(
         "--manifest", type=Path, required=True, help="CorpusPreparationManifest JSON."
+    )
+    validate_dataset = commands.add_parser(
+        "validate-dataset",
+        help="Validate a public-content JSONL handoff without importing it.",
+    )
+    validate_dataset.add_argument("--input", type=Path, required=True, help="Dataset JSONL file.")
+    validate_dataset.add_argument("--output", type=Path, help="Optional validation report path.")
+    dataset_schema = commands.add_parser(
+        "dataset-schema",
+        help="Emit the canonical JSON Schema for collector implementations.",
+    )
+    dataset_schema.add_argument("--output", type=Path, help="Optional JSON Schema destination.")
+    development = commands.add_parser(
+        "build-development-profile",
+        help="Build a local, non-production profile catalog from reviewed screenshot captures.",
+    )
+    development.add_argument(
+        "--profile", default="ali-ghodsi", help="Existing selectable profile slug."
+    )
+    development.add_argument(
+        "--capture",
+        type=Path,
+        action="append",
+        required=True,
+        help="Normalized screenshot JSON array; repeat for multiple batches.",
+    )
+    development.add_argument(
+        "--workspace", type=Path, required=True, help="Private local build workspace."
+    )
+    development.add_argument(
+        "--catalog", type=Path, required=True, help="Published development catalog path."
     )
     prepare.add_argument(
         "--export-root",
@@ -233,6 +266,58 @@ def _run_doctor() -> int:
     return 0
 
 
+def _run_validate_dataset(args: argparse.Namespace) -> int:
+    """Validate an external collector handoff and emit only content-free diagnostics."""
+
+    report = validate_public_dataset(args.input)
+    serialized = report.model_dump_json(indent=2)
+    if args.output is not None:
+        output = args.output.expanduser().resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(serialized, encoding="utf-8")
+    print(serialized)
+    return 0 if report.valid else 3
+
+
+def _run_dataset_schema(args: argparse.Namespace) -> int:
+    """Emit the same schema enforced by the runtime validator."""
+
+    serialized = json.dumps(PublicContentRecord.model_json_schema(), indent=2)
+    if args.output is not None:
+        output = args.output.expanduser().resolve()
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(serialized, encoding="utf-8")
+    print(serialized)
+    return 0
+
+
+async def _run_build_development_profile(args: argparse.Namespace) -> int:
+    """Build a visibly development-only serving bundle from reviewed local captures."""
+
+    from ceo_voice.showcase.manual_capture import publish_manual_capture_bundle
+
+    bundle = await publish_manual_capture_bundle(
+        profile_slug=args.profile,
+        capture_paths=tuple(args.capture),
+        workspace_root=args.workspace,
+        catalog_path=args.catalog,
+    )
+    print(
+        json.dumps(
+            {
+                "profile": bundle.slug,
+                "artifact_status": bundle.artifact_status,
+                "documents": len(bundle.voice_corpus.documents),
+                "release_id": str(bundle.voice_profile.managed_release.release.id),
+                "release_version": bundle.voice_profile.managed_release.release.version,
+                "catalog": str(args.catalog.expanduser().resolve()),
+            },
+            separators=(",", ":"),
+        )
+    )
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Run the requested command and return a process exit code."""
 
@@ -247,6 +332,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return _run_audit_corpus(args)
         if args.command == "prepare-corpus":
             return asyncio.run(_run_prepare_corpus(args))
+        if args.command == "validate-dataset":
+            return _run_validate_dataset(args)
+        if args.command == "dataset-schema":
+            return _run_dataset_schema(args)
+        if args.command == "build-development-profile":
+            return asyncio.run(_run_build_development_profile(args))
         if args.command == "doctor":
             return _run_doctor()
     except ValidationError as exc:

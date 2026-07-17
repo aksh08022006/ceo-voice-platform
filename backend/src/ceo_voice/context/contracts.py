@@ -15,7 +15,7 @@ from ceo_voice.context.enums import (
     VoiceResolutionSource,
 )
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
-from ceo_voice.models.enums import ContextRole, Platform
+from ceo_voice.models.enums import ContentType, ContextRole, Platform
 from ceo_voice.models.retrieval import RetrievedContext, RetrievedItem
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.utils.hashing import sha256_text
@@ -259,6 +259,7 @@ class ViralityTarget(ContractModel):
     release_version: int = Field(ge=1)
     release_content_hash: NonEmptyStr
     platform: Platform
+    influence: float = Field(ge=0, le=0.25)
     guidance: tuple[StructuralGuidance, ...] = Field(min_length=1)
     causal_claims_permitted: bool = False
 
@@ -343,6 +344,10 @@ class GenerationIntent(ContractModel):
     objective: NonEmptyStr
     audience: NonEmptyStr
     platform: Platform
+    content_type: ContentType
+    thread_post_count: int | None = Field(default=None, ge=2, le=5)
+    minimum_words: int | None = Field(default=None, ge=1, le=2_000)
+    maximum_words: int | None = Field(default=None, ge=1, le=2_000)
     candidate_count: int = Field(ge=1, le=10)
     source_document_ids: tuple[UUID, ...]
 

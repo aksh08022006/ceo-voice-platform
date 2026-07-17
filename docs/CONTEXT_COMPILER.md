@@ -125,9 +125,9 @@ bound without losing source attribution.
 
 Platform contracts are injected data, not scattered constants. The default composition pins the
 official 3,000-character LinkedIn UGC limit and 280-character X post limit with source references,
-verification date, and policy version. Thread compilation is explicitly disabled in the current
-single-post contract even though X supports threads; a later thread content type needs its own
-validated assembly and limit policy.
+verification date, and policy version. LinkedIn remains a single-post contract. X supports a
+request-pinned thread of two to five posts: every unit retains the 280-character limit and the exact
+requested count is sealed into generation intent before validation and splitting.
 
 ## Retrieved evidence
 

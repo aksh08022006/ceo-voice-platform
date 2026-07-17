@@ -1,13 +1,16 @@
 """Synthetic corpora and an explicit showcase-only review gate."""
 
 from datetime import UTC, datetime, timedelta
-from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from ceo_voice.ingestion import CleanDocument
 from ceo_voice.models.enums import DocumentSourceType, DocumentType, Platform
-from ceo_voice.profiles import CuratedCorpus, CuratedDocument, ProfileBuildManifest
-from ceo_voice.profiles.builder import VoiceProfileBuilder
+from ceo_voice.profiles import (
+    CuratedCorpus,
+    CuratedDocument,
+    ProfileBuildManifest,
+    ReviewedDevelopmentProfileBuilder,
+)
 from ceo_voice.virality import (
     MetricCollectionMethod,
     PerformanceMetrics,
@@ -16,8 +19,6 @@ from ceo_voice.virality import (
     ViralityCorpusItem,
 )
 from ceo_voice.voice import (
-    DecisionState,
-    FeatureRegistry,
     ProfileLineage,
     SemanticVersion,
     SourceModality,
@@ -127,16 +128,55 @@ def profile_manifest(profile: ShowcaseProfile) -> ProfileBuildManifest:
 def virality_corpus(profile: ShowcaseProfile) -> ViralityCorpus:
     """Create a multi-author structural corpus scoped to the showcase tenant."""
 
+    examples = (
+        (
+            "Strong teams ship consistently when ownership is explicit.\n\n"
+            "The problem is ambiguity at decision boundaries.\n\n"
+            "The solution is one accountable owner with the context to act.\n\n"
+            "Clear ownership compounds into speed."
+        ),
+        (
+            "A useful platform removes work from builders.\n\n"
+            "Start with the constraint. Explain the mechanism. Show the consequence.\n\n"
+            "The evidence matters more than the slogan."
+        ),
+        (
+            "Most teams do not have an execution problem. They have a clarity problem.\n\n"
+            "Make the decision visible, assign an owner, and measure the result.\n\n"
+            "That is how operating discipline becomes momentum."
+        ),
+        (
+            "Today we launched a simpler way for teams to move from data to decisions.\n\n"
+            "It removes a handoff, keeps governance intact, and shortens the path to production.\n\n"
+            "The technical details are available in the launch notes."
+        ),
+        (
+            "The strongest product improvements are often architectural.\n\n"
+            "They eliminate an entire category of coordination rather than optimizing one step.\n\n"
+            "That difference shows up in both speed and reliability."
+        ),
+        (
+            "Execution gets faster when the system makes the right behavior easy.\n\n"
+            "First remove the unnecessary choice. Then make ownership explicit.\n\n"
+            "The result is a process teams can trust."
+        ),
+        (
+            "Evidence changes the quality of a technical decision.\n\n"
+            "A benchmark is useful only when it reflects the workload, constraints, and users.\n\n"
+            "Measure the real system before choosing the answer."
+        ),
+        (
+            "We built the new capability around one constraint: no additional copy of the data.\n\n"
+            "That architecture preserves governance while reducing latency.\n\n"
+            "One system can now support both the operational and analytical path."
+        ),
+    )
     items = []
     for number in range(1, 9):
         document = _document(
             profile,
             20 + number,
-            (
-                "Why do strong teams ship consistently?\n\n"
-                "The problem is unclear ownership.\n\n"
-                "Make one decision explicit.\n\nWhat would you change?"
-            ),
+            examples[number - 1],
             platform=Platform.X if number % 2 == 0 else Platform.LINKEDIN,
         ).model_copy(update={"ceo_id": _uuid(f"benchmark-leader:{(number // 2) % 2}")})
         items.append(
@@ -166,72 +206,5 @@ def virality_corpus(profile: ShowcaseProfile) -> ViralityCorpus:
     )
 
 
-class ReviewedShowcaseProfileBuilder:
+class ReviewedShowcaseProfileBuilder(ReviewedDevelopmentProfileBuilder):
     """Promote only synthetic fixtures through an explicit local demonstration gate."""
-
-    def __init__(self, builder: VoiceProfileBuilder, registry: FeatureRegistry) -> None:
-        self._builder = builder
-        self._registry = registry
-
-    async def build(self, command: Any) -> Any:
-        """Build normally, then attach synthetic review authorization for generation."""
-
-        profile = await self._builder.build(command)
-        release = profile.managed_release.release
-
-        def promoted(value: Any) -> Any:
-            return value.model_copy(
-                update={
-                    "measurement_reliability": 1,
-                    "attribution_reliability": 1,
-                    "coverage": 1,
-                    "effective_support": min(1, value.evidence_count),
-                    "context_diversity": 1,
-                    "stability": 1,
-                    "cross_context_robustness": 1,
-                    "nuisance_robustness": 1,
-                    "distinctiveness": 1,
-                    "freshness": 1,
-                    "calibration": 1,
-                    "independent_cluster_count": min(1, value.evidence_count),
-                }
-            )
-
-        components = release.components.model_copy(
-            update={
-                field: tuple(
-                    item.model_copy(
-                        update={
-                            "confidence": promoted(item.confidence),
-                            "decision_state": DecisionState.ACTIONABLE_STRONG,
-                        }
-                    )
-                    for item in getattr(release.components, field)
-                )
-                for field in ("aggregates", "residuals", "conditional_residuals")
-            }
-        )
-        authorized = release.model_copy(
-            update={"registry": self._registry.reference, "components": components}
-        )
-        report = profile.validation_report.model_copy(
-            update={"release_content_hash": authorized.content_hash}
-        )
-        managed = profile.managed_release.model_copy(
-            update={"release": authorized, "validation_report": report}
-        )
-        return profile.model_copy(
-            update={
-                "managed_release": managed,
-                "validation_report": report,
-                "corpus_health": profile.corpus_health.model_copy(
-                    update={"generation_ready": True}
-                ),
-                "inspection": profile.inspection.model_copy(
-                    update={"release_content_hash": authorized.content_hash}
-                ),
-                "retrieval_projection": profile.retrieval_projection.model_copy(
-                    update={"release_content_hash": authorized.content_hash}
-                ),
-            }
-        )

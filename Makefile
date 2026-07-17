@@ -1,4 +1,4 @@
-.PHONY: setup format lint typecheck test check check-all frontend-setup frontend-check doctor demo benchmark api frontend-dev clean
+.PHONY: setup format lint typecheck test check check-all frontend-setup frontend-check doctor demo benchmark profiles ali-profile matei-profile api frontend-dev clean
 
 PYTHON := .venv/bin/python
 
@@ -50,6 +50,36 @@ benchmark:
 	$(PYTHON) -m pytest --no-cov \
 		tests/unit/evaluation/test_engine.py::test_batch_benchmark_and_regression_workflows
 	@echo "Fixture reports: data/benchmarks/fixture-report.{json,md}"
+
+ali-profile:
+	$(PYTHON) -m ceo_voice.profiles.cli build-development-profile \
+		--profile ali-ghodsi \
+		--capture data/runtime/incoming/ali-ghodsi-linkedin-screenshot-batch-001.normalized.json \
+		--capture data/runtime/incoming/ali-ghodsi-linkedin-screenshot-batch-002.normalized.json \
+		--capture data/runtime/incoming/ali-ghodsi-linkedin-screenshot-batch-003.normalized.json \
+		--capture data/runtime/incoming/ali-ghodsi-x-screenshot-batch-001.normalized.json \
+		--capture data/runtime/incoming/ali-ghodsi-x-screenshot-batch-002.normalized.json \
+		--capture data/runtime/incoming/ali-ghodsi-x-screenshot-batch-003.normalized.json \
+		--workspace data/runtime/ali/workspace \
+		--catalog data/runtime/ali/published/catalog.json
+
+matei-profile:
+	$(PYTHON) -m ceo_voice.profiles.cli build-development-profile \
+		--profile matei-zaharia \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-001.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-002.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-003.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-004.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-005.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-linkedin-screenshot-batch-006.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-x-screenshot-batch-001.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-x-screenshot-batch-002.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-x-screenshot-batch-003.normalized.json \
+		--capture data/runtime/incoming/matei-zaharia-x-screenshot-batch-004.normalized.json \
+		--workspace data/runtime/matei/workspace \
+		--catalog data/runtime/ali/published/catalog.json
+
+profiles: ali-profile matei-profile
 
 clean:
 	$(PYTHON) -c "from pathlib import Path; import shutil; [shutil.rmtree(path, ignore_errors=True) for name in ('__pycache__', '.pytest_cache', '.mypy_cache', '.ruff_cache') for path in Path('.').rglob(name)]"

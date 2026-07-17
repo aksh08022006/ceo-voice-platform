@@ -25,6 +25,8 @@ class ValidationCode(StrEnum):
     THREAD_NOT_SUPPORTED = "thread_not_supported"
     THREAD_LENGTH = "thread_length"
     THREAD_POST_LENGTH = "thread_post_length"
+    THREAD_POST_COUNT = "thread_post_count"
+    WORD_COUNT = "word_count"
     REQUIRED_CONSTRAINT = "required_constraint"
     UNSAFE_CONTENT = "unsafe_content"
     LOW_VOICE_CONFIDENCE = "low_voice_confidence"

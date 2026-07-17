@@ -38,6 +38,7 @@ def test_compiler_builds_deterministic_separated_generation_context() -> None:
     assert first.voice.features[0].feature_id == "lexical.function-word-rate"
     assert first.voice.release_id != first.virality.release_id
     assert len(first.virality.guidance) == 8
+    assert first.virality.influence == 0.125
     assert first.virality.causal_claims_permitted is False
     assert first.constraints.summary.hard == 3
     assert first.constraints.summary.soft == 1

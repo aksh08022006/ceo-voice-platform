@@ -9,9 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from ceo_voice.config import Settings, get_settings
+from ceo_voice.core.constants import Environment
 from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
+from ceo_voice.models.enums import ContentType
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
 from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.showcase.service import WorkflowSession
@@ -37,6 +39,11 @@ PUBLISHED_DISCLAIMER = (
     "Generated from a governed immutable profile release and its traceable evidence. "
     "Human review remains required before publication."
 )
+DEVELOPMENT_DISCLAIMER = (
+    "Development-only output from screenshot-transcribed public posts with incomplete provenance, "
+    "timestamps, and reuse authority. It is not an approved identity simulation; human review is "
+    "required and the artifacts must not be deployed to production."
+)
 
 
 def create_app(
@@ -57,17 +64,22 @@ def create_app(
         transport = HttpxJsonTransport(
             timeout_seconds=resolved.model.request_timeout_seconds,
         )
+        published_bundles = (
+            load_published_profile_catalog(resolved.api.published_profile_catalog)
+            if resolved.api.published_profile_catalog is not None
+            else ()
+        )
+        if resolved.application.environment is Environment.PRODUCTION and any(
+            bundle.artifact_status == "development" for bundle in published_bundles
+        ):
+            raise ConfigurationError("development profile artifacts are forbidden in production")
         workflows = ShowcaseWorkflowService(
             provider=create_model_provider(resolved.model, transport),
             model=resolved.model.generation_model,
             model_context_tokens=resolved.model.context_window_tokens,
             maximum_output_tokens=resolved.model.maximum_output_tokens,
             maximum_provider_retries=resolved.model.max_retries,
-            published_bundles=(
-                load_published_profile_catalog(resolved.api.published_profile_catalog)
-                if resolved.api.published_profile_catalog is not None
-                else ()
-            ),
+            published_bundles=published_bundles,
         )
     else:
         workflows = ShowcaseWorkflowService()
@@ -148,6 +160,10 @@ def create_app(
                 title=item.title,
                 platform=item.platform,
                 content_type=item.content_type,
+                thread_post_count=item.thread_post_count,
+                virality_influence=item.virality_influence,
+                minimum_words=item.minimum_words,
+                maximum_words=item.maximum_words,
                 idea=item.idea,
                 constraints=item.constraints,
                 human_edit=item.human_edit,
@@ -167,11 +183,9 @@ def create_app(
             session = await workflows.generate(
                 profile_slug=value.profile_slug,
                 platform=value.platform,
-                content_type=value.content_type,
+                content_type=ContentType.POST,
                 idea=value.idea,
-                constraints=tuple(
-                    line.strip() for line in value.constraints.splitlines() if line.strip()
-                ),
+                constraints=(),
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="profile not found") from exc
@@ -245,6 +259,9 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
         profile_slug=session.profile.slug,
         profile_name=session.profile.name,
         platform=artifacts.context.platform.platform.value if artifacts.context else "unknown",
+        content_type=artifacts.context.intent.content_type.value if artifacts.context else "post",
+        virality_influence=artifacts.context.virality.influence if artifacts.context else 0.0,
+        thread=draft.thread,
         content=draft.content,
         edited_content=session.edited.content if session.edited else None,
         revoiced_content=revoice.content if revoice else None,
@@ -287,7 +304,11 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
             else ()
         ),
         recommendations=evaluation.recommended_improvements if evaluation else (),
-        disclaimer=PUBLISHED_DISCLAIMER if session.profile.status == "published" else DISCLAIMER,
+        disclaimer=(
+            PUBLISHED_DISCLAIMER
+            if session.profile.status == "published"
+            else (DEVELOPMENT_DISCLAIMER if session.profile.status == "development" else DISCLAIMER)
+        ),
     )
 
 

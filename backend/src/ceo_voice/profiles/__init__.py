@@ -20,6 +20,7 @@ from ceo_voice.profiles.contracts import (
     ScalarBaselineSnapshot,
     ScalarFeatureBaseline,
 )
+from ceo_voice.profiles.development import ReviewedDevelopmentProfileBuilder
 from ceo_voice.profiles.enums import (
     BuildStage,
     CorpusHealthStatus,
@@ -74,6 +75,7 @@ __all__ = [
     "ProgressKind",
     "ProgressSink",
     "PublishedVoiceProfile",
+    "ReviewedDevelopmentProfileBuilder",
     "ScalarBaselineSnapshot",
     "ScalarFeatureBaseline",
     "Tier1Runtime",

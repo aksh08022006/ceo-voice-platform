@@ -38,6 +38,11 @@ def validate_generation_input(value: GenerationInput) -> None:
             == value.retrieval.platform.platform,
             "platform_mismatch",
         ),
+        (value.request.content_type == value.context.intent.content_type, "content_type_mismatch"),
+        (
+            value.request.thread_post_count == value.context.intent.thread_post_count,
+            "thread_count_mismatch",
+        ),
         (value.retrieval.source_context_id == value.context.context_id, "context_mismatch"),
         (
             value.retrieval.source_context_hash == value.context.content_hash,
@@ -79,18 +84,46 @@ class OutputValidator:
                 "thread exceeds platform post count",
                 findings,
             )
-        for post in posts:
+        requested_posts = value.request.thread_post_count
+        if requested_posts is not None:
             self._add(
-                len(post) > value.context.platform.maximum_characters,
+                len(posts) != requested_posts,
+                ValidationCode.THREAD_POST_COUNT,
+                f"thread must contain exactly {requested_posts} posts",
+                findings,
+            )
+        for post in posts:
+            character_count = len(post)
+            maximum_characters = value.context.platform.maximum_characters
+            self._add(
+                character_count > maximum_characters,
                 (
                     ValidationCode.THREAD_POST_LENGTH
                     if len(posts) > 1
                     else ValidationCode.PLATFORM_LENGTH
                 ),
-                "post exceeds platform character limit",
+                (
+                    f"post has {character_count} characters; rewrite it to at most "
+                    f"{maximum_characters} characters"
+                ),
                 findings,
             )
         lowered = content.casefold()
+        word_count = len(content.split())
+        if value.request.minimum_words is not None:
+            self._add(
+                word_count < value.request.minimum_words,
+                ValidationCode.WORD_COUNT,
+                f"output must contain at least {value.request.minimum_words} words",
+                findings,
+            )
+        if value.request.maximum_words is not None:
+            self._add(
+                word_count > value.request.maximum_words,
+                ValidationCode.WORD_COUNT,
+                f"output must contain at most {value.request.maximum_words} words",
+                findings,
+            )
         self._add(
             any(term in lowered for term in self._UNSAFE),
             ValidationCode.UNSAFE_CONTENT,
