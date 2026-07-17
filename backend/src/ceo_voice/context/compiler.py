@@ -65,6 +65,7 @@ class ContextCompiler:
         structure_result = ViralityCompiler(policy=self._policy.structure).compile(
             virality_profile,
             platform=request.platform,
+            influence=request.virality_influence,
         )
         constraints = self._constraint_compiler.compile(
             voice_record.release,
@@ -87,6 +88,10 @@ class ContextCompiler:
             objective=request.objective,
             audience=request.audience,
             platform=request.platform,
+            content_type=request.content_type,
+            thread_post_count=request.thread_post_count,
+            minimum_words=request.minimum_words,
+            maximum_words=request.maximum_words,
             candidate_count=request.candidate_count,
             source_document_ids=request.source_document_ids,
         )

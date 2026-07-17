@@ -2,6 +2,8 @@
 
 from uuid import UUID
 
+from pydantic import JsonValue
+
 from ceo_voice.core.exceptions import PromptBudgetError
 from ceo_voice.generation.contracts import (
     GenerationInput,
@@ -14,6 +16,28 @@ from ceo_voice.generation.enums import PromptSectionKind
 from ceo_voice.prompts import PROMPT_VERSION, SYSTEM_INSTRUCTIONS, THREAD_SEPARATOR
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.utils.json import dumps_json
+
+_COMPOSITION_ROUTES = (
+    "lead with the concrete outcome, then explain the mechanism",
+    "lead with the core claim, then support it with evidence",
+    "lead with the operating problem, then show what changed",
+    "lead with the technical mechanism, then connect it to the practical consequence",
+    "lead with a specific observation, then widen to the strategic implication",
+)
+
+
+def _variation_directive(request_id: UUID) -> dict[str, JsonValue]:
+    """Return a traceable composition choice without adding a caller-facing input."""
+
+    route = _COMPOSITION_ROUTES[request_id.int % len(_COMPOSITION_ROUTES)]
+    return {
+        "variation_key": str(request_id),
+        "composition_route": route,
+        "instruction": (
+            "Write fresh wording for this request. Do not reuse a stock hook, stock closing, "
+            "or question-led frame merely because it appeared in an example."
+        ),
+    }
 
 
 class TokenBudgetManager:
@@ -94,6 +118,10 @@ class PromptBuilder:
             source_ids=tuple(item.pattern_id for item in bundle.structural_guidance),
             content=dumps_json(
                 {
+                    "influence": context.virality.influence,
+                    "instruction": (
+                        "Apply structural guidance proportionally and never override voice targets"
+                    ),
                     "structure_targets": [
                         {
                             "dimension": item.dimension.value,
@@ -101,7 +129,7 @@ class PromptBuilder:
                             "label": item.label,
                         }
                         for item in bundle.structural_guidance
-                    ]
+                    ],
                 }
             ),
         )
@@ -116,7 +144,10 @@ class PromptBuilder:
                     "objective": value.request.objective,
                     "audience": value.request.audience,
                     "platform": value.request.platform.value,
+                    "content_type": value.request.content_type.value,
+                    "thread_post_count": value.request.thread_post_count,
                     "candidate_number": 1,
+                    "variation": _variation_directive(value.request.request_id),
                 }
             ),
         )
@@ -129,8 +160,21 @@ class PromptBuilder:
                     "maximum_characters_per_post": context.platform.maximum_characters,
                     "thread_supported": context.platform.thread_output_supported,
                     "maximum_thread_posts": context.platform.maximum_thread_posts,
+                    "requested_thread_posts": value.request.thread_post_count,
+                    "minimum_words": value.request.minimum_words,
+                    "maximum_words": value.request.maximum_words,
                     "thread_separator": THREAD_SEPARATOR,
                     "format": "plain text only",
+                    "hard_requirement": (
+                        f"Return exactly one post of at most "
+                        f"{context.platform.maximum_characters} characters, including spaces "
+                        "and line breaks. Do not add commentary before or after it."
+                        if value.request.thread_post_count is None
+                        else (
+                            "Every thread post must remain within the supplied character limit "
+                            "and posts must use only the supplied separator."
+                        )
+                    ),
                 }
             ),
         )

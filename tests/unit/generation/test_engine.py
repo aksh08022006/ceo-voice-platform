@@ -95,6 +95,10 @@ def test_generation_uses_bundle_without_persona_impersonation_and_reports_lineag
     assert "impersonate" in provider.requests[0].system
     assert "[VOICE]" in provider.requests[0].user
     assert "[STRUCTURE]" in provider.requests[0].user
+    assert '"influence":0.125' in provider.requests[0].user
+    assert '"variation_key"' in provider.requests[0].user
+    assert '"hard_requirement"' in provider.requests[0].user
+    assert "Do not default to a question" in provider.requests[0].system
     assert "[EVIDENCE]" in provider.requests[0].user
 
 
@@ -159,15 +163,26 @@ def test_budget_and_output_policy_fail_closed() -> None:
     value = _generation_input()
     constrained = value.model_copy(
         update={
-            "request": value.request.model_copy(update={"constraints": ("must include: flywheel",)})
+            "request": value.request.model_copy(
+                update={
+                    "constraints": ("must include: flywheel",),
+                    "thread_post_count": 3,
+                    "minimum_words": 20,
+                    "maximum_words": 1,
+                }
+            )
         }
     )
     result = OutputValidator().validate("first\n---\nsecond", constrained, policy)
     assert result.valid is False
     assert {item.code for item in result.findings} >= {
         ValidationCode.THREAD_NOT_SUPPORTED,
+        ValidationCode.THREAD_POST_COUNT,
+        ValidationCode.WORD_COUNT,
         ValidationCode.REQUIRED_CONSTRAINT,
     }
+    long_result = OutputValidator().validate("x" * 4_000, value, policy)
+    assert any("rewrite it to at most" in item.message for item in long_result.findings)
 
 
 def test_nonretryable_provider_failure_is_propagated() -> None:

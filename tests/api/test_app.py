@@ -6,7 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from ceo_voice.api import create_app
-from ceo_voice.config import ApiSettings, Settings
+from ceo_voice.config import ApiSettings, ModelSettings, Settings
 from ceo_voice.core.exceptions import ConfigurationError
 from ceo_voice.showcase import ShowcaseWorkflowService
 
@@ -16,7 +16,7 @@ def client(tmp_path: Path) -> TestClient:
 
     return TestClient(
         create_app(
-            Settings(),
+            Settings(_env_file=None, model=ModelSettings(enabled=False)),
             ShowcaseWorkflowService(output_directory=tmp_path / "artifacts"),
         )
     )
@@ -51,9 +51,7 @@ def test_browser_can_generate_edit_revoice_evaluate_and_inspect(tmp_path: Path) 
             json={
                 "profile_slug": "ali-ghodsi",
                 "platform": "linkedin",
-                "content_type": "announcement",
                 "idea": "Launch a governed AI feature for production data teams.",
-                "constraints": "Avoid hype.",
             },
         )
         assert generated.status_code == 200, generated.text
@@ -69,6 +67,7 @@ def test_browser_can_generate_edit_revoice_evaluate_and_inspect(tmp_path: Path) 
         inspected = api.get(f"/api/v1/workflows/{session_id}")
 
     assert first["evidence_count"] > 0
+    assert first["content_type"] == "post"
     assert first["voice_features"]
     assert first["timeline"][-1]["label"] == "Generated Draft"
     assert revoiced.status_code == 200, revoiced.text
@@ -92,9 +91,7 @@ def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path:
             json={
                 "profile_slug": "jensen-huang",
                 "platform": "x",
-                "content_type": "post",
                 "idea": "Explain why accelerated computing is becoming infrastructure.",
-                "constraints": "Connect the platform shift to builders.",
             },
         )
     assert response.status_code == 200, response.text
@@ -102,9 +99,79 @@ def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path:
     assert len(response.json()["content"]) <= 280
 
 
+def test_generation_contract_accepts_exactly_three_inputs(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        response = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "matei-zaharia",
+                "platform": "x",
+                "idea": "Explain why compound AI systems combine models, retrieval, and tools.",
+            },
+        )
+        hidden_control = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "matei-zaharia",
+                "platform": "x",
+                "idea": "Explain why compound AI systems combine models, retrieval, and tools.",
+                "virality_influence": 0.1,
+            },
+        )
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["content_type"] == "post"
+    assert payload["virality_influence"] == 0.125
+    assert len(payload["content"]) <= 280
+    assert hidden_control.status_code == 422
+
+
+def test_repeated_showcase_requests_vary_without_question_templates(tmp_path: Path) -> None:
+    request = {
+        "profile_slug": "ali-ghodsi",
+        "platform": "linkedin",
+        "idea": "Launch a governed AI feature for production data teams.",
+    }
+    with client(tmp_path) as api:
+        first = api.post("/api/v1/workflows/generate", json=request)
+        second = api.post("/api/v1/workflows/generate", json=request)
+
+    assert first.status_code == second.status_code == 200
+    first_content = first.json()["content"]
+    second_content = second.json()["content"]
+    assert first_content != second_content
+    assert not first_content.splitlines()[0].endswith("?")
+    assert not first_content.splitlines()[-1].endswith("?")
+
+
+def test_generation_contract_rejects_missing_or_invalid_product_inputs(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        missing_identity = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "platform": "linkedin",
+                "idea": "Explain why an open-source acquisition benefits customers and builders.",
+            },
+        )
+        short_idea = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "linkedin",
+                "idea": "Too short.",
+            },
+        )
+
+    assert missing_identity.status_code == 422
+    assert short_idea.status_code == 422
+
+
 def test_published_catalog_requires_enabled_model_access(tmp_path: Path) -> None:
     settings = Settings(
-        api=ApiSettings(published_profile_catalog=tmp_path / "deployment" / "catalog.json")
+        _env_file=None,
+        api=ApiSettings(published_profile_catalog=tmp_path / "deployment" / "catalog.json"),
+        model=ModelSettings(enabled=False),
     )
 
     with pytest.raises(ConfigurationError, match="requires model access"):
@@ -114,7 +181,11 @@ def test_published_catalog_requires_enabled_model_access(tmp_path: Path) -> None
 def test_disabled_showcase_keeps_catalog_visible_but_blocks_generation(tmp_path: Path) -> None:
     with TestClient(
         create_app(
-            Settings(api=ApiSettings(showcase_enabled=False)),
+            Settings(
+                _env_file=None,
+                api=ApiSettings(showcase_enabled=False),
+                model=ModelSettings(enabled=False),
+            ),
             ShowcaseWorkflowService(output_directory=tmp_path / "artifacts"),
         )
     ) as api:
@@ -124,7 +195,6 @@ def test_disabled_showcase_keeps_catalog_visible_but_blocks_generation(tmp_path:
             json={
                 "profile_slug": "ali-ghodsi",
                 "platform": "linkedin",
-                "content_type": "post",
                 "idea": "Explain why clear ownership helps technical teams execute.",
             },
         )

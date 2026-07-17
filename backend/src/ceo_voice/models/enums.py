@@ -15,6 +15,14 @@ class Platform(StrEnum):
     GENERIC = "generic"
 
 
+class ContentType(StrEnum):
+    """Requested social-content shape, independent of provider prompting."""
+
+    POST = "post"
+    THREAD = "thread"
+    ANNOUNCEMENT = "announcement"
+
+
 class DocumentSourceType(StrEnum):
     """Origin of an ingested source document."""
 

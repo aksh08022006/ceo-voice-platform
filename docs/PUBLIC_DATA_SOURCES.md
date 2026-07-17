@@ -2,10 +2,11 @@
 
 ## Current truth
 
-The repository does **not** currently contain or claim a trained real-person Ali Ghodsi or Matei
-Zaharia profile. It contains synthetic showcase corpora and URL-only discovery catalogs. Raw real
-content is intentionally ignored by Git because public availability does not grant redistribution,
-authorship certainty, or permission to bulk scrape it.
+The repository does **not** contain or claim a trained impersonation model for Ali Ghodsi or Matei
+Zaharia. The local development workflow can build profiles from operator-transcribed public posts;
+that raw material and its generated bundles remain ignored by Git. Synthetic fixtures remain for
+deterministic tests. Public availability does not by itself establish redistribution rights,
+authorship certainty, or permission to bulk scrape content.
 
 The production pipeline is ready to ingest an operator-reviewed JSON/JSONL export, retain its raw
 and clean forms, build HVM/VKR releases, and fail closed until profile authority is approved. A
@@ -48,11 +49,12 @@ as authorization.
 
 ## Exact real-data status
 
-As of 15 July 2026, the platform uses no Ali Ghodsi or Matei Zaharia words for training, profile
-construction, retrieval, generation, or evaluation. It uses public URLs only to establish source
-identity and acquisition constraints. The application walkthrough corpus is synthetic and labeled
-as such. A provider API key enables LLM transport only; it does not make a synthetic or unreviewed
-profile authoritative.
+As of 16 July 2026, local development profiles can use manually transcribed Ali Ghodsi and Matei
+Zaharia public posts for profile construction, retrieval, and generation testing. The material is
+not used to fine-tune a model and is not committed to the repository. Some records lack canonical
+URLs, exact timestamps, complete provenance, and reuse authority, so these profiles remain
+development-only. Synthetic fixtures still serve deterministic integration tests. A provider API
+key enables LLM transport only; it does not make an unreviewed profile authoritative.
 
 The first lawful primary-data paths are, in order of preference:
 

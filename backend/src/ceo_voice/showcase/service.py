@@ -1,6 +1,7 @@
 """Browser workflow composition over the existing production engines."""
 
 from dataclasses import dataclass
+from itertools import count
 from pathlib import Path
 from tempfile import gettempdir
 from typing import cast
@@ -25,7 +26,7 @@ from ceo_voice.integration import (
     PublishedIntegrationInput,
     PublishedIntegrationRunner,
 )
-from ceo_voice.models.enums import Platform
+from ceo_voice.models.enums import ContentType, Platform
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
     PublishedVoiceProfile,
@@ -74,6 +75,7 @@ class ShowcaseWorkflowService:
     ) -> None:
         self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
         self._sessions: dict[UUID, WorkflowSession] = {}
+        self._variation_sequence = count()
         self._provider = provider
         self._model = model
         self._model_context_tokens = model_context_tokens
@@ -87,7 +89,13 @@ class ShowcaseWorkflowService:
     def mode(self) -> str:
         """Return the active artifact source exposed by this service."""
 
-        return "published" if self._bundles else "showcase"
+        if not self._bundles:
+            return "showcase"
+        return (
+            "development"
+            if any(bundle.artifact_status == "development" for bundle in self._bundles.values())
+            else "published"
+        )
 
     @property
     def profiles(self) -> tuple[ShowcaseProfile, ...]:
@@ -102,7 +110,7 @@ class ShowcaseWorkflowService:
                 role=bundle.role,
                 summary=bundle.summary,
                 status=(
-                    "published"
+                    bundle.artifact_status
                     if bundle.voice_profile.corpus_health.generation_ready
                     else "not-ready"
                 ),
@@ -124,6 +132,10 @@ class ShowcaseWorkflowService:
         content_type: str,
         idea: str,
         constraints: tuple[str, ...],
+        thread_post_count: int | None = None,
+        virality_influence: float = 0.125,
+        minimum_words: int | None = None,
+        maximum_words: int | None = None,
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
 
@@ -134,6 +146,10 @@ class ShowcaseWorkflowService:
                 content_type=content_type,
                 idea=idea,
                 constraints=constraints,
+                thread_post_count=thread_post_count,
+                virality_influence=virality_influence,
+                minimum_words=minimum_words,
+                maximum_words=maximum_words,
             )
         profile = profile_by_slug(profile_slug)
         manifest = profile_manifest(profile)
@@ -145,13 +161,25 @@ class ShowcaseWorkflowService:
             voice_profile_id=manifest.corpus.lineage.id,
             voice_profile_version=1,
             platform=platform,
+            content_type=ContentType(content_type),
+            thread_post_count=thread_post_count,
+            virality_influence=virality_influence,
+            minimum_words=minimum_words,
+            maximum_words=maximum_words,
             topic=idea,
             objective=f"Create a {content_type} that communicates the idea clearly",
             audience="executive and technical readers",
             constraints=constraints,
         )
         provider = self._provider or ShowcaseProvider(
-            self._draft(profile_slug, platform, idea, content_type)
+            self._draft(
+                profile_slug,
+                platform,
+                idea,
+                content_type,
+                minimum_words,
+                variation_index=next(self._variation_sequence),
+            )
         )
         runner = self._runner(provider)
         outcome = await runner.run(
@@ -182,6 +210,10 @@ class ShowcaseWorkflowService:
         content_type: str,
         idea: str,
         constraints: tuple[str, ...],
+        thread_post_count: int | None,
+        virality_influence: float,
+        minimum_words: int | None,
+        maximum_words: int | None,
     ) -> WorkflowSession:
         """Serve one request from exact immutable release artifacts without rebuilding them."""
 
@@ -201,6 +233,11 @@ class ShowcaseWorkflowService:
             voice_profile_id=release.lineage_id,
             voice_profile_version=release.version,
             platform=platform,
+            content_type=ContentType(content_type),
+            thread_post_count=thread_post_count,
+            virality_influence=virality_influence,
+            minimum_words=minimum_words,
+            maximum_words=maximum_words,
             topic=idea,
             objective=f"Create a {content_type} that communicates the idea clearly",
             audience="executive and technical readers",
@@ -305,11 +342,24 @@ class ShowcaseWorkflowService:
         return value
 
     @staticmethod
-    def _draft(slug: str, platform: Platform, idea: str, content_type: str) -> str:
+    def _draft(
+        slug: str,
+        platform: Platform,
+        idea: str,
+        content_type: str,
+        minimum_words: int | None,
+        *,
+        variation_index: int,
+    ) -> str:
         idea = idea.strip().rstrip(".")
         if platform is Platform.X:
-            parts = (
+            opening_options = (
                 f"A platform shift is underway: {idea}.",
+                f"The practical consequence of {idea} is bigger than the demo.",
+                f"{idea} changes what builders can put into production.",
+            )
+            parts = (
+                opening_options[variation_index % len(opening_options)],
                 "The important change is not the demo. It is the infrastructure that lets builders turn capability into reliable systems.",
                 "The next chapter belongs to teams that connect ambitious technology to useful work.",
             )
@@ -319,11 +369,39 @@ class ShowcaseWorkflowService:
             "matei-zaharia": "The mechanism matters before the benchmark.",
             "jensen-huang": "Computing is entering a new platform transition.",
         }
+        lead_options = (
+            openings[slug],
+            f"{idea} is a practical infrastructure shift.",
+            "The architecture matters more than the announcement.",
+        )
+        lead = lead_options[variation_index % len(lead_options)]
+        closing_options = (
+            "The opportunity is to remove the first constraint that keeps the idea from production.",
+            "Progress compounds when the operating model is as clear as the technology.",
+            "The next step is turning this capability into something teams can trust every day.",
+        )
+        closing = closing_options[variation_index % len(closing_options)]
+        compact = (
+            f"{lead}\n\n{idea}.\n\n"
+            "The practical shift is to connect the technology, the operating model, and clear ownership. "
+            f"That is how an idea becomes a system people can trust.\n\n{closing}"
+        )
+        if minimum_words is None or len(compact.split()) >= minimum_words:
+            return compact
         return (
             f"{openings[slug]}\n\n{idea}.\n\n"
-            "The practical shift is to connect the technology, the operating model, and clear ownership. "
-            "That is how an idea becomes a system people can trust.\n\n"
-            "What is the first constraint your team would remove?"
+            "Open systems create a durable advantage because customers and builders can inspect "
+            "the interfaces, extend the technology, and choose how their data moves. That freedom "
+            "does not weaken execution. It creates a larger community that can test ideas, expose "
+            "limitations, and improve the foundation together.\n\n"
+            "The practical opportunity is to connect the technology, the operating model, and "
+            "clear ownership. Teams should be able to adopt the strongest parts without rebuilding "
+            "everything around them or accepting a new point of lock-in. When the architecture is "
+            "open, progress compounds across companies rather than staying inside one roadmap.\n\n"
+            "This is ultimately about giving customers a simpler path from an ambitious idea to a "
+            "system they can trust in production. We are excited to keep working with the community, "
+            "make the interfaces clearer, and help more teams build on an open foundation.\n\n"
+            "The next chapter will be built in the open."
         )
 
     @staticmethod

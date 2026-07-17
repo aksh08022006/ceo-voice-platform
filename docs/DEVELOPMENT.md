@@ -76,8 +76,9 @@ CEO_VOICE_MODEL__REQUEST_TIMEOUT_SECONDS=30
 CEO_VOICE_MODEL__MAX_RETRIES=3
 ```
 
-Do not enable model access merely to bypass profile readiness. The browser showcase still labels
-its named profiles as synthetic until a reviewed corpus and published production profile are wired.
+Do not enable model access merely to bypass profile readiness. The browser distinguishes synthetic
+test fixtures, operator-transcribed development profiles, and reviewed production profiles. A
+provider credential changes transport only; it does not promote corpus authority.
 
 Environment policies:
 

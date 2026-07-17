@@ -2,10 +2,10 @@
 
 from uuid import UUID, uuid4
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
 from ceo_voice.models.base import NonBlankText, NonEmptyStr, UtcDatetime
-from ceo_voice.models.enums import GenerationStatus, Platform
+from ceo_voice.models.enums import ContentType, GenerationStatus, Platform
 from ceo_voice.models.evaluation import EvaluationResult
 from ceo_voice.schemas.base import BoundarySchema
 
@@ -29,6 +29,34 @@ class GenerationRequest(BoundarySchema):
         description="Pinned voice-profile version for reproducibility.",
     )
     platform: Platform = Field(description="Target content platform.")
+    content_type: ContentType = Field(
+        default=ContentType.POST,
+        description="Requested output shape; threads are validated against platform policy.",
+    )
+    thread_post_count: int | None = Field(
+        default=None,
+        ge=2,
+        le=5,
+        description="Exact requested thread length; present only for thread requests.",
+    )
+    virality_influence: float = Field(
+        default=0.125,
+        ge=0,
+        le=0.25,
+        description="Bounded structural influence; voice remains dominant at every setting.",
+    )
+    minimum_words: int | None = Field(
+        default=None,
+        ge=1,
+        le=2_000,
+        description="Optional deterministic lower word-count bound.",
+    )
+    maximum_words: int | None = Field(
+        default=None,
+        ge=1,
+        le=2_000,
+        description="Optional deterministic upper word-count bound.",
+    )
     topic: NonEmptyStr = Field(description="Subject the content should address.")
     objective: NonEmptyStr = Field(description="Intended communication outcome.")
     audience: NonEmptyStr = Field(description="Intended reader segment.")
@@ -46,6 +74,25 @@ class GenerationRequest(BoundarySchema):
         le=10,
         description="Number of independently traceable candidates requested.",
     )
+
+    @model_validator(mode="after")
+    def validate_output_shape(self) -> "GenerationRequest":
+        """Keep thread and word bounds internally consistent before orchestration."""
+
+        if self.content_type is ContentType.THREAD:
+            if self.platform is not Platform.X:
+                raise ValueError("thread output is supported only for X")
+            if self.thread_post_count is None:
+                raise ValueError("thread requests require thread_post_count")
+        elif self.thread_post_count is not None:
+            raise ValueError("thread_post_count is allowed only for thread requests")
+        if (
+            self.minimum_words is not None
+            and self.maximum_words is not None
+            and self.minimum_words > self.maximum_words
+        ):
+            raise ValueError("minimum_words cannot exceed maximum_words")
+        return self
 
 
 class GenerationCandidate(BoundarySchema):

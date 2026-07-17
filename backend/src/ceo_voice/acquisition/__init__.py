@@ -16,6 +16,12 @@ from ceo_voice.acquisition.contracts import (
     SourceCatalogEntry,
     SourceCatalogManifest,
 )
+from ceo_voice.acquisition.dataset import (
+    DatasetValidationReport,
+    PublicContentRecord,
+    PublicPerformanceSnapshot,
+    validate_public_dataset,
+)
 from ceo_voice.acquisition.enums import (
     AcquisitionMethod,
     AuditSeverity,
@@ -41,9 +47,13 @@ __all__ = [
     "CorpusAcquisitionReport",
     "CorpusAuditFinding",
     "CorpusContentRole",
+    "DatasetValidationReport",
+    "PublicContentRecord",
+    "PublicPerformanceSnapshot",
     "ReusePermissionBasis",
     "SourceCatalogEntry",
     "SourceCatalogManifest",
     "SourceReviewStatus",
     "load_source_catalog",
+    "validate_public_dataset",
 ]

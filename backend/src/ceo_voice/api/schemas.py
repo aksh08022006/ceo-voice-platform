@@ -2,19 +2,19 @@
 
 from uuid import UUID
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from ceo_voice.models.enums import Platform
 
 
 class GenerateWorkflowRequest(BaseModel):
-    """Inputs supplied by the Generate workspace."""
+    """The three product inputs defined by the Draft Generator contract."""
+
+    model_config = ConfigDict(extra="forbid")
 
     profile_slug: str = Field(min_length=1)
     platform: Platform
-    content_type: str = Field(pattern=r"^(post|thread|announcement)$")
     idea: str = Field(min_length=20, max_length=1_200)
-    constraints: str = Field(default="", max_length=600)
 
 
 class ReVoiceWorkflowRequest(BaseModel):
@@ -50,6 +50,9 @@ class WorkflowResponse(BaseModel):
     profile_slug: str
     profile_name: str
     platform: str
+    content_type: str
+    virality_influence: float
+    thread: tuple[str, ...]
     content: str
     edited_content: str | None = None
     revoiced_content: str | None = None
@@ -83,6 +86,10 @@ class WalkthroughResponse(BaseModel):
     title: str
     platform: str
     content_type: str
+    thread_post_count: int | None
+    virality_influence: float
+    minimum_words: int | None
+    maximum_words: int | None
     idea: str
     constraints: str
     human_edit: str

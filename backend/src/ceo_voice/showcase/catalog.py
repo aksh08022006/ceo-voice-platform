@@ -23,6 +23,10 @@ class Walkthrough:
     title: str
     platform: str
     content_type: str
+    thread_post_count: int | None
+    virality_influence: float
+    minimum_words: int | None
+    maximum_words: int | None
     idea: str
     constraints: str
     human_edit: str
@@ -51,24 +55,32 @@ PROFILES = (
 
 WALKTHROUGHS = (
     Walkthrough(
-        "ali-ai-feature",
+        "ali-tabular-acquisition",
         "ali-ghodsi",
-        "Launching a governed AI feature",
+        "Open source and the Tabular acquisition",
         "linkedin",
         "announcement",
-        "Launch a governed AI feature that lets data teams move from prototype to production faster.",
-        "Avoid hype. Explain the operating consequence and end with a practical question.",
-        "Teams do not need another AI demo.\n\nThey need a clear path from prototype to production.\n\nToday we are launching governed AI workflows that keep data, evaluation, and ownership connected. The goal is simple: help teams ship useful systems faster without losing control.\n\nWhere does your AI workflow slow down today?",
+        None,
+        0.125,
+        150,
+        300,
+        "Databricks acquired Tabular, the company behind Apache Iceberg. Explain why this validates open-source data infrastructure and brings the teams behind Spark and Iceberg together.",
+        "Avoid hype. Include a company-specific detail and close with a forward-looking statement.",
+        "I still remember an early conversation with the Tabular founders about a simple idea: data formats should remain open.\n\nThat belief shaped the structural change I wanted to preserve. Spark opened compute. Iceberg opened table formats. Bringing these teams together gives the ecosystem a clearer path to build on both.\n\nThe acquisition matters because customers should not have to choose between performance and openness. The best infrastructure earns adoption by making it easier for everyone to participate, extend it, and move their data without being trapped.\n\nWe are excited to work with the Tabular team and the broader community on the next chapter of open lakehouse infrastructure.",
     ),
     Walkthrough(
-        "matei-technical-announcement",
+        "matei-compound-ai-systems",
         "matei-zaharia",
-        "A technical systems announcement",
-        "linkedin",
-        "announcement",
-        "Announce a new query engine optimization that improves mixed analytical workloads.",
-        "Explain the mechanism before the benefit. Do not use unsupported benchmark claims.",
-        "Mixed analytical workloads are hard because the best execution strategy changes with the data.\n\nOur new optimizer observes those changes during execution and adapts the plan without asking teams to rewrite their queries.\n\nThat makes performance more predictable while preserving the interfaces developers already use.\n\nThe technical note includes the design and its current limits.",
+        "Compound AI systems",
+        "x",
+        "thread",
+        3,
+        0.10,
+        None,
+        None,
+        "The AI industry is converging on compound systems. Progress will come from orchestrating models, retrieval, and tools rather than only making one model larger.",
+        "Explain the mechanism before the benefit. Keep it technical and avoid corporate announcement language.",
+        "A useful shift in AI systems: the model is becoming one component, not the whole application.\n---\nRetrieval, tools, routing, memory, and evaluation determine whether a system works reliably. Improving their orchestration can matter more than increasing one model's size.\n---\nThis is why compound AI systems are an important systems problem: progress now depends on the interfaces and feedback loops between components.",
     ),
     Walkthrough(
         "jensen-visionary-keynote",
@@ -76,6 +88,10 @@ WALKTHROUGHS = (
         "A visionary keynote moment",
         "x",
         "post",
+        None,
+        0.125,
+        None,
+        None,
         "Explain why accelerated computing is becoming infrastructure for every industry.",
         "Connect the platform shift to builders without making forecasts.",
         "Computing is entering a new platform transition.\n\nAs models become part of every product, accelerated computing becomes infrastructure—not a specialty.\n\nThe next chapter belongs to builders who can turn that infrastructure into useful intelligence for every industry.",

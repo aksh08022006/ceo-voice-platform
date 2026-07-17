@@ -20,6 +20,7 @@ dependencies = [
 
 [project.scripts]
 ceo-voice = "ceo_voice.profiles.cli:main"
+ceo-collector = "ceo_voice.collector.cli:main"
 
 [project.optional-dependencies]
 dev = [

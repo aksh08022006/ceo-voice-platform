@@ -39,8 +39,13 @@ data/processed/
 data/demo/
 data/runtime/
 data/exports/
+data/collector/
 logs/
 *.log
+
+# Local generated artifacts and scratch work
+/output/
+/tmp/
 
 # Frontend artifacts reserved for a later phase
 frontend/node_modules/

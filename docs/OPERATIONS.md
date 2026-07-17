@@ -13,7 +13,8 @@ admit a new immutable profile deployment.
 | Development | `configs/development.env` | local JSON/in-memory | engineering and inspection |
 | Offline demo | deterministic test configuration | `data/demo/` | wiring and regression evidence |
 | Production CLI | `configs/production.env` plus injected secrets | mounted workspace or organization adapter | governed batch jobs |
-| Showcase API | default development settings | in-process sessions, synthetic corpora | browser workflow and integration testing only |
+| Showcase API | default development settings | in-process sessions, synthetic corpora | deterministic browser and integration testing only |
+| Development-profile API | validated development catalog plus optional model secret | ignored local bundles; in-process sessions | testing operator-transcribed public corpora; never production identity claims |
 | Published API | validated bundle catalog plus model secrets | immutable profile files; in-process sessions | controlled single-instance review deployment |
 
 Do not put API keys in Compose files, manifests, logs, or images. Inject them with the deployment's
@@ -79,8 +80,8 @@ immutable release and retains predecessor lineage.
    ```
 
 4. Check `/api/v1/health`. A reviewed deployment reports `mode: "published"`, the configured
-   provider, and the exact number of loaded profiles. Treat `mode: "showcase"` as a failed
-   production rollout even when the endpoint is otherwise healthy.
+   provider, and the exact number of loaded profiles. Treat `mode: "showcase"` or `mode:
+   "development"` as a failed production rollout even when the endpoint is otherwise healthy.
 5. Point the frontend build at the API with `NEXT_PUBLIC_API_BASE_URL`. Validate Generate → Re-Voice
    → Evaluation against a non-public review environment before routing external traffic.
 

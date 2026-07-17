@@ -149,7 +149,7 @@ class Settings(BaseSettings):
     model: ModelSettings = Field(default_factory=ModelSettings)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=(".env", ".env.local"),
         env_file_encoding="utf-8",
         env_prefix="CEO_VOICE_",
         env_nested_delimiter="__",

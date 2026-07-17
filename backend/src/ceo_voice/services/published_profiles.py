@@ -1,7 +1,7 @@
 """Self-validating deployment bundles for immutable published profile serving."""
 
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import Field, model_validator
 
@@ -25,6 +25,7 @@ class PublishedProfileBundle(ContractModel):
     name: NonEmptyStr
     role: NonEmptyStr
     summary: NonEmptyStr
+    artifact_status: Literal["published", "development"] = "published"
     voice_profile: PublishedVoiceProfile
     voice_corpus: CuratedCorpus
     virality_profile: ViralityProfile
