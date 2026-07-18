@@ -30,6 +30,7 @@ htmlcov/
 # IDE and editor state
 .idea/
 .vscode/
+.vercel/
 *.swp
 
 # Runtime data and logs

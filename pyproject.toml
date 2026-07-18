@@ -22,6 +22,9 @@ dependencies = [
 ceo-voice = "ceo_voice.profiles.cli:main"
 ceo-collector = "ceo_voice.collector.cli:main"
 
+[tool.vercel]
+entrypoint = "app:app"
+
 [project.optional-dependencies]
 dev = [
     "black>=25.1,<27",

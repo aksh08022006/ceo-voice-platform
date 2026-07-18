@@ -1,0 +1,30 @@
+# The root Vercel project serves only the FastAPI backend. The Next.js application is deployed
+# independently from frontend/ so each runtime has an explicit build boundary.
+frontend/
+
+# Development-only material is not required by the public showcase API and must not enter the
+# serverless function bundle.
+tests/
+docs/
+scripts/
+data/
+.github/
+.agents/
+.codex/
+
+# Local artifacts and credentials.
+.env
+.env.*
+!.env.example
+.venv/
+build/
+dist/
+*.egg-info/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+logs/
