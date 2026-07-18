@@ -40,9 +40,9 @@ PUBLISHED_DISCLAIMER = (
     "Human review remains required before publication."
 )
 DEVELOPMENT_DISCLAIMER = (
-    "Development-only output from screenshot-transcribed public posts with incomplete provenance, "
-    "timestamps, and reuse authority. It is not an approved identity simulation; human review is "
-    "required and the artifacts must not be deployed to production."
+    "Evaluation-only output derived from manually transcribed public posts. Source timestamps, "
+    "engagement metadata, reuse authority, and independent fidelity review are incomplete. It is "
+    "not endorsed by the named person; human review is required before publication."
 )
 
 

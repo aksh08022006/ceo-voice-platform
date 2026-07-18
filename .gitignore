@@ -47,6 +47,7 @@ logs/
 # Local generated artifacts and scratch work
 /output/
 /tmp/
+/deployment/profiles/
 
 # Frontend artifacts reserved for a later phase
 frontend/node_modules/
