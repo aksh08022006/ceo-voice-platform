@@ -148,6 +148,11 @@ class PromptBuilder:
                     "thread_post_count": value.request.thread_post_count,
                     "candidate_number": 1,
                     "variation": _variation_directive(value.request.request_id),
+                    "topic_requirement": (
+                        "The draft must directly address this topic in every paragraph. Preserve at "
+                        "least one of its concrete anchor terms; do not substitute a topic found in "
+                        "voice or structural examples."
+                    ),
                 }
             ),
         )
@@ -203,8 +208,21 @@ class PromptBuilder:
                     {
                         "evidence_id": str(item.evidence_id),
                         "purposes": [purpose.value for purpose in item.purposes],
+                        "content_authority": (
+                            "factual_source"
+                            if EvidencePurpose.FACTUAL_SUPPORT in item.purposes
+                            else "style_only"
+                        ),
                         "text": item.content,
                         "why_selected": item.explanation.reason,
+                        "use_restriction": (
+                            "May support factual claims in the requested topic."
+                            if EvidencePurpose.FACTUAL_SUPPORT in item.purposes
+                            else (
+                                "Use only as evidence of writing behavior or structure. Do not "
+                                "reuse its topic, entities, events, metrics, or claims."
+                            )
+                        ),
                     }
                 ),
             )

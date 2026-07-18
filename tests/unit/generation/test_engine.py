@@ -99,12 +99,18 @@ def test_generation_uses_bundle_without_persona_impersonation_and_reports_lineag
     assert '"variation_key"' in provider.requests[0].user
     assert '"hard_requirement"' in provider.requests[0].user
     assert "Do not default to a question" in provider.requests[0].system
+    assert "REQUEST topic is the authoritative subject" in provider.requests[0].system
+    assert '"content_authority":"style_only"' in provider.requests[0].user
+    assert '"content_authority":"factual_source"' in provider.requests[0].user
     assert "[EVIDENCE]" in provider.requests[0].user
 
 
 def test_transient_provider_retry_reuses_the_same_prompt() -> None:
     provider = FakeProvider(
-        (ProviderError("rate limited", retryable=True), "A concise valid post.")
+        (
+            ProviderError("rate limited", retryable=True),
+            "Clear ownership improves execution.",
+        )
     )
     draft = asyncio.run(_engine(provider).generate(_generation_input()))
 
@@ -114,7 +120,7 @@ def test_transient_provider_retry_reuses_the_same_prompt() -> None:
 
 
 def test_validation_retry_adds_only_targeted_repair_feedback() -> None:
-    provider = FakeProvider(("x" * 4000, "A valid repaired post."))
+    provider = FakeProvider(("x" * 4000, "Clear ownership improves execution."))
     draft = asyncio.run(_engine(provider).generate(_generation_input()))
 
     assert draft.report.attempts[0].validation is not None
@@ -128,6 +134,23 @@ def test_invalid_output_fails_after_configured_repair_limit() -> None:
     provider = FakeProvider(("x" * 4000,))
     with pytest.raises(GenerationValidationError, match="valid draft"):
         asyncio.run(_engine(provider, maximum_validation_retries=0).generate(_generation_input()))
+
+
+def test_unrelated_subject_is_repaired_before_returning_a_draft() -> None:
+    provider = FakeProvider(
+        (
+            "Benchmarks often fail when vendors optimize the wrong metrics.",
+            "Clear ownership improves execution by making decisions explicit.",
+        )
+    )
+
+    draft = asyncio.run(_engine(provider).generate(_generation_input()))
+
+    first_validation = draft.report.attempts[0].validation
+    assert first_validation is not None
+    assert ValidationCode.TOPIC_ALIGNMENT in {item.code for item in first_validation.findings}
+    assert draft.report.attempts[1].kind is AttemptKind.VALIDATION_REPAIR
+    assert "directly address the REQUEST topic" in provider.requests[1].user
 
 
 def test_mismatched_context_is_rejected_before_provider_call() -> None:

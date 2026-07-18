@@ -1,8 +1,9 @@
 """Stable browser-facing request and response contracts."""
 
+import re
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ceo_voice.models.enums import Platform
 
@@ -15,6 +16,37 @@ class GenerateWorkflowRequest(BaseModel):
     profile_slug: str = Field(min_length=1)
     platform: Platform
     idea: str = Field(min_length=20, max_length=1_200)
+
+    @model_validator(mode="after")
+    def require_subject_beyond_identity(self) -> "GenerateWorkflowRequest":
+        """Reject identity-only text that does not describe a post subject or angle."""
+
+        filler = {
+            "a",
+            "am",
+            "ceo",
+            "cto",
+            "draft",
+            "hello",
+            "hey",
+            "hi",
+            "i",
+            "im",
+            "make",
+            "me",
+            "post",
+            "the",
+            "write",
+        }
+        profile_terms = set(self.profile_slug.casefold().replace("-", " ").split())
+        idea_terms = {
+            token.casefold().strip("'-") for token in re.findall(r"[\w'-]+", self.idea, re.UNICODE)
+        }
+        if not idea_terms - filler - profile_terms:
+            raise ValueError(
+                "Describe what the post should communicate, not only the selected identity."
+            )
+        return self
 
 
 class ReVoiceWorkflowRequest(BaseModel):

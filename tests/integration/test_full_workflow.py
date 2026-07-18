@@ -52,7 +52,7 @@ class NeverCalledProvider:
     async def generate(self, request: ProviderRequest) -> ProviderResult:
         self.calls += 1
         return ProviderResult(
-            text="This must not run for a descriptive-only profile.",
+            text="Clear ownership improves execution by making decisions explicit.",
             provider=self.name,
             model=request.model,
             usage=TokenUsage(input_tokens=1, output_tokens=1),

@@ -19,6 +19,18 @@ const schema = z.object({
   profile_slug: z.string().min(1, "Select a CEO profile."),
   platform: z.enum(["linkedin", "x"]),
   idea: z.string().min(20, "Describe the idea in at least 20 characters.").max(1200),
+}).superRefine((value, context) => {
+  const filler = new Set(["a", "am", "ceo", "cto", "draft", "hello", "hey", "hi", "i", "im", "make", "me", "post", "the", "write"]);
+  const profileTerms = new Set(value.profile_slug.toLowerCase().split("-"));
+  const ideaTerms = (value.idea.toLowerCase().match(/[\p{L}\p{N}'-]+/gu) ?? [])
+    .map((term) => term.replace(/^['-]+|['-]+$/g, ""));
+  if (!ideaTerms.some((term) => term && !filler.has(term) && !profileTerms.has(term))) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: "Describe what the post should communicate, not only the selected identity.",
+      path: ["idea"],
+    });
+  }
 });
 type Form = z.infer<typeof schema>;
 

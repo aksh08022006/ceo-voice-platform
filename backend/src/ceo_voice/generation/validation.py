@@ -1,5 +1,7 @@
 """Deterministic cross-artifact and generated-output validation."""
 
+import re
+
 from ceo_voice.core.exceptions import GenerationError
 from ceo_voice.generation.contracts import (
     GenerationInput,
@@ -10,6 +12,63 @@ from ceo_voice.generation.contracts import (
 from ceo_voice.generation.enums import ValidationCode
 from ceo_voice.models.enums import Platform
 from ceo_voice.prompts import THREAD_SEPARATOR
+
+_TOKEN = re.compile(r"[\w'-]+", re.UNICODE)
+_TOPIC_STOP_WORDS = {
+    "about",
+    "after",
+    "also",
+    "and",
+    "are",
+    "because",
+    "create",
+    "draft",
+    "explain",
+    "for",
+    "from",
+    "hello",
+    "how",
+    "idea",
+    "into",
+    "make",
+    "new",
+    "post",
+    "should",
+    "that",
+    "the",
+    "their",
+    "this",
+    "what",
+    "when",
+    "where",
+    "which",
+    "why",
+    "with",
+    "write",
+}
+
+
+def _topic_root(token: str) -> str:
+    """Apply small deterministic inflection folding for topic-overlap validation."""
+
+    word = token.casefold().strip("'-")
+    if len(word) > 5 and word.endswith("ing"):
+        return word[:-3]
+    if len(word) > 4 and word.endswith("ies"):
+        return f"{word[:-3]}y"
+    if len(word) > 4 and word.endswith("ed"):
+        return word[:-2]
+    if len(word) > 3 and word.endswith("s"):
+        return word[:-1]
+    return word
+
+
+def _topic_terms(value: str) -> set[str]:
+    return {
+        root
+        for token in _TOKEN.findall(value)
+        if len(root := _topic_root(token)) >= 2 and root not in _TOPIC_STOP_WORDS
+    }
 
 
 def validate_generation_input(value: GenerationInput) -> None:
@@ -110,6 +169,19 @@ class OutputValidator:
             )
         lowered = content.casefold()
         word_count = len(content.split())
+        topic_terms = _topic_terms(value.request.topic)
+        output_terms = _topic_terms(content)
+        required_overlap = min(2, max(1, len(topic_terms)))
+        overlap = topic_terms & output_terms
+        self._add(
+            bool(topic_terms) and len(overlap) < required_overlap,
+            ValidationCode.TOPIC_ALIGNMENT,
+            (
+                "draft changed the requested subject; directly address the REQUEST topic and "
+                f"retain at least {required_overlap} concrete topic anchor term(s)"
+            ),
+            findings,
+        )
         if value.request.minimum_words is not None:
             self._add(
                 word_count < value.request.minimum_words,

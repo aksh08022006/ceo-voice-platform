@@ -162,9 +162,19 @@ def test_generation_contract_rejects_missing_or_invalid_product_inputs(tmp_path:
                 "idea": "Too short.",
             },
         )
+        identity_only = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "linkedin",
+                "idea": "hello i am ali ghodsi",
+            },
+        )
 
     assert missing_identity.status_code == 422
     assert short_idea.status_code == 422
+    assert identity_only.status_code == 422
+    assert "not only the selected identity" in identity_only.text
 
 
 def test_published_catalog_requires_enabled_model_access(tmp_path: Path) -> None:
