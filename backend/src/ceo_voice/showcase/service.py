@@ -124,6 +124,24 @@ class ShowcaseWorkflowService:
 
         return () if self._bundles else WALKTHROUGHS
 
+    def published_bundle(self, profile_slug: str) -> PublishedProfileBundle:
+        """Return one governed deployment bundle for read-only inspection.
+
+        The browser API uses this boundary to project aggregate HVM analytics without exposing
+        raw corpus content or reaching into the service's private deployment state.
+        """
+
+        try:
+            return self._bundles[profile_slug]
+        except KeyError as exc:
+            raise KeyError(profile_slug) from exc
+
+    @property
+    def published_bundles(self) -> tuple[PublishedProfileBundle, ...]:
+        """Return immutable deployment bundles for aggregate cross-profile comparison."""
+
+        return tuple(self._bundles.values())
+
     async def generate(
         self,
         *,

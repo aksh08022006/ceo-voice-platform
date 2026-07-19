@@ -18,12 +18,14 @@ from ceo_voice.services import create_model_provider, load_published_profile_cat
 from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.showcase.service import WorkflowSession
 
+from .profile_analytics import project_profile_analytics
 from .schemas import (
     DimensionResponse,
     EvidenceResponse,
     GenerateWorkflowRequest,
     HealthResponse,
     MetricResponse,
+    ProfileAnalyticsResponse,
     ProfileResponse,
     ReVoiceWorkflowRequest,
     WalkthroughResponse,
@@ -150,6 +152,22 @@ def create_app(
             )
             for item in workflows.profiles
         )
+
+    @application.get(
+        "/api/v1/profiles/{profile_slug}/analytics",
+        response_model=ProfileAnalyticsResponse,
+    )
+    async def profile_analytics(profile_slug: str) -> ProfileAnalyticsResponse:
+        """Expose aggregate HVM evidence and governance without returning source content."""
+
+        try:
+            bundle = workflows.published_bundle(profile_slug)
+        except KeyError as exc:
+            raise HTTPException(
+                status_code=404,
+                detail="published profile analytics not found",
+            ) from exc
+        return project_profile_analytics(bundle, workflows.published_bundles)
 
     @application.get("/api/v1/walkthroughs", response_model=tuple[WalkthroughResponse, ...])
     async def walkthroughs() -> tuple[WalkthroughResponse, ...]:

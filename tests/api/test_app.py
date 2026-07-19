@@ -84,6 +84,14 @@ def test_unknown_workflow_is_a_transport_level_not_found(tmp_path: Path) -> None
     assert response.status_code == 404
 
 
+def test_profile_analytics_requires_a_published_hvm_bundle(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        response = api.get("/api/v1/profiles/ali-ghodsi/analytics")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "published profile analytics not found"
+
+
 def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path: Path) -> None:
     with client(tmp_path) as api:
         response = api.post(

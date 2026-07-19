@@ -1,6 +1,7 @@
 """Stable browser-facing request and response contracts."""
 
 import re
+from datetime import datetime
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -109,6 +110,144 @@ class ProfileResponse(BaseModel):
     role: str
     summary: str
     status: str
+
+
+class CountBreakdownResponse(BaseModel):
+    """Named count used by corpus and evidence distributions."""
+
+    label: str
+    count: int = Field(ge=0)
+
+
+class CorpusIssueResponse(BaseModel):
+    """One explicit limitation detected for the published corpus."""
+
+    code: str
+    message: str
+    blocking: bool
+
+
+class CorpusAnalyticsResponse(BaseModel):
+    """Evidence ledger for the exact corpus admitted to an HVM release."""
+
+    corpus_hash: str
+    health_status: str
+    total_documents: int = Field(ge=1)
+    successful_documents: int = Field(ge=0)
+    partial_documents: int = Field(ge=0)
+    failed_documents: int = Field(ge=0)
+    reused_documents: int = Field(ge=0)
+    observation_count: int = Field(ge=0)
+    observed_feature_count: int = Field(ge=0)
+    evidence_unit_count: int = Field(ge=0)
+    total_characters: int = Field(ge=0)
+    total_words: int = Field(ge=0)
+    exact_publication_dates: int = Field(ge=0)
+    missing_publication_dates: int = Field(ge=0)
+    earliest_publication: datetime | None
+    latest_publication: datetime | None
+    build_eligible: bool
+    generation_enabled_for_evaluation: bool
+    failed_analyzers: int = Field(ge=0)
+    platforms: tuple[CountBreakdownResponse, ...]
+    sources: tuple[CountBreakdownResponse, ...]
+    languages: tuple[CountBreakdownResponse, ...]
+    document_types: tuple[CountBreakdownResponse, ...]
+    content_types: tuple[CountBreakdownResponse, ...]
+    source_modalities: tuple[CountBreakdownResponse, ...]
+    acquisition_methods: tuple[CountBreakdownResponse, ...]
+    capture_media: tuple[CountBreakdownResponse, ...]
+    evidence_unit_types: tuple[CountBreakdownResponse, ...]
+    reposts: int = Field(ge=0)
+    quote_posts: int = Field(ge=0)
+    uncertain_documents: int = Field(ge=0)
+    development_only_documents: int = Field(ge=0)
+    issues: tuple[CorpusIssueResponse, ...]
+
+
+class ReleaseAnalyticsResponse(BaseModel):
+    """Immutable HVM release and structural-validation identity."""
+
+    release_id: UUID
+    version: int = Field(ge=1)
+    status: str
+    artifact_status: str
+    authority: str
+    content_hash: str
+    previous_release_id: UUID | None
+    registry_version: str
+    registry_hash: str
+    compiler_version: str
+    validator_version: str
+    structurally_valid: bool
+    validation_issue_count: int = Field(ge=0)
+    lifecycle_event_count: int = Field(ge=1)
+    created_at: datetime
+    published_at: datetime
+    inspected_at: datetime
+    summary: str
+
+
+class FeatureMetricResponse(BaseModel):
+    """One scalar HVM component with scope, support, and decision metadata."""
+
+    feature_id: str
+    version: str
+    display_name: str
+    dimension: str
+    value: float
+    unit: str
+    decision_state: str
+    confidence_coverage: float = Field(ge=0, le=1)
+    support_count: int = Field(ge=0)
+    platform: str | None
+    scope: str
+
+
+class DimensionCoverageResponse(BaseModel):
+    """Coverage summary for one HVM voice dimension."""
+
+    dimension: str
+    core_feature_count: int = Field(ge=0)
+    total_component_count: int = Field(ge=0)
+    average_coverage: float = Field(ge=0, le=1)
+    support_links: int = Field(ge=0)
+
+
+class ComparisonValueResponse(BaseModel):
+    """One leader's core measurement in a cross-profile comparison."""
+
+    profile_slug: str
+    profile_name: str
+    value: float
+
+
+class FeatureComparisonResponse(BaseModel):
+    """Like-for-like core HVM measurements across published profiles."""
+
+    feature_id: str
+    display_name: str
+    dimension: str
+    unit: str
+    values: tuple[ComparisonValueResponse, ...]
+
+
+class ProfileAnalyticsResponse(BaseModel):
+    """Reviewer-facing, aggregate-only inspection of one published voice profile."""
+
+    slug: str
+    name: str
+    role: str
+    summary: str
+    corpus: CorpusAnalyticsResponse
+    release: ReleaseAnalyticsResponse
+    dimensions: tuple[DimensionCoverageResponse, ...]
+    features: tuple[FeatureMetricResponse, ...]
+    comparisons: tuple[FeatureComparisonResponse, ...]
+    limitations: tuple[str, ...]
+    evidence_count_explanation: str
+    hvm_formula: str
+    trust_statement: str
 
 
 class WalkthroughResponse(BaseModel):

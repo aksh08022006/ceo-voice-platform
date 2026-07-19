@@ -5,6 +5,11 @@ from pathlib import Path
 from typing import Any, cast
 from uuid import UUID
 
+from fastapi.testclient import TestClient
+
+from ceo_voice.api import create_app
+from ceo_voice.api.profile_analytics import project_profile_analytics
+from ceo_voice.config import ModelSettings, Settings
 from ceo_voice.context import create_context_compiler
 from ceo_voice.evaluation import EvaluationEngine, EvaluationInput, render_evaluation_report
 from ceo_voice.generation import (
@@ -563,6 +568,33 @@ def test_published_release_serving_does_not_rebuild_profiles(tmp_path: Path) -> 
         ("integration-leader", "published")
     ]
     assert browser_service.walkthroughs == ()
+    peer = deployed.model_copy(update={"slug": "comparison-leader", "name": "Comparison Leader"})
+    analytics = project_profile_analytics(deployed, (deployed, peer))
+    assert analytics.corpus.total_documents == len(command.profile_manifest.corpus.documents)
+    assert analytics.corpus.observation_count > analytics.corpus.total_documents
+    assert analytics.release.structurally_valid
+    assert (
+        analytics.release.content_hash
+        == deployed.voice_profile.managed_release.release.content_hash
+    )
+    assert analytics.features
+    assert {item.scope for item in analytics.features} == {"core", "platform_residual"}
+    assert analytics.dimensions
+    assert analytics.comparisons
+    assert all(len(item.values) == 2 for item in analytics.comparisons)
+    assert "must not be interpreted as additional documents" in (
+        analytics.evidence_count_explanation
+    )
+    with TestClient(
+        create_app(
+            Settings(_env_file=None, model=ModelSettings(enabled=False)),
+            browser_service,
+        )
+    ) as api:
+        analytics_response = api.get("/api/v1/profiles/integration-leader/analytics")
+    assert analytics_response.status_code == 200
+    assert analytics_response.json()["release"]["structurally_valid"] is True
+    assert analytics_response.json()["features"]
     browser_session = asyncio.run(
         browser_service.generate(
             profile_slug="integration-leader",
