@@ -68,10 +68,15 @@ def test_browser_can_generate_edit_revoice_evaluate_and_inspect(tmp_path: Path) 
 
     assert first["evidence_count"] > 0
     assert first["content_type"] == "post"
+    assert first["platform_maximum_characters"] == 3000
     assert first["voice_features"]
     assert first["timeline"][-1]["label"] == "Generated Draft"
     assert revoiced.status_code == 200, revoiced.text
-    assert revoiced.json()["revoiced_content"] == edited_content
+    revoiced_payload = revoiced.json()
+    assert revoiced_payload["revoiced_content"] == edited_content
+    assert revoiced_payload["revoice_applied"] is False
+    assert revoiced_payload["revoice_fallback_used"] is False
+    assert revoiced_payload["revoice_attempt_count"] == 1
     assert evaluated.status_code == 200, evaluated.text
     assert evaluated.json()["evaluation_score"] > 0
     assert evaluated.json()["dimensions"]
@@ -104,7 +109,35 @@ def test_x_showcase_has_platform_specific_voice_and_structure_evidence(tmp_path:
         )
     assert response.status_code == 200, response.text
     assert response.json()["platform"] == "x"
+    assert response.json()["platform_maximum_characters"] == 280
     assert len(response.json()["content"]) <= 280
+
+
+def test_revoice_rejects_an_over_limit_human_edit_with_actionable_details(
+    tmp_path: Path,
+) -> None:
+    with client(tmp_path) as api:
+        generated = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "x",
+                "idea": "Announce a mapping interface for regional climate risk.",
+            },
+        )
+        assert generated.status_code == 200, generated.text
+        session_id = generated.json()["session_id"]
+        over_limit_edit = generated.json()["content"] + "\n\n" + ("x" * 281)
+        response = api.post(
+            f"/api/v1/workflows/{session_id}/revoice",
+            json={"content": over_limit_edit},
+        )
+
+    assert response.status_code == 422
+    payload = response.json()
+    assert "280-character limit" in payload["message"]
+    assert payload["details"]["maximum_characters"] == 280
+    assert payload["details"]["characters_over"] > 0
 
 
 def test_generation_contract_accepts_exactly_three_inputs(tmp_path: Path) -> None:

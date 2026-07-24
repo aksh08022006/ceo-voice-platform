@@ -83,6 +83,7 @@ class WorkflowResponse(BaseModel):
     profile_slug: str
     profile_name: str
     platform: str
+    platform_maximum_characters: int = Field(ge=1)
     content_type: str
     virality_influence: float
     thread: tuple[str, ...]
@@ -97,6 +98,9 @@ class WorkflowResponse(BaseModel):
     changed_regions: tuple[str, ...] = ()
     preserved: tuple[str, ...] = ()
     revoice_confidence: float | None = None
+    revoice_applied: bool | None = None
+    revoice_fallback_used: bool | None = None
+    revoice_attempt_count: int | None = Field(default=None, ge=0)
     evaluation_score: float | None = None
     evaluation_status: str | None = None
     dimensions: tuple[DimensionResponse, ...] = ()

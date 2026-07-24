@@ -246,6 +246,8 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     report = draft.report
     evaluation = session.evaluation
     revoice = session.revoiced
+    revoice_attempts = revoice.report.attempts if revoice else ()
+    last_revoice_validation = revoice_attempts[-1].validation if revoice_attempts else None
     voice = tuple(
         EvidenceResponse(
             id=item.evidence_id,
@@ -277,6 +279,9 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
         profile_slug=session.profile.slug,
         profile_name=session.profile.name,
         platform=artifacts.context.platform.platform.value if artifacts.context else "unknown",
+        platform_maximum_characters=(
+            artifacts.context.platform.maximum_characters if artifacts.context else 1
+        ),
         content_type=artifacts.context.intent.content_type.value if artifacts.context else "post",
         virality_influence=artifacts.context.virality.influence if artifacts.context else 0.0,
         thread=draft.thread,
@@ -306,6 +311,11 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
         changed_regions=revoice.report.changed_regions if revoice else (),
         preserved=tuple(item.subject for item in revoice.report.preserved) if revoice else (),
         revoice_confidence=revoice.report.confidence if revoice else None,
+        revoice_applied=bool(revoice.report.changed_regions) if revoice else None,
+        revoice_fallback_used=(
+            bool(last_revoice_validation and not last_revoice_validation.valid) if revoice else None
+        ),
+        revoice_attempt_count=len(revoice_attempts) if revoice else None,
         evaluation_score=round(evaluation.overall_score * 100, 1) if evaluation else None,
         evaluation_status=evaluation.status.value if evaluation else None,
         dimensions=(

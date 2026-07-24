@@ -131,6 +131,7 @@ export type Workflow = {
   profile_slug: string;
   profile_name: string;
   platform: string;
+  platform_maximum_characters: number;
   content_type: "post" | "thread" | "announcement";
   virality_influence: number;
   thread: string[];
@@ -145,6 +146,9 @@ export type Workflow = {
   changed_regions: string[];
   preserved: string[];
   revoice_confidence: number | null;
+  revoice_applied: boolean | null;
+  revoice_fallback_used: boolean | null;
+  revoice_attempt_count: number | null;
   evaluation_score: number | null;
   evaluation_status: string | null;
   dimensions: Dimension[];

@@ -155,10 +155,39 @@ def test_transient_provider_failure_retries_the_identical_prompt() -> None:
     assert result.report.attempts[1].kind is ReVoiceAttemptKind.PROVIDER_RETRY
 
 
-def test_invalid_restoration_fails_closed_after_validation_budget() -> None:
+def test_invalid_restoration_preserves_valid_human_edit_after_validation_budget() -> None:
     provider = FakeProvider(("Replaced everything.",))
-    with pytest.raises(ReVoiceValidationError, match="constraint-preserving"):
-        asyncio.run(engine(provider, maximum_validation_retries=0).restore(revoice_input()))
+    value = revoice_input()
+
+    result = asyncio.run(engine(provider, maximum_validation_retries=0).restore(value))
+
+    assert result.content == value.edited_draft.content
+    assert result.report.changed_regions == ()
+    assert len(result.report.attempts) == 1
+    assert result.report.attempts[0].validation is not None
+    assert not result.report.attempts[0].validation.valid
+    assert result.report.final_validation.valid
+    assert result.report.confidence == 0
+
+
+def test_invalid_human_edit_is_rejected_before_provider_call_with_actionable_limit() -> None:
+    provider = FakeProvider(("unused",))
+    value = revoice_input(
+        original="Keep this.",
+        edited="Keep this.\n\nThis addition exceeds the tiny compiled platform budget.",
+    )
+    constrained_platform = value.context.platform.model_copy(update={"maximum_characters": 20})
+    constrained_context = value.context.model_copy(update={"platform": constrained_platform})
+
+    with pytest.raises(ReVoiceValidationError, match=r"characters.*over.*20-character") as error:
+        asyncio.run(
+            engine(provider).restore(value.model_copy(update={"context": constrained_context}))
+        )
+
+    assert error.value.details["maximum_characters"] == 20
+    assert cast(int, error.value.details["characters_over"]) > 0
+    assert error.value.details["findings"] == (ReVoiceValidationCode.PLATFORM_LENGTH.value,)
+    assert not provider.requests
 
 
 def test_nonretryable_and_exhausted_provider_failures_propagate() -> None:
