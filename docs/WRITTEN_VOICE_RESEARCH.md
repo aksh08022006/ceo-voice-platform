@@ -98,12 +98,12 @@ For this repository, use the existing hybrid retrieval as an experiment arm. Do 
 
 **Explicit comment context and reply intent now accompany the existing generator.** This contributes a missing task capability beyond adding more surface scalar counts.
 
-The API carries the following optional fields through a typed, sealed context into generation and revoice prompts:
+The browser API carries these inputs through a typed, sealed context into generation and revoice prompts:
 
 - `content_kind`: `original_post` or `comment`; default original post for backwards compatibility.
 - `parent_post`: the actual text being answered; required for comments.
 - `reply_intent`: add perspective, ask a question, respectfully disagree, acknowledge, or answer.
-- `topic`: the existing idea/angle field carries what the user wants to contribute; there is no separate `supplied_points` API field.
+- `idea`: the required existing idea/angle field carries what the user wants to contribute. It becomes `topic` in the internal generation contract; there is no separate `supplied_points` API field.
 
 Generation should first identify the addressed proposition from the provided parent text, then realize the selected intent using the voice examples. Parent-post claims remain attributed to the parent author; they do not become the executive's experiences, evidence, or agreement. Keep the requested reply stance and user-supplied facts fixed. A concise `acknowledgment → contribution → optional question` structure is one selectable plan, not a compulsory template for every comment.
 
