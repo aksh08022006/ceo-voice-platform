@@ -29,6 +29,8 @@ from ceo_voice.retrieval.contracts import (
 )
 from ceo_voice.retrieval.enums import EvidencePurpose, EvidenceSourceKind, KnowledgeKind
 from ceo_voice.retrieval.ports import EvidenceMaterialReader
+from ceo_voice.retrieval.ranking import rerank_candidates
+from ceo_voice.retrieval.ranking_contracts import RetrievalRankingMode
 from ceo_voice.retrieval.scoring import exact_intent_match, mean, score_evidence
 from ceo_voice.retrieval.selection import BudgetedEvidenceSelector, EvidenceCandidate
 from ceo_voice.retrieval.validation import validate_retrieval_input
@@ -54,7 +56,18 @@ class RetrievalIntelligenceEngine:
 
         validate_retrieval_input(value)
         candidates = await self._candidates(value)
-        result = self._selector.select(tuple(candidates.values()), budget=value.budget)
+        self._validate_candidate_coverage(value, candidates)
+        ranking_report = rerank_candidates(
+            tuple(candidates.values()),
+            topic=value.request.topic,
+            tenant_id=value.request.tenant_id,
+            ranking=value.ranking,
+        )
+        result = self._selector.select(
+            tuple(candidates.values()),
+            budget=value.budget,
+            required_requirements=self._required_requirements(value),
+        )
         evidence = tuple(
             self._retrieved(candidate, score, rank)
             for rank, (candidate, score) in enumerate(result.selected, start=1)
@@ -116,6 +129,10 @@ class RetrievalIntelligenceEngine:
                 EvidencePurpose.REPRESENTATIVE_EXAMPLE in item.purposes for item in evidence
             ),
             budget=value.budget,
+            semantic_ranking_used=(
+                ranking_report is not None and ranking_report.mode is RetrievalRankingMode.HYBRID
+            ),
+            ranking_report=ranking_report,
         )
         provisional = RetrievalBundle.model_construct(
             bundle_id=UUID(int=0),
@@ -140,6 +157,63 @@ class RetrievalIntelligenceEngine:
             content_hash=digest,
             bundle_id=retrieval_bundle_id(digest),
         )
+
+    async def candidate_materials(self, value: RetrievalInput) -> tuple[EvidenceMaterial, ...]:
+        """Expose exact eligible spans for an external embedding preparer, without ranking."""
+
+        validate_retrieval_input(value)
+        candidates = await self._candidates(value)
+        self._validate_candidate_coverage(value, candidates)
+        return tuple(
+            item.material
+            for item in sorted(candidates.values(), key=lambda item: item.material.evidence_id.int)
+        )
+
+    @classmethod
+    def _validate_candidate_coverage(
+        cls, value: RetrievalInput, candidates: dict[UUID, EvidenceCandidate]
+    ) -> None:
+        if not candidates:
+            raise RetrievalValidationError(
+                "retrieval produced no evidence candidates",
+                details={"reason": "missing_required_evidence"},
+            )
+        for requirement, kind in cls._required_requirements(value).items():
+            minimum = (
+                value.budget.minimum_voice_evidence_per_feature
+                if kind is KnowledgeKind.VOICE_FEATURE
+                else (
+                    value.budget.minimum_structural_evidence_per_pattern
+                    if kind is KnowledgeKind.STRUCTURAL_PATTERN
+                    else 1
+                )
+            )
+            available = sum(requirement in item.requirements for item in candidates.values())
+            if available < minimum:
+                raise RetrievalValidationError(
+                    "mandatory retrieval requirement lacks evidence",
+                    details={"reason": "missing_required_evidence", "requirement": requirement},
+                )
+
+    @staticmethod
+    def _required_requirements(value: RetrievalInput) -> dict[str, KnowledgeKind]:
+        """Requirements come from governed targets, never from surviving material."""
+
+        return {
+            **{
+                f"voice:{item.feature_id}": KnowledgeKind.VOICE_FEATURE
+                for item in value.context.voice.features
+            },
+            **{
+                f"structure:{item.pattern_id}": KnowledgeKind.STRUCTURAL_PATTERN
+                for item in value.context.virality.guidance
+            },
+            **{
+                f"request:{lane.role.value}": KnowledgeKind.PLATFORM_POLICY
+                for lane in value.context.evidence.lanes
+                if lane.items
+            },
+        }
 
     async def _candidates(self, value: RetrievalInput) -> dict[UUID, EvidenceCandidate]:
         release = value.voice_profile.managed_release.release
@@ -202,12 +276,21 @@ class RetrievalIntelligenceEngine:
                         75,
                     )
                 )
-        materials = {
-            item.evidence_id: item
-            for item in await self._reader.get_many(
-                value.request.tenant_id, tuple(sorted(wanted, key=lambda item: item.int))
-            )
-        }
+        materials: dict[UUID, EvidenceMaterial] = {}
+        for item in await self._reader.get_many(
+            value.request.tenant_id, tuple(sorted(wanted, key=lambda item: item.int))
+        ):
+            if item.tenant_id != value.request.tenant_id or item.evidence_id not in wanted:
+                raise RetrievalValidationError(
+                    "material reader returned evidence outside the requested ownership boundary",
+                    details={"reason": "material_boundary_mismatch"},
+                )
+            if item.evidence_id in materials:
+                raise RetrievalValidationError(
+                    "material reader returned a duplicate evidence identifier",
+                    details={"reason": "duplicate_evidence_material"},
+                )
+            materials[item.evidence_id] = item
         candidates: dict[UUID, EvidenceCandidate] = {}
         for evidence_id, contributions in links.items():
             material = materials.get(evidence_id)

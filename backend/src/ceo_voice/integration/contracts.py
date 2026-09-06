@@ -12,6 +12,7 @@ from ceo_voice.generation.contracts import RenderedPrompt
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
 from ceo_voice.profiles import CuratedCorpus, ProfileBuildManifest, PublishedVoiceProfile
 from ceo_voice.retrieval import RetrievalBundle
+from ceo_voice.retrieval.ranking_contracts import RetrievalRankingInput
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.virality import ViralityCorpus, ViralityProfile
 from ceo_voice.virality.contracts import CorpusAnalysis
@@ -87,6 +88,7 @@ class IntegrationArtifacts(ContractModel):
     virality_profile: ViralityProfile | None = None
     context: GenerationContext | None = None
     retrieval: RetrievalBundle | None = None
+    retrieval_ranking: RetrievalRankingInput | None = Field(default=None, exclude=True)
     rendered_prompt: RenderedPrompt | None = None
     draft: GeneratedDraft | None = None
 

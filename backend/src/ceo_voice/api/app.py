@@ -15,6 +15,7 @@ from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
 from ceo_voice.models.enums import ContentType
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
+from ceo_voice.services.retrieval_ranking import ConfiguredRetrievalRanking
 from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.showcase.service import WorkflowSession
 
@@ -82,9 +83,14 @@ def create_app(
             maximum_output_tokens=resolved.model.maximum_output_tokens,
             maximum_provider_retries=resolved.model.max_retries,
             published_bundles=published_bundles,
+            retrieval_ranking=ConfiguredRetrievalRanking(
+                resolved.retrieval, resolved.model, transport
+            ),
         )
     else:
-        workflows = ShowcaseWorkflowService()
+        workflows = ShowcaseWorkflowService(
+            retrieval_ranking=ConfiguredRetrievalRanking(resolved.retrieval, resolved.model)
+        )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:

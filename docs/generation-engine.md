@@ -1,12 +1,22 @@
 # Generation Engine
 
-The Generation Engine is the platform's only model-calling subsystem. It accepts one matching `GenerationRequest`, sealed `GenerationContext`, and sealed `RetrievalBundle`, and returns a validated `GeneratedDraft` with a complete `GenerationReport`.
+The Generation Engine owns initial draft creation through the provider-neutral text model boundary.
+It accepts one matching `GenerationRequest`, sealed `GenerationContext`, and sealed `RetrievalBundle`,
+and returns a validated `GeneratedDraft` with a complete `GenerationReport`. Re-Voice and the optional
+independent judge also consume the text provider interface; optional embedding preparation belongs
+to a separate application boundary before retrieval.
 
 ## Prompt-last boundary
 
 `PromptBuilder` projects the already-governed voice targets, structure targets, constraints, intent, platform contract, and selected evidence into typed sections. It never reads HVM or VKR artifacts and never creates a prose persona summary. The system instruction explicitly forbids claiming to be or mentioning the leader. `PromptRenderer` runs only after section selection and token budgeting.
 
-The token manager reserves all instructions, voice and structure targets, output policy, and the highest-ranked voice, structural, and factual evidence. Remaining evidence is included by retrieval rank until the model context budget is full. It fails rather than dropping mandatory grounding.
+The token manager reserves instructions, voice/structure targets, and output policy, then protects
+a compact evidence set covering every governed voice, structure, and supplied-evidence requirement
+at its configured minimum. A deterministic greedy cover and redundant-span removal reduce its
+size; this is not an optimal set-cover solver. Remaining evidence is included by retrieval rank.
+Budget estimates include rendered section labels and separators. They remain character-based
+estimates rather than exact provider tokenization. The builder fails when mandatory grounding
+exceeds the configured estimate instead of silently pruning required support.
 
 ## Provider boundary
 

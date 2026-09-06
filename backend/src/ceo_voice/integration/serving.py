@@ -18,6 +18,7 @@ from ceo_voice.integration.contracts import (
     TimelineEvent,
 )
 from ceo_voice.integration.evidence import materialize_evidence
+from ceo_voice.integration.ports import RetrievalRankingPreparer
 from ceo_voice.retrieval import (
     InMemoryEvidenceMaterialReader,
     RetrievalInput,
@@ -39,6 +40,7 @@ class PublishedIntegrationRunner:
         prompt_renderer: PromptRenderer,
         generation_engine: GenerationEngine,
         artifacts: ArtifactWriter | None = None,
+        retrieval_ranking: RetrievalRankingPreparer | None = None,
     ) -> None:
         self._registry = feature_registry
         self._context_compiler = context_compiler
@@ -46,6 +48,7 @@ class PublishedIntegrationRunner:
         self._prompt_renderer = prompt_renderer
         self._generation_engine = generation_engine
         self._writer = artifacts or ArtifactWriter()
+        self._retrieval_ranking = retrieval_ranking
 
     async def run(self, command: PublishedIntegrationInput) -> IntegrationOutcome:
         """Authorize, compile, retrieve, prompt, and generate from immutable inputs."""
@@ -87,17 +90,20 @@ class PublishedIntegrationRunner:
                 command.virality_analysis,
                 command.virality_corpus,
             )
-            retrieval = await RetrievalIntelligenceEngine(
-                InMemoryEvidenceMaterialReader(materials)
-            ).retrieve(
-                RetrievalInput(
-                    request=command.request,
-                    context=context,
-                    voice_profile=command.profile,
-                    virality_profile=command.virality_profile,
-                    retrieved_at=command.started_at,
-                )
+            retrieval_input = RetrievalInput(
+                request=command.request,
+                context=context,
+                voice_profile=command.profile,
+                virality_profile=command.virality_profile,
+                retrieved_at=command.started_at,
             )
+            engine = RetrievalIntelligenceEngine(InMemoryEvidenceMaterialReader(materials))
+            if self._retrieval_ranking is not None:
+                eligible = await engine.candidate_materials(retrieval_input)
+                ranking = await self._retrieval_ranking.prepare(retrieval_input, eligible)
+                retrieval_input = retrieval_input.model_copy(update={"ranking": ranking})
+                artifacts = artifacts.model_copy(update={"retrieval_ranking": ranking})
+            retrieval = await engine.retrieve(retrieval_input)
             artifacts = artifacts.model_copy(update={"retrieval": retrieval})
             self._record(timeline, current, started, stage_start, "assembled retrieval bundle")
 

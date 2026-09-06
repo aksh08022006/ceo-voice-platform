@@ -95,7 +95,7 @@
     {
       "id": "operator-reviewed-local-export",
       "channel": "all_supported_sources",
-      "official_url": "https://github.com/aksh08022006/ceo-voice-platform/blob/main/docs/CORPUS_ACQUISITION.md",
+      "official_url": "https://github.com/akshhkaushik/ceo-voice-platform/blob/main/docs/CORPUS_ACQUISITION.md",
       "access": "authorized_export_or_manual_curation",
       "voice_role": "primary_or_supplementary",
       "current_use": "supported",

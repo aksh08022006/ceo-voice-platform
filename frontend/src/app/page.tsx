@@ -42,7 +42,7 @@ export default function LandingPage() {
             </Link>
             <a
               className={buttonStyles({ variant: "ghost", size: "lg" })}
-              href="https://github.com/aksh08022006/ceo-voice-platform"
+              href="https://github.com/akshhkaushik/ceo-voice-platform"
               rel="noreferrer"
               target="_blank"
             >

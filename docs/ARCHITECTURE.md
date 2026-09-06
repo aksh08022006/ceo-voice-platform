@@ -41,8 +41,11 @@ This platform retrieves from structured knowledge instead:
 - Retrieval selects the minimum relevant evidence and explains every selection.
 - The Prompt Builder consumes only that compact Retrieval Bundle. It never reads an entire profile.
 
-Embeddings can later improve candidate ranking behind the retrieval interface. They are not the
-architecture and cannot bypass feature, authority, platform, or context-budget checks.
+Optional BM25 or hybrid ranking adds topic relevance signals behind the retrieval interface.
+Hybrid ranking uses BM25 and cosine similarity over supplied embedding snapshots, fused by rank.
+The application can prepare these embeddings through an explicitly enabled OpenAI-compatible
+adapter before retrieval. Embeddings cannot bypass feature, authority, platform, or context-budget
+checks and are not evidence of improved voice fidelity by themselves.
 
 ## Complete workflow
 
@@ -54,7 +57,7 @@ architecture and cannot bypass feature, authority, platform, or context-budget c
 | Profile Builder | Curated corpus and analyzer registry | Published immutable HVM release | Orchestrate analysis, validate health, recover failures, and publish |
 | VKR | Authorized structural examples and performance snapshots | Published immutable structure release | Model hooks, pacing, post shapes, and calls to action separately from voice |
 | Context Compiler | CEO, platform, idea, policies, active HVM and VKR | Generation Context | Resolve exact release versions, voice targets, structure targets, intent, and constraints |
-| Retrieval | Generation Context and retrieval-ready releases | Retrieval Bundle | Select compact, diverse, confidence-aware evidence with reasons and budgets |
+| Retrieval | Generation Context, retrieval-ready releases, and optional pinned ranking inputs | Retrieval Bundle | Rank already eligible spans; select compact, diverse, confidence-aware evidence with reasons and budgets |
 | Generation | Generation Context and Retrieval Bundle | Draft and Generation Report | Build the prompt last, call one provider, validate, post-process, and report |
 | Re-Voice | Original draft, human edit, and existing context | Re-Voiced Draft and change report | Strengthen voice only where meaning, facts, order, formatting, and intent remain safe |
 | Evaluation | Draft, reports, context, and evidence | Dimension scores and disposition | Measure voice, structure, platform fit, readability, constraints, and evidence use independently |
@@ -81,10 +84,11 @@ latency and token usage, validation findings, constraints, and execution timelin
 | `profiles` | end-to-end corpus builds, incremental reuse, publication, inspection, health reports | a second voice representation |
 | `virality` | independent structural observations, patterns, releases, and platform rules | personal voice claims |
 | `context` | request-specific targets, constraints, authority, and release pinning | retrieval or prompt rendering |
-| `retrieval` | deterministic selection, scoring, diversity, budgets, explanations | raw-document access by default or LLM calls |
+| `retrieval` | deterministic selection, BM25/supplied-vector ranking, diversity, budgets, explanations | broad corpus discovery, embedding-provider I/O, or generation calls |
 | `generation` | prompt rendering, provider adapters, retries, validation, reports | direct HVM/VKR access |
 | `revoice` | edit diff, protected regions, conservative restoration, change report | changing intended meaning or structure |
 | `evaluation` | independent dimensions, hard gates, reports, benchmarks | hiding failures in one blended score |
+| `experiments` | declared split validation, blinded ballots, scoring supplied human comparisons | generation, invented ratings, automatic profile promotion |
 | `api` | HTTP contracts, request correlation, dependency wiring, workflow sessions | domain logic |
 | `frontend` | the reviewer and editor workflow | duplicate business rules or secret access |
 
@@ -120,9 +124,31 @@ restartable, and storage/provider interfaces are injected. Reference JSON and in
 support local evaluation; production deployments can replace them with object storage, relational
 metadata, queues, caches, and distributed workers without changing the domain contracts.
 
-Semantic ranking is also an extension point. A future embedding or reranking adapter may propose
-candidates, but deterministic policy remains responsible for authority, platform compatibility,
-diversity, confidence, evidence lineage, and final budget selection.
+Ranking is configurable as `baseline`, `bm25`, or `hybrid`. Baseline remains the default. The two
+additional modes rerank only spans admitted by the existing release/context path. Hybrid inputs pin
+tenant, model, revision, dimensions, evidence membership and content hashes, and the exact query
+hash. The pure retrieval engine verifies these before cosine scoring; no vectors are fabricated.
+The application preparation boundary owns provider transport, input bounds, and caching.
+
+This is not full-corpus semantic discovery or factual search. Those would require a separately
+governed corpus and candidate-generation contract. Deterministic policy continues to own mandatory
+coverage, authority, platform compatibility, diversity, lineage, and final budgets. See
+[ADR 001](adr/001-governed-retrieval-experiments.md).
+
+## Comparing system variants
+
+`ceo_voice.experiments` accepts supplied outputs from named arms on the same briefs. A manifest
+rejects declared held-out source/group/content-hash overlap and training/context material dated
+after the case cutoff; held-out sources must be strictly later than that cutoff. Preparation
+randomizes comparison sides and separates reviewer ballots
+from the analyst key. Scoring uses actual submitted ratings, reports missing coverage, and produces
+case-weighted preferences with paired bootstrap intervals over held-out dependence groups.
+
+This workflow measures comparative human evidence, separately from candidate conformance in
+`evaluation`. It does not execute generation arms or prove that upstream corpora were isolated
+outside the declared manifest. Model/prompt control, reference selection, representative sampling,
+human-panel adequacy, and cost/latency measurement remain study responsibilities. See
+[the experiment guide](experiments.md).
 
 ## Current trust boundary
 

@@ -55,6 +55,11 @@ and Jensen Huang. It is intentionally labeled as a synthetic harness fixture. Th
 repository does not claim empirical real-person fidelity without legally approved, held-out corpora.
 Tests execute the three-case harness and verify pass/regression behavior.
 
+Comparative human studies are a separate workflow in `ceo_voice.experiments`: declared split
+validation, blinded comparisons of supplied outputs, and scoring actual human ratings. See the
+[experiment guide](experiments.md) for commands, uncertainty interpretation, and limitations.
+Neither preparing ballots nor passing synthetic regression fixtures measures real-person quality.
+
 ## Reports and failure analysis
 
 Machine reports contain every metric, applicability, score, threshold disposition, explanation,

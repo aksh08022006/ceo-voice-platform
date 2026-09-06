@@ -75,6 +75,7 @@ class BudgetedEvidenceSelector:
         candidates: tuple[EvidenceCandidate, ...],
         *,
         budget: RetrievalBudget,
+        required_requirements: dict[str, KnowledgeKind] | None = None,
     ) -> SelectionResult:
         """Select a deterministic set that never exceeds any configured hard budget."""
 
@@ -84,6 +85,18 @@ class BudgetedEvidenceSelector:
                 details={"reason": "missing_required_evidence"},
             )
         requirements = self._requirements(candidates)
+        if required_requirements is not None:
+            for requirement, kind in required_requirements.items():
+                if requirement not in requirements:
+                    raise RetrievalValidationError(
+                        "mandatory retrieval requirement lacks evidence",
+                        details={"reason": "missing_required_evidence", "requirement": requirement},
+                    )
+                if requirements[requirement] is not kind:
+                    raise RetrievalValidationError(
+                        "mandatory retrieval requirement has the wrong knowledge kind",
+                        details={"reason": "requirement_conflict", "requirement": requirement},
+                    )
         selected: list[tuple[EvidenceCandidate, RetrievalScore]] = []
         selected_ids: set[UUID] = set()
         counts: dict[str, int] = dict.fromkeys(requirements, 0)
@@ -102,20 +115,38 @@ class BudgetedEvidenceSelector:
                         "mandatory retrieval requirement lacks evidence",
                         details={"reason": "missing_required_evidence", "requirement": requirement},
                     )
-                choice, adjusted = self._rank(choices, selected)[0]
-                violation = self._budget_violation(choice, selected, budget, counts)
-                if violation is not None:
+                ranked = self._rank(choices, selected)
+                admissible = next(
+                    (
+                        pair
+                        for pair in ranked
+                        if self._budget_violation(pair[0], selected, budget, counts) is None
+                    ),
+                    None,
+                )
+                if admissible is None:
+                    violation = self._budget_violation(ranked[0][0], selected, budget, counts)
                     raise RetrievalBudgetError(
                         "mandatory retrieval evidence exceeds the configured budget",
-                        details={"reason": violation.value, "requirement": requirement},
+                        details={
+                            "reason": violation.value if violation else "no_admissible_candidate",
+                            "requirement": requirement,
+                        },
                     )
+                choice, adjusted = admissible
                 self._append(choice, adjusted, selected, selected_ids, counts)
 
         remaining = tuple(
             item for item in candidates if item.material.evidence_id not in selected_ids
         )
         pruned: list[PrunedCandidate] = []
-        for candidate, adjusted in self._rank(remaining, selected):
+        while remaining:
+            candidate, adjusted = self._rank(remaining, selected)[0]
+            remaining = tuple(
+                item
+                for item in remaining
+                if item.material.evidence_id != candidate.material.evidence_id
+            )
             violation = self._budget_violation(candidate, selected, budget, counts)
             if violation is not None:
                 pruned.append(self._pruned(candidate, violation))

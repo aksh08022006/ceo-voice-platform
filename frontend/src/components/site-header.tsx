@@ -43,7 +43,7 @@ export function SiteHeader() {
           ))}
           <a
             className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            href="https://github.com/aksh08022006/ceo-voice-platform"
+            href="https://github.com/akshhkaushik/ceo-voice-platform"
             rel="noreferrer"
             target="_blank"
           >
@@ -78,7 +78,7 @@ export function SiteHeader() {
           ))}
           <a
             className="block py-3 text-sm text-muted-foreground hover:text-foreground"
-            href="https://github.com/aksh08022006/ceo-voice-platform"
+            href="https://github.com/akshhkaushik/ceo-voice-platform"
             rel="noreferrer"
             target="_blank"
           >

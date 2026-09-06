@@ -10,8 +10,21 @@ from ceo_voice.retrieval.contracts import (
 from ceo_voice.retrieval.engine import RetrievalIntelligenceEngine
 from ceo_voice.retrieval.memory import InMemoryEvidenceMaterialReader
 from ceo_voice.retrieval.ports import EvidenceMaterialReader
+from ceo_voice.retrieval.ranking_contracts import (
+    CandidateRanking,
+    DenseEmbeddingSnapshot,
+    DenseEvidenceEmbedding,
+    DenseQueryEmbedding,
+    RetrievalRankingInput,
+    RetrievalRankingMode,
+    RetrievalRankingReport,
+)
 
 __all__ = [
+    "CandidateRanking",
+    "DenseEmbeddingSnapshot",
+    "DenseEvidenceEmbedding",
+    "DenseQueryEmbedding",
     "EvidenceMaterial",
     "EvidenceMaterialReader",
     "InMemoryEvidenceMaterialReader",
@@ -20,4 +33,7 @@ __all__ = [
     "RetrievalInput",
     "RetrievalIntelligenceEngine",
     "RetrievalPolicy",
+    "RetrievalRankingInput",
+    "RetrievalRankingMode",
+    "RetrievalRankingReport",
 ]

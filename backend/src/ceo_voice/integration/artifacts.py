@@ -24,6 +24,7 @@ class ArtifactWriter:
             ("virality-profile", artifacts.virality_profile),
             ("generation-context", artifacts.context),
             ("retrieval-bundle", artifacts.retrieval),
+            ("retrieval-ranking", artifacts.retrieval_ranking),
             ("rendered-prompt", artifacts.rendered_prompt),
             ("generated-draft", artifacts.draft),
         ):

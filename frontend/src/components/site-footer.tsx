@@ -11,7 +11,7 @@ export function SiteFooter() {
           </Link>
           <a
             className="hover:text-foreground"
-            href="https://github.com/aksh08022006/ceo-voice-platform"
+            href="https://github.com/akshhkaushik/ceo-voice-platform"
             rel="noreferrer"
             target="_blank"
           >

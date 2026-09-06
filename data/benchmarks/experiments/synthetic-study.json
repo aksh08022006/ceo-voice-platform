@@ -1,0 +1,107 @@
+{
+  "schema_version": "1.0",
+  "experiment_id": "4de49a38-48df-4489-9870-967e088ac965",
+  "tenant_id": "0e779fdf-d144-45bb-bf19-7c224ea92075",
+  "synthetic": true,
+  "seed": 1729,
+  "dimensions": [
+    "voice",
+    "meaning",
+    "fluency"
+  ],
+  "arms": [
+    "generic",
+    "exemplar",
+    "hvm",
+    "hybrid"
+  ],
+  "baseline_arm": "generic",
+  "sources": [
+    {
+      "source_id": "source-0",
+      "group_id": "group-0",
+      "content_sha256": "55a7ae512554f41401d66ac86245e4f06509746e453baba2d708e3719610ede3",
+      "published_at": "2023-01-01T00:00:00Z"
+    },
+    {
+      "source_id": "source-1",
+      "group_id": "group-1",
+      "content_sha256": "a08dafa2b1b7f2773077a9b371257e71f021760c0a955949d27c15939218168a",
+      "published_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "source_id": "source-2",
+      "group_id": "group-2",
+      "content_sha256": "cf04726f97b14dd56305242a9b782fdc9bc3bc9be869b3caab956618fd883ace",
+      "published_at": "2024-01-01T00:00:00Z"
+    },
+    {
+      "source_id": "source-3",
+      "group_id": "group-3",
+      "content_sha256": "b66fc49968c7aa67b94dec93592b4791948b863009814f74635a1c61f0268fd4",
+      "published_at": "2024-01-01T00:00:00Z"
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "case-1",
+      "author_id": "fictional-1",
+      "platform": "linkedin",
+      "brief": "Announce an internal prototype that reduced median queue time from 12 minutes to 8 minutes. Explain that this is a small test, and thank the operations team.",
+      "as_of": "2023-12-01T00:00:00Z",
+      "training_source_ids": [
+        "source-0"
+      ],
+      "context_source_ids": [],
+      "held_out_source_ids": [
+        "source-1"
+      ],
+      "outputs": {
+        "generic": "Our internal prototype reduced median queue time from 12 minutes to 8 minutes in a small test. Thank you to the operations team for making this progress possible.",
+        "exemplar": "We shortened the queue. In a small internal test, median wait fell from 12 minutes to 8. Thank you to the operations team. Next, we test whether it holds.",
+        "hvm": "12 minutes became 8.\n\nThat is the median queue time in our small internal prototype test. The operations team made it possible.\n\nNow we need to see whether the result holds.",
+        "hybrid": "Median queue time: 12 minutes to 8.\n\nA useful result from a small internal prototype test. Thank you to the operations team for the work behind it.\n\nThe next question is whether it holds."
+      }
+    },
+    {
+      "case_id": "case-2",
+      "author_id": "fictional-0",
+      "platform": "linkedin",
+      "brief": "Explain why a fictional startup is spending this month improving reliability before adding features. Do not claim numerical improvements.",
+      "as_of": "2023-12-01T00:00:00Z",
+      "training_source_ids": [
+        "source-0"
+      ],
+      "context_source_ids": [],
+      "held_out_source_ids": [
+        "source-2"
+      ],
+      "outputs": {
+        "generic": "This month, our startup is focusing on reliability before adding new features. We want the features customers already use to work consistently.",
+        "exemplar": "Reliability begins with the work already in front of us. This month, we are improving what exists before adding more.",
+        "hvm": "A feature only helps when it works.\n\nThis month, we are improving reliability before adding new features. We want to earn confidence in what is already here.",
+        "hybrid": "This month, reliability comes first.\n\nBefore we add new features, we are working on the ones people already depend on.\n\nOur priority is consistency."
+      }
+    },
+    {
+      "case_id": "case-3",
+      "author_id": "fictional-1",
+      "platform": "linkedin",
+      "brief": "Invite colleagues to test an early dashboard and submit one specific improvement. Make clear this is an internal prototype.",
+      "as_of": "2023-12-01T00:00:00Z",
+      "training_source_ids": [
+        "source-0"
+      ],
+      "context_source_ids": [],
+      "held_out_source_ids": [
+        "source-3"
+      ],
+      "outputs": {
+        "generic": "Please try our early internal dashboard prototype and suggest one specific improvement. Your feedback will help us decide what to change next.",
+        "exemplar": "Try the dashboard. Tell us one thing to improve.\n\nIt is an early internal prototype, and specific feedback will help us decide what to change.",
+        "hvm": "We have an early dashboard to test.\n\nIt is an internal prototype. Please try it and send one specific improvement.\n\nThat gives us a concrete next step.",
+        "hybrid": "One test. One specific improvement.\n\nPlease try our early internal dashboard prototype and tell us what to change.\n\nUseful feedback will shape the next version."
+      }
+    }
+  ]
+}

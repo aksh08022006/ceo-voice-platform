@@ -26,6 +26,7 @@ from ceo_voice.integration import (
     PublishedIntegrationInput,
     PublishedIntegrationRunner,
 )
+from ceo_voice.integration.ports import RetrievalRankingPreparer
 from ceo_voice.models.enums import ContentType, Platform
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
@@ -72,11 +73,13 @@ class ShowcaseWorkflowService:
         maximum_output_tokens: int = 800,
         maximum_provider_retries: int = 2,
         published_bundles: tuple[PublishedProfileBundle, ...] = (),
+        retrieval_ranking: RetrievalRankingPreparer | None = None,
     ) -> None:
         self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
         self._sessions: dict[UUID, WorkflowSession] = {}
         self._variation_sequence = count()
         self._provider = provider
+        self._retrieval_ranking = retrieval_ranking
         self._model = model
         self._model_context_tokens = model_context_tokens
         self._maximum_output_tokens = maximum_output_tokens
@@ -467,6 +470,7 @@ class ShowcaseWorkflowService:
             virality_builder=create_virality_builder(workspace=virality_workspace),
             virality_workspace=virality_workspace,
             feature_registry=registry,
+            retrieval_ranking=self._retrieval_ranking,
             context_compiler=create_context_compiler(),
             prompt_builder=prompts,
             prompt_renderer=renderer,
@@ -493,6 +497,7 @@ class ShowcaseWorkflowService:
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
         return PublishedIntegrationRunner(
             feature_registry=bundle.feature_registry,
+            retrieval_ranking=self._retrieval_ranking,
             context_compiler=create_context_compiler(),
             prompt_builder=prompts,
             prompt_renderer=renderer,

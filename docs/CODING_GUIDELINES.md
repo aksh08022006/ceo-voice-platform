@@ -81,7 +81,7 @@ Infrastructure adapters implement ports; domain and application code do not impo
 
 ## API design
 
-No API is implemented in the current phase. When transport work begins:
+The FastAPI transport follows these boundaries:
 
 - endpoints translate transport input into application schemas and call one use case;
 - no business decision belongs in route handlers;

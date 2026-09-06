@@ -51,7 +51,7 @@ class TokenBudgetManager:
     ) -> tuple[tuple[PromptSection, ...], tuple[str, ...]]:
         available = self._policy.model_context_tokens - self._policy.maximum_output_tokens
         selected = list(mandatory)
-        used = sum(self.estimate(item.content) for item in mandatory)
+        used = sum(self.section_cost(item) for item in mandatory)
         if used > available:
             raise PromptBudgetError(
                 "mandatory generation guidance exceeds model context",
@@ -59,7 +59,7 @@ class TokenBudgetManager:
             )
         pruned: list[str] = []
         for section in evidence:
-            cost = self.estimate(section.content)
+            cost = self.section_cost(section)
             if used + cost <= available:
                 selected.append(section)
                 used += cost
@@ -69,6 +69,16 @@ class TokenBudgetManager:
 
     def estimate(self, content: str) -> int:
         return max(1, int(len(content) / self._policy.estimated_characters_per_token) + 1)
+
+    def section_cost(self, section: PromptSection) -> int:
+        """Include rendered labels and separators so fitting cannot undercount formatting."""
+
+        rendered = (
+            section.content
+            if section.kind is PromptSectionKind.SYSTEM
+            else f"[{section.kind.value.upper()}]\n{section.content}"
+        )
+        return self.estimate(rendered + "\n\n")
 
 
 class PromptBuilder:
@@ -228,16 +238,7 @@ class PromptBuilder:
             )
             for item in bundle.evidence
         )
-        required_purposes = {
-            EvidencePurpose.VOICE_SUPPORT,
-            EvidencePurpose.STRUCTURAL_SUPPORT,
-            EvidencePurpose.FACTUAL_SUPPORT,
-        }
-        reserved_ids = {
-            next((item.evidence_id for item in bundle.evidence if purpose in item.purposes), None)
-            for purpose in required_purposes
-        }
-        reserved_ids.discard(None)
+        reserved_ids = self._required_evidence(value, evidence)
         reserved = tuple(
             item.model_copy(update={"mandatory": True})
             for item in evidence
@@ -254,6 +255,68 @@ class PromptBuilder:
             included_evidence_ids=included,
             pruned_evidence_ids=tuple(UUID(item) for item in pruned),
         )
+
+    def _required_evidence(
+        self, value: GenerationInput, sections: tuple[PromptSection, ...]
+    ) -> set[UUID]:
+        """Build a compact requirement cover; token pruning cannot erase governed support.
+
+        Greedy token density followed by redundant-span removal keeps the selection
+        deterministic and bounded. This is a compact cover, not an optimal set-cover claim.
+        """
+
+        bundle = value.retrieval
+        minima = {
+            **{
+                f"voice:{item.feature_id}": bundle.metadata.budget.minimum_voice_evidence_per_feature
+                for item in bundle.voice_features
+            },
+            **{
+                f"structure:{item.pattern_id}": bundle.metadata.budget.minimum_structural_evidence_per_pattern
+                for item in bundle.structural_guidance
+            },
+            **{
+                f"request:{lane.role.value}": 1
+                for lane in value.context.evidence.lanes
+                if lane.items
+            },
+        }
+        requirements = {
+            item.evidence_id: set(item.explanation.requirements) & minima.keys()
+            for item in bundle.evidence
+        }
+        costs = {item.source_ids[0]: self._budget.section_cost(item) for item in sections}
+        ranks = {item.evidence_id: item.rank for item in bundle.evidence}
+        counts = dict.fromkeys(minima, 0)
+        selected: set[UUID] = set()
+        while unmet := {key for key, minimum in minima.items() if counts[key] < minimum}:
+            choices = tuple(
+                evidence_id
+                for evidence_id, covered in requirements.items()
+                if evidence_id not in selected and covered & unmet
+            )
+            if not choices:
+                raise PromptBudgetError(
+                    "mandatory generation evidence is missing for governed requirements",
+                    details={"requirements": sorted(unmet)},
+                )
+            choice = min(
+                choices,
+                key=lambda evidence_id: (
+                    -len(requirements[evidence_id] & unmet) / costs[evidence_id],
+                    ranks[evidence_id],
+                    evidence_id.int,
+                ),
+            )
+            selected.add(choice)
+            for requirement in requirements[choice]:
+                counts[requirement] += 1
+        for evidence_id in sorted(selected, key=lambda key: (-costs[key], -ranks[key], key.int)):
+            if all(counts[key] > minima[key] for key in requirements[evidence_id]):
+                selected.remove(evidence_id)
+                for requirement in requirements[evidence_id]:
+                    counts[requirement] -= 1
+        return selected
 
 
 class PromptRenderer:

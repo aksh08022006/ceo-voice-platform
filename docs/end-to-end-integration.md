@@ -34,6 +34,7 @@ Each run writes to `<output_directory>/<run_id>/`:
 - `voice-profile.json`
 - `virality-profile.json`
 - `generation-context.json`
+- `retrieval-ranking.json` (when optional ranking is configured; includes exact dense inputs in hybrid mode)
 - `retrieval-bundle.json`
 - `rendered-prompt.json`
 - `generated-draft.json`
@@ -42,6 +43,11 @@ Each run writes to `<output_directory>/<run_id>/`:
 - `integration-outcome.json`
 
 The outcome contains stage offsets and durations, corpus sizes, evidence and prompt counts, provider attempts, safe failure details, and every completed typed artifact. Writes are atomic at file level. API keys are never present in these artifacts.
+
+The optional ranking input is persisted separately and excluded from the aggregate outcome to
+avoid duplicating vector payloads. Retain it in restricted runtime storage for replay: an embedding
+model/revision label alone cannot reproduce a changed provider alias. Baseline needs no embedding
+preparation; BM25 is local; hybrid makes explicitly configured embedding calls before pure retrieval.
 
 ## Integration finding: authorization is currently the production blocker
 

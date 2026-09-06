@@ -6,6 +6,11 @@
 - **Does not authorize:** Feature extraction, model training, prompts, APIs, storage migrations, or
   production Voice Profile Engine code
 
+> Historical representation specification. This document defines the larger research target;
+> it is not a claim that every feature family, estimator, or validation study exists. See
+> [Voice Analysis](VOICE_ANALYSIS.md) and [Profile Builder](PROFILE_BUILDER.md) for implemented
+> measurements and authority, and [experiments](experiments.md) for current comparison tooling.
+
 ## 1. Executive decision
 
 The authoritative representation of a leader's writing voice will be a **Hierarchical Voice Model

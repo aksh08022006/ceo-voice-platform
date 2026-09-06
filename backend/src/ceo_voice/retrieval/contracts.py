@@ -23,6 +23,7 @@ from ceo_voice.retrieval.enums import (
     KnowledgeKind,
     RetrievalPruneReason,
 )
+from ceo_voice.retrieval.ranking_contracts import RetrievalRankingInput, RetrievalRankingReport
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.utils.hashing import sha256_text
 from ceo_voice.utils.json import dumps_json
@@ -64,7 +65,7 @@ class RetrievalBudget(ContractModel):
 class RetrievalPolicy(ContractModel):
     """Versioned deterministic ranking and admissibility policy."""
 
-    version: RetrievalEngineVersion = RetrievalEngineVersion(major=1, minor=0, patch=0)
+    version: RetrievalEngineVersion = RetrievalEngineVersion(major=1, minor=0, patch=1)
     freshness_horizon_days: int = Field(default=730, ge=1)
     minimum_observation_quality: float = Field(default=0.5, ge=0, le=1)
     diversity_bonus: float = Field(default=0.05, ge=0, le=0.25)
@@ -80,6 +81,7 @@ class RetrievalInput(ContractModel):
     virality_profile: ViralityProfile
     budget: RetrievalBudget = RetrievalBudget()
     retrieved_at: UtcDatetime
+    ranking: RetrievalRankingInput | None = None
 
 
 class EvidenceMaterial(ContractModel):
@@ -235,6 +237,10 @@ class RetrievalMetadata(ContractModel):
     budget: RetrievalBudget
     deterministic: bool = True
     semantic_ranking_used: bool = False
+    # Omit absent diagnostics so previously sealed baseline bundles remain readable.
+    ranking_report: RetrievalRankingReport | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 class RetrievalBundle(ContractModel):
