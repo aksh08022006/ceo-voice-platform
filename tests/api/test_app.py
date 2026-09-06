@@ -140,7 +140,9 @@ def test_revoice_rejects_an_over_limit_human_edit_with_actionable_details(
     assert payload["details"]["characters_over"] > 0
 
 
-def test_generation_contract_accepts_exactly_three_inputs(tmp_path: Path) -> None:
+def test_generation_contract_keeps_three_primary_inputs_and_optional_structure_control(
+    tmp_path: Path,
+) -> None:
     with client(tmp_path) as api:
         response = api.post(
             "/api/v1/workflows/generate",
@@ -150,7 +152,7 @@ def test_generation_contract_accepts_exactly_three_inputs(tmp_path: Path) -> Non
                 "idea": "Explain why compound AI systems combine models, retrieval, and tools.",
             },
         )
-        hidden_control = api.post(
+        structure_control = api.post(
             "/api/v1/workflows/generate",
             json={
                 "profile_slug": "matei-zaharia",
@@ -163,9 +165,10 @@ def test_generation_contract_accepts_exactly_three_inputs(tmp_path: Path) -> Non
     assert response.status_code == 200, response.text
     payload = response.json()
     assert payload["content_type"] == "post"
-    assert payload["virality_influence"] == 0.125
+    assert payload["virality_influence"] == 0.12
     assert len(payload["content"]) <= 280
-    assert hidden_control.status_code == 422
+    assert structure_control.status_code == 200
+    assert structure_control.json()["virality_influence"] == 0.1
 
 
 def test_repeated_showcase_requests_vary_without_question_templates(tmp_path: Path) -> None:
@@ -252,3 +255,108 @@ def test_disabled_showcase_keeps_catalog_visible_but_blocks_generation(tmp_path:
 
     assert profiles.status_code == 200
     assert generated.status_code == 404
+
+
+@pytest.mark.parametrize("post_count", [2, 3, 4, 5])
+def test_x_thread_shape_is_available_through_browser_api(tmp_path: Path, post_count: int) -> None:
+    with client(tmp_path) as api:
+        generated = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "matei-zaharia",
+                "platform": "x",
+                "idea": "Explain how compound AI systems combine models, retrieval, and tools.",
+                "content_type": "thread",
+                "thread_post_count": post_count,
+                "virality_influence": 0,
+            },
+        )
+    assert generated.status_code == 200, generated.text
+    payload = generated.json()
+    assert payload["content_type"] == "thread"
+    assert len(payload["thread"]) == post_count
+    assert all(0 < len(post) <= 280 for post in payload["thread"])
+    assert payload["virality_influence"] == 0
+
+
+@pytest.mark.parametrize(
+    "controls",
+    [
+        {"content_type": "thread"},
+        {"content_type": "thread", "thread_post_count": 1},
+        {"content_type": "thread", "thread_post_count": 6},
+        {"content_type": "thread", "thread_post_count": 3, "platform": "linkedin"},
+        {"thread_post_count": 3},
+        {"virality_influence": 0.26},
+        {"minimum_words": 300, "maximum_words": 150},
+        {"platform": "youtube"},
+    ],
+)
+def test_format_controls_reject_inconsistent_or_unsupported_output(
+    tmp_path: Path, controls: dict[str, object]
+) -> None:
+    with client(tmp_path) as api:
+        response = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "x",
+                "idea": "Explain why open interfaces help technical teams build useful systems.",
+                **controls,
+            },
+        )
+    assert response.status_code == 422, response.text
+
+
+def test_linkedin_example_length_bounds_reach_generation(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        response = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "ali-ghodsi",
+                "platform": "linkedin",
+                "idea": "Explain why open interfaces help technical teams build useful systems.",
+                "minimum_words": 150,
+                "maximum_words": 300,
+                "virality_influence": 0.25,
+            },
+        )
+    assert response.status_code == 200, response.text
+    assert 150 <= len(response.json()["content"].split()) <= 300
+    assert response.json()["virality_influence"] == 0.25
+
+
+def test_thread_revoice_repeats_from_latest_revision_and_rejects_stale_edit(tmp_path: Path) -> None:
+    with client(tmp_path) as api:
+        generated = api.post(
+            "/api/v1/workflows/generate",
+            json={
+                "profile_slug": "matei-zaharia",
+                "platform": "x",
+                "idea": "Explain how compound AI systems combine models, retrieval, and tools.",
+                "content_type": "thread",
+                "thread_post_count": 3,
+            },
+        )
+        assert generated.status_code == 200, generated.text
+        initial = generated.json()
+        endpoint = f"/api/v1/workflows/{initial['session_id']}/revoice"
+        edited = initial["content"].replace("useful work", "useful and reliable work")
+        assert len(edited) > 280
+        first = api.post(endpoint, json={"content": edited, "expected_revision": 0})
+        assert first.status_code == 200, first.text
+        assert first.json()["revision_count"] == 1
+        assert "\n---\n".join(first.json()["thread"]) == edited
+        second_edit = first.json()["revoiced_content"].replace(
+            "A platform shift", "An infrastructure shift"
+        )
+        second = api.post(endpoint, json={"content": second_edit, "expected_revision": 1})
+        assert second.status_code == 200, second.text
+        assert second.json()["revision_count"] == 2
+        assert second.json()["current_candidate_id"] != first.json()["current_candidate_id"]
+        assert "useful and reliable work" in second.json()["revoiced_content"]
+        stale = api.post(endpoint, json={"content": edited, "expected_revision": 0})
+        assert stale.status_code == 409
+        inspected = api.get(f"/api/v1/workflows/{initial['session_id']}")
+        assert inspected.json()["revision_count"] == 2
+        assert "\n---\n".join(inspected.json()["thread"]) == second_edit

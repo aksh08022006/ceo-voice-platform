@@ -126,13 +126,22 @@ export type Dimension = {
   summary: string;
 };
 
+export type ReplyIntent = "add_perspective" | "ask_question" | "respectfully_disagree" | "acknowledge" | "answer";
+
 export type Workflow = {
   session_id: string;
+  continuation_token: string | null;
+  continuation_expires_in_seconds: number | null;
+  revision_count: number;
+  current_candidate_id: string;
   profile_slug: string;
   profile_name: string;
   platform: string;
   platform_maximum_characters: number;
   content_type: "post" | "thread" | "announcement";
+  content_kind: "original_post" | "comment";
+  parent_post: string | null;
+  reply_intent: ReplyIntent | null;
   virality_influence: number;
   thread: string[];
   content: string;
@@ -184,22 +193,64 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+const continuationTokens = new Map<string, string>();
+
+function continuationToken(id: string): string | undefined {
+  if (typeof window !== "undefined") {
+    try {
+      return window.sessionStorage.getItem(`ceo-voice:continuation:${id}`) ?? continuationTokens.get(id);
+    } catch {
+      // Private browsing may disable storage; navigation still works in this page session.
+    }
+  }
+  return continuationTokens.get(id);
+}
+
+async function workflowRequest(path: string, init?: RequestInit): Promise<Workflow> {
+  const workflow = await request<Workflow>(path, init);
+  if (workflow.continuation_token) {
+    continuationTokens.set(workflow.session_id, workflow.continuation_token);
+    try {
+      window.sessionStorage.setItem(`ceo-voice:continuation:${workflow.session_id}`, workflow.continuation_token);
+    } catch {
+      // The in-memory copy remains usable if the browser's storage quota is unavailable.
+    }
+  }
+  return workflow;
+}
+
 export const api = {
   profiles: () => request<Profile[]>("/api/v1/profiles"),
   profileAnalytics: (slug: string) =>
     request<ProfileAnalytics>(`/api/v1/profiles/${slug}/analytics`),
   walkthroughs: () => request<Walkthrough[]>("/api/v1/walkthroughs"),
-  workflow: (id: string) => request<Workflow>(`/api/v1/workflows/${id}`),
+  workflow: (id: string) => {
+    const token = continuationToken(id);
+    return token
+      ? workflowRequest(`/api/v1/workflows/${id}/resume`, { method: "POST", body: JSON.stringify({ continuation_token: token }) })
+      : workflowRequest(`/api/v1/workflows/${id}`);
+  },
   generate: (body: {
     profile_slug: string;
     platform: "linkedin" | "x";
     idea: string;
-  }) => request<Workflow>("/api/v1/workflows/generate", { method: "POST", body: JSON.stringify(body) }),
-  revoice: (id: string, content: string) =>
-    request<Workflow>(`/api/v1/workflows/${id}/revoice`, {
+    content_type?: "post" | "thread";
+    content_kind?: "original_post" | "comment";
+    parent_post?: string;
+    reply_intent?: ReplyIntent;
+    thread_post_count?: number;
+    virality_influence?: number;
+    minimum_words?: number;
+    maximum_words?: number;
+  }) => workflowRequest("/api/v1/workflows/generate", { method: "POST", body: JSON.stringify(body) }),
+  revoice: (id: string, content: string, expectedRevision?: number) =>
+    workflowRequest(`/api/v1/workflows/${id}/revoice`, {
       method: "POST",
-      body: JSON.stringify({ content }),
+      body: JSON.stringify({ content, expected_revision: expectedRevision, continuation_token: continuationToken(id) }),
     }),
   evaluate: (id: string) =>
-    request<Workflow>(`/api/v1/workflows/${id}/evaluate`, { method: "POST" }),
+    workflowRequest(`/api/v1/workflows/${id}/evaluate`, {
+      method: "POST",
+      body: continuationToken(id) ? JSON.stringify({ continuation_token: continuationToken(id) }) : undefined,
+    }),
 };

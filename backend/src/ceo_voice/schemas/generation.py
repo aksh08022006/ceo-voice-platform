@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 from pydantic import Field, model_validator
 
 from ceo_voice.models.base import NonBlankText, NonEmptyStr, UtcDatetime
+from ceo_voice.models.communication import CommentContext
 from ceo_voice.models.enums import ContentType, GenerationStatus, Platform
 from ceo_voice.models.evaluation import EvaluationResult
 from ceo_voice.schemas.base import BoundarySchema
@@ -57,7 +58,12 @@ class GenerationRequest(BoundarySchema):
         le=2_000,
         description="Optional deterministic upper word-count bound.",
     )
-    topic: NonEmptyStr = Field(description="Subject the content should address.")
+    comment_context: CommentContext | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Attributed parent text and editor-selected intent for a single-post comment.",
+    )
+    topic: NonEmptyStr = Field(description="Subject or supplied comment contribution.")
     objective: NonEmptyStr = Field(description="Intended communication outcome.")
     audience: NonEmptyStr = Field(description="Intended reader segment.")
     source_document_ids: tuple[UUID, ...] = Field(
@@ -79,6 +85,11 @@ class GenerationRequest(BoundarySchema):
     def validate_output_shape(self) -> "GenerationRequest":
         """Keep thread and word bounds internally consistent before orchestration."""
 
+        if self.comment_context is not None and (
+            self.content_type is not ContentType.POST
+            or self.platform not in {Platform.X, Platform.LINKEDIN}
+        ):
+            raise ValueError("comments require a single X or LinkedIn post")
         if self.content_type is ContentType.THREAD:
             if self.platform is not Platform.X:
                 raise ValueError("thread output is supported only for X")

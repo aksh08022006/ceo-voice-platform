@@ -349,3 +349,53 @@ def test_validator_rejects_format_structure_safety_budget_and_hard_constraint_dr
         ReVoiceValidationCode.HARD_CONSTRAINT_VIOLATED,
     }
     assert not validation.valid
+
+
+def test_second_pass_protects_prior_voice_changes_and_only_refines_the_new_edit() -> None:
+    value = revoice_input()
+    first_text = "We build quickly.\n\nOwnership compounds momentum.\n\nTell me what you think?"
+    first = asyncio.run(engine(FakeProvider((first_text,))).restore(value))
+    second_edit = first_text.replace("We build quickly.", "We build carefully.")
+    proposed = second_edit.replace("carefully", "deliberately")
+    provider = FakeProvider((proposed.replace("compounds", "creates"), proposed))
+    revision = EditedDraft(
+        original=value.edited_draft.original,
+        previous_revision=first,
+        content=second_edit,
+        edited_at=value.requested_at,
+    )
+    result = asyncio.run(
+        engine(provider).restore(value.model_copy(update={"edited_draft": revision}))
+    )
+    assert result.content == proposed
+    assert result.report.difference.changed_line_indices == (0,)
+    assert result.report.changed_regions == ("editable.line.0",)
+    assert result.report.attempts[0].validation is not None
+    assert not result.report.attempts[0].validation.valid
+    assert "Ownership compounds momentum." in result.content
+    assert result.original_draft_id == value.edited_draft.original.id
+
+
+def test_previous_revision_must_have_matching_generation_and_profile_lineage() -> None:
+    value = revoice_input()
+    first = asyncio.run(engine(FakeProvider((value.edited_draft.content,))).restore(value))
+    with pytest.raises(ValueError, match="previous revision must belong"):
+        EditedDraft(
+            original=value.edited_draft.original,
+            previous_revision=first.model_copy(update={"original_draft_id": UUID(int=99999)}),
+            content=first.content,
+            edited_at=value.requested_at,
+        )
+    invalid_previous = first.model_copy(
+        update={"report": first.report.model_copy(update={"hvm_release_id": UUID(int=99999)})}
+    )
+    revised = EditedDraft(
+        original=value.edited_draft.original,
+        previous_revision=invalid_previous,
+        content=first.content,
+        edited_at=value.requested_at,
+    )
+    provider = FakeProvider(())
+    with pytest.raises(ReVoiceError, match="incompatible"):
+        asyncio.run(engine(provider).restore(value.model_copy(update={"edited_draft": revised})))
+    assert not provider.requests

@@ -13,6 +13,7 @@ from ceo_voice.generation.contracts import (
     StructuredPrompt,
 )
 from ceo_voice.generation.enums import PromptSectionKind
+from ceo_voice.models.communication import COMMENT_SYSTEM_INSTRUCTIONS, REPLY_INTENT_GUIDANCE
 from ceo_voice.prompts import PROMPT_VERSION, SYSTEM_INSTRUCTIONS, THREAD_SEPARATOR
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.utils.json import dumps_json
@@ -95,7 +96,10 @@ class PromptBuilder:
             kind=PromptSectionKind.SYSTEM,
             mandatory=True,
             priority=100,
-            content=SYSTEM_INSTRUCTIONS,
+            content=(
+                SYSTEM_INSTRUCTIONS
+                + ("\n\n" + COMMENT_SYSTEM_INSTRUCTIONS if value.request.comment_context else "")
+            ),
         )
         voice = PromptSection(
             kind=PromptSectionKind.VOICE,
@@ -156,8 +160,24 @@ class PromptBuilder:
                     "platform": value.request.platform.value,
                     "content_type": value.request.content_type.value,
                     "thread_post_count": value.request.thread_post_count,
+                    "comment_context": (
+                        value.request.comment_context.model_dump(mode="json")
+                        if value.request.comment_context
+                        else None
+                    ),
+                    "reply_intent_requirement": (
+                        REPLY_INTENT_GUIDANCE[value.request.comment_context.reply_intent]
+                        if value.request.comment_context
+                        else None
+                    ),
                     "candidate_number": 1,
-                    "variation": _variation_directive(value.request.request_id),
+                    "variation": (
+                        {
+                            "composition_route": "Respond to the addressed point using the selected reply intent."
+                        }
+                        if value.request.comment_context
+                        else _variation_directive(value.request.request_id)
+                    ),
                     "topic_requirement": (
                         "The draft must directly address this topic in every paragraph. Preserve at "
                         "least one of its concrete anchor terms; do not substitute a topic found in "

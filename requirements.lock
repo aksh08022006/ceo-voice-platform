@@ -21,6 +21,8 @@ certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
+cffi==2.1.1
+    # via cryptography
 cfgv==3.5.0
     # via pre-commit
 click==8.4.2
@@ -30,6 +32,8 @@ click==8.4.2
     #   uvicorn
 coverage[toml]==7.15.1
     # via pytest-cov
+cryptography==50.0.1
+    # via ceo-voice-platform (pyproject.toml)
 distlib==0.4.3
     # via virtualenv
 fastapi==0.139.0
@@ -89,6 +93,8 @@ pluggy==1.6.0
     #   pytest-cov
 pre-commit==4.6.0
     # via ceo-voice-platform (pyproject.toml)
+pycparser==3.0
+    # via cffi
 pydantic==2.13.4
     # via
     #   ceo-voice-platform (pyproject.toml)

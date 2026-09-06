@@ -27,6 +27,7 @@ from ceo_voice.integration import (
     PublishedIntegrationRunner,
 )
 from ceo_voice.integration.ports import RetrievalRankingPreparer
+from ceo_voice.models.communication import CommentContext, ReplyIntent
 from ceo_voice.models.enums import ContentType, Platform
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
@@ -58,6 +59,7 @@ class WorkflowSession:
     edited: EditedDraft | None = None
     revoiced: ReVoicedDraft | None = None
     evaluation: EvaluationReport | None = None
+    revision_count: int = 0
 
 
 class ShowcaseWorkflowService:
@@ -157,6 +159,7 @@ class ShowcaseWorkflowService:
         virality_influence: float = 0.125,
         minimum_words: int | None = None,
         maximum_words: int | None = None,
+        comment_context: CommentContext | None = None,
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
 
@@ -171,6 +174,7 @@ class ShowcaseWorkflowService:
                 virality_influence=virality_influence,
                 minimum_words=minimum_words,
                 maximum_words=maximum_words,
+                comment_context=comment_context,
             )
         profile = profile_by_slug(profile_slug)
         manifest = profile_manifest(profile)
@@ -188,7 +192,12 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
-            objective=f"Create a {content_type} that communicates the idea clearly",
+            comment_context=comment_context,
+            objective=(
+                "Write a concise comment preserving the editor's selected reply intent and supplied points"
+                if comment_context
+                else f"Create a {content_type} that communicates the idea clearly"
+            ),
             audience="executive and technical readers",
             constraints=constraints,
         )
@@ -200,6 +209,8 @@ class ShowcaseWorkflowService:
                 content_type,
                 minimum_words,
                 variation_index=next(self._variation_sequence),
+                thread_post_count=thread_post_count,
+                comment_context=comment_context,
             )
         )
         runner = self._runner(provider)
@@ -235,6 +246,7 @@ class ShowcaseWorkflowService:
         virality_influence: float,
         minimum_words: int | None,
         maximum_words: int | None,
+        comment_context: CommentContext | None,
     ) -> WorkflowSession:
         """Serve one request from exact immutable release artifacts without rebuilding them."""
 
@@ -260,7 +272,12 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
-            objective=f"Create a {content_type} that communicates the idea clearly",
+            comment_context=comment_context,
+            objective=(
+                "Write a concise comment preserving the editor's selected reply intent and supplied points"
+                if comment_context
+                else f"Create a {content_type} that communicates the idea clearly"
+            ),
             audience="executive and technical readers",
             constraints=constraints,
         )
@@ -294,10 +311,14 @@ class ShowcaseWorkflowService:
         session = self.get(session_id)
         artifacts = session.outcome.artifacts
         draft = self._require(artifacts.draft, "generated draft")
+        previous_revision = session.revoiced
+        revision_count = session.revision_count
+        requested_at = utc_now()
         edited = EditedDraft(
             original=draft,
+            previous_revision=previous_revision,
             content=edited_content,
-            edited_at=session.outcome.completed_at,
+            edited_at=requested_at,
         )
         provider = self._provider or ShowcaseProvider(self._restore(edited_content))
         revoiced = await ReVoiceEngine(
@@ -316,10 +337,13 @@ class ShowcaseWorkflowService:
                     ViralityProfile,
                     self._require(artifacts.virality_profile, "virality profile"),
                 ),
-                requested_at=session.outcome.completed_at,
+                requested_at=requested_at,
             )
         )
+        if session.revision_count != revision_count:
+            raise IntegrationError("A newer revision is available. Reload before re-voicing.")
         session.edited, session.revoiced = edited, revoiced
+        session.revision_count += 1
         session.evaluation = None
         return session
 
@@ -356,6 +380,17 @@ class ShowcaseWorkflowService:
         except KeyError as exc:
             raise KeyError(str(session_id)) from exc
 
+    def resume(self, session: WorkflowSession) -> WorkflowSession:
+        """Install a server-authenticated continuation snapshot for one request."""
+
+        if session.profile.slug not in self._bundles:
+            raise KeyError(session.profile.slug)
+        self._sessions[session.id] = session
+        # Portable snapshots make keeping every old request in process memory unnecessary.
+        while len(self._sessions) > 32:
+            self._sessions.pop(next(iter(self._sessions)))
+        return session
+
     @staticmethod
     def _require(value: object | None, name: str) -> object:
         if value is None:
@@ -371,9 +406,28 @@ class ShowcaseWorkflowService:
         minimum_words: int | None,
         *,
         variation_index: int,
+        thread_post_count: int | None = None,
+        comment_context: CommentContext | None = None,
     ) -> str:
         idea = idea.strip().rstrip(".")
+        if comment_context:
+            lead = {
+                ReplyIntent.ADD_PERSPECTIVE: "An additional perspective:",
+                ReplyIntent.ASK_QUESTION: "A question worth exploring:",
+                ReplyIntent.RESPECTFULLY_DISAGREE: "I see the point differently:",
+                ReplyIntent.ACKNOWLEDGE: "This is a useful point to recognize:",
+                ReplyIntent.ANSWER: "One way to answer that:",
+            }[comment_context.reply_intent]
+            content = f"{lead} {idea[:180]}{('?') if comment_context.reply_intent is ReplyIntent.ASK_QUESTION else '.'}"
+            if platform is Platform.LINKEDIN and len(content.split()) < 40:
+                content += (
+                    " The practical details deserve attention: what changes for the people using "
+                    "the system, which assumptions need testing, and how we can tell whether the "
+                    "approach works in the context being discussed."
+                )
+            return content
         if platform is Platform.X:
+            idea = idea[:180].rstrip()
             opening_options = (
                 f"A platform shift is underway: {idea}.",
                 f"The practical consequence of {idea} is bigger than the demo.",
@@ -383,8 +437,14 @@ class ShowcaseWorkflowService:
                 opening_options[variation_index % len(opening_options)],
                 "The important change is not the demo. It is the infrastructure that lets builders turn capability into reliable systems.",
                 "The next chapter belongs to teams that connect ambitious technology to useful work.",
+                "Clear interfaces let teams test each component, understand failure modes, and improve the system without replacing every part.",
+                "The useful question is where this approach removes a real constraint for builders and the people using what they build.",
             )
-            return THREAD_SEPARATOR.join(parts) if content_type == "thread" else parts[0]
+            return (
+                THREAD_SEPARATOR.join(parts[:thread_post_count])
+                if content_type == "thread"
+                else parts[0]
+            )
         openings = {
             "ali-ghodsi": "Teams do not need another disconnected demo.",
             "matei-zaharia": "The mechanism matters before the benchmark.",

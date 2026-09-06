@@ -15,6 +15,7 @@ from ceo_voice.context.enums import (
     VoiceResolutionSource,
 )
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
+from ceo_voice.models.communication import CommentContext
 from ceo_voice.models.enums import ContentType, ContextRole, Platform
 from ceo_voice.models.retrieval import RetrievedContext, RetrievedItem
 from ceo_voice.schemas.generation import GenerationRequest
@@ -348,6 +349,9 @@ class GenerationIntent(ContractModel):
     thread_post_count: int | None = Field(default=None, ge=2, le=5)
     minimum_words: int | None = Field(default=None, ge=1, le=2_000)
     maximum_words: int | None = Field(default=None, ge=1, le=2_000)
+    comment_context: CommentContext | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     candidate_count: int = Field(ge=1, le=10)
     source_document_ids: tuple[UUID, ...]
 

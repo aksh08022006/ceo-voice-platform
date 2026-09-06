@@ -17,6 +17,7 @@ const sections = [
   "One request",
   "Human review",
   "Trust boundary",
+  "Research and parameters",
 ];
 
 const workflow = [
@@ -135,10 +136,53 @@ export default function DocumentationPage() {
           <DocSection id="section-6" eyebrow="06 · Human review" title="Editing is part of the product workflow.">
             <p>
               Generate creates the first draft. A human then makes strategic or factual edits.
-              Re-Voice compares the edited text with the original and may strengthen voice only in
+              Re-Voice compares the edited text with the latest accepted revision and may strengthen voice only in
               safe regions. It protects meaning, paragraph order, argument structure, facts, links,
               formatting, calls to action, and thread boundaries. Evaluation then explains the
               quality and remaining risks.
+            </p>
+            <p className="mt-5">
+              Repeat the edit and revoice cycle as needed. Encrypted continuation snapshots keep the
+              same profile and evidence available across server restarts. They remain in this browser
+              tab for up to seven days after the latest successful step; copy drafts before closing the tab.
+              This is a single-editor workflow without a shared team revision history.
+            </p>
+          </DocSection>
+
+          <DocSection id="section-8" eyebrow="08 · Research and parameters" title="Voice is a pattern of choices in context.">
+            <p>
+              Stylometry, personalized generation, and pragmatics research give us testable ways to
+              represent writing. The current engine measures 55 surface features across 11 analyzers.
+              Grammar and semantic intent need separately validated annotation; adding more features
+              alone does not establish recognizable voice.
+            </p>
+            <dl className="mt-8 divide-y divide-border border-y border-border">
+              <Definition term="Vocabulary">Function words, contractions, recurring expressions, vocabulary diversity, and technical language. Separate characteristic wording from company and product names.</Definition>
+              <Definition term="Rhythm and shape">Sentence-length distributions, paragraph breaks, punctuation, lists, and the positions of questions. Model a range of choices rather than forcing one average.</Definition>
+              <Definition term="Grammar">Clause structure, tense, active and passive constructions, and syntactic depth. These remain proposed parser-based measurements, beyond the current surface rules.</Definition>
+              <Definition term="Discourse and rhetoric">How claims, reasons, examples, concessions, analogies, and stories are ordered. Visible markers are clues; full rhetorical labels require contextual review.</Definition>
+              <Definition term="Commitment and attribution">Who makes a claim, how certain it is, and what supports it. Rewriting should preserve facts, uncertainty, and the user&apos;s chosen position.</Definition>
+              <Definition term="Replies">The parent post, addressed point, and chosen intent: answer, acknowledge, ask, add perspective, or disagree. Parent claims stay attributed to their author.</Definition>
+              <Definition term="Platform and evidence">Compare X with X, LinkedIn with LinkedIn, and comments with comments. Keep spoken transcripts supplementary; they cannot establish a person&apos;s written formatting habits.</Definition>
+            </dl>
+            <p className="mt-6">
+              We use retrieval as an experiment, with baseline, lexical, and hybrid alternatives.
+              A topic match can masquerade as a voice match. Hold out independent examples, compare
+              the same factual brief across voices, and score meaning preservation and naturalness
+              separately. Fine-tuning is justified only by measured errors and sufficient approved examples.
+            </p>
+            <ul className="mt-6 space-y-3 text-sm">
+              <li><a className="text-primary underline underline-offset-4" href="https://aclanthology.org/2024.personalize-1.8/">Alhafni et al. (2024): fine-grained linguistic control</a></li>
+              <li><a className="text-primary underline underline-offset-4" href="https://aclanthology.org/2024.acl-long.399/">LaMP (2024): retrieval for personalized generation</a></li>
+              <li><a className="text-primary underline underline-offset-4" href="https://aclanthology.org/2021.findings-emnlp.359/">Altakrori et al. (2021): separating author and topic signals</a></li>
+              <li><a className="text-primary underline underline-offset-4" href="https://aclanthology.org/P13-1025/">Danescu-Niculescu-Mizil et al. (2013): politeness depends on context</a></li>
+              <li><a className="text-primary underline underline-offset-4" href="https://aclanthology.org/N19-1049/">Mir et al. (2019): style, content preservation, and naturalness</a></li>
+            </ul>
+            <p className="mt-6">
+              These papers inform our design; they do not validate this deployment. The assignment
+              gate remains pending until Ali, Matei, and a third leader each have ten reviewed examples
+              and averages of at least 4/5 for voice accuracy, post quality, and naturalness, alongside
+              the separate reference-based model evaluation.
             </p>
           </DocSection>
 

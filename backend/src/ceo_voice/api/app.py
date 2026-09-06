@@ -13,14 +13,16 @@ from ceo_voice.core.constants import Environment
 from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
-from ceo_voice.models.enums import ContentType
+from ceo_voice.models.communication import CommentContext
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
 from ceo_voice.services.retrieval_ranking import ConfiguredRetrievalRanking
 from ceo_voice.showcase import ShowcaseWorkflowService
+from ceo_voice.showcase.continuation import ContinuationError, WorkflowContinuation
 from ceo_voice.showcase.service import WorkflowSession
 
 from .profile_analytics import project_profile_analytics
 from .schemas import (
+    ContinueWorkflowRequest,
     DimensionResponse,
     EvidenceResponse,
     GenerateWorkflowRequest,
@@ -112,6 +114,36 @@ def create_app(
     )
     application.state.workflows = workflows
     application.state.settings = resolved
+    continuation = (
+        WorkflowContinuation(
+            resolved.api.continuation_key.get_secret_value(),
+            workflows.published_bundles,
+            ttl_seconds=resolved.api.continuation_ttl_seconds,
+        )
+        if resolved.api.continuation_key is not None and workflows.published_bundles
+        else None
+    )
+
+    def project(session: WorkflowSession) -> WorkflowResponse:
+        result = _project(session)
+        if continuation is not None:
+            result.continuation_token = continuation.seal(session)
+            result.continuation_expires_in_seconds = resolved.api.continuation_ttl_seconds
+        return result
+
+    def resume(session_id: UUID, token: str | None) -> WorkflowSession:
+        if continuation is None:
+            return _session_or_404(workflows, session_id)
+        if token is None:
+            raise HTTPException(
+                status_code=401,
+                detail="This workflow requires its continuation token from the original browser tab.",
+            )
+        try:
+            return workflows.resume(continuation.open(token, session_id))
+        except ContinuationError as exc:
+            raise HTTPException(status_code=410, detail=exc.message) from exc
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=list(resolved.api.allowed_origins),
@@ -128,6 +160,8 @@ def create_app(
         with request_context(identifier):
             response = await call_next(request)
         response.headers["X-Request-ID"] = identifier
+        if request.url.path.startswith("/api/v1/workflows"):
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     @application.exception_handler(ApplicationError)
@@ -207,27 +241,50 @@ def create_app(
             session = await workflows.generate(
                 profile_slug=value.profile_slug,
                 platform=value.platform,
-                content_type=ContentType.POST,
+                content_type=value.content_type,
+                comment_context=(
+                    CommentContext(parent_post=value.parent_post, reply_intent=value.reply_intent)
+                    if value.parent_post is not None and value.reply_intent is not None
+                    else None
+                ),
                 idea=value.idea,
                 constraints=(),
+                thread_post_count=value.thread_post_count,
+                virality_influence=value.virality_influence,
+                minimum_words=value.minimum_words,
+                maximum_words=value.maximum_words,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="profile not found") from exc
-        return _project(session)
+        return project(session)
 
     @application.get("/api/v1/workflows/{session_id}", response_model=WorkflowResponse)
     async def get_workflow(session_id: UUID) -> WorkflowResponse:
-        return _project(_session_or_404(workflows, session_id))
+        return project(resume(session_id, None))
+
+    @application.post("/api/v1/workflows/{session_id}/resume", response_model=WorkflowResponse)
+    async def resume_workflow(session_id: UUID, value: ContinueWorkflowRequest) -> WorkflowResponse:
+        return project(resume(session_id, value.continuation_token))
 
     @application.post("/api/v1/workflows/{session_id}/revoice", response_model=WorkflowResponse)
     async def revoice(session_id: UUID, value: ReVoiceWorkflowRequest) -> WorkflowResponse:
-        _session_or_404(workflows, session_id)
-        return _project(await workflows.revoice(session_id, value.content))
+        session = resume(session_id, value.continuation_token)
+        if (
+            value.expected_revision is not None
+            and value.expected_revision != session.revision_count
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="A newer revision is available. Reload the current draft before re-voicing.",
+            )
+        return project(await workflows.revoice(session_id, value.content))
 
     @application.post("/api/v1/workflows/{session_id}/evaluate", response_model=WorkflowResponse)
-    async def evaluate(session_id: UUID) -> WorkflowResponse:
-        _session_or_404(workflows, session_id)
-        return _project(await workflows.evaluate(session_id))
+    async def evaluate(
+        session_id: UUID, value: ContinueWorkflowRequest | None = None
+    ) -> WorkflowResponse:
+        resume(session_id, value.continuation_token if value else None)
+        return project(await workflows.evaluate(session_id))
 
     return application
 
@@ -252,6 +309,7 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     report = draft.report
     evaluation = session.evaluation
     revoice = session.revoiced
+    comment = artifacts.context.intent.comment_context if artifacts.context else None
     revoice_attempts = revoice.report.attempts if revoice else ()
     last_revoice_validation = revoice_attempts[-1].validation if revoice_attempts else None
     voice = tuple(
@@ -282,6 +340,8 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     )
     return WorkflowResponse(
         session_id=session.id,
+        revision_count=session.revision_count,
+        current_candidate_id=revoice.id if revoice else draft.id,
         profile_slug=session.profile.slug,
         profile_name=session.profile.name,
         platform=artifacts.context.platform.platform.value if artifacts.context else "unknown",
@@ -290,7 +350,10 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
         ),
         content_type=artifacts.context.intent.content_type.value if artifacts.context else "post",
         virality_influence=artifacts.context.virality.influence if artifacts.context else 0.0,
-        thread=draft.thread,
+        content_kind="comment" if comment else "original_post",
+        parent_post=comment.parent_post if comment else None,
+        reply_intent=comment.reply_intent if comment else None,
+        thread=revoice.thread if revoice else draft.thread,
         content=draft.content,
         edited_content=session.edited.content if session.edited else None,
         revoiced_content=revoice.content if revoice else None,

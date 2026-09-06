@@ -92,6 +92,7 @@ class ContextCompiler:
             thread_post_count=request.thread_post_count,
             minimum_words=request.minimum_words,
             maximum_words=request.maximum_words,
+            comment_context=request.comment_context,
             candidate_count=request.candidate_count,
             source_document_ids=request.source_document_ids,
         )

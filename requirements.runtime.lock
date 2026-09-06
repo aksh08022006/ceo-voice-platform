@@ -17,8 +17,12 @@ certifi==2026.6.17
     # via
     #   httpcore
     #   httpx
+cffi==2.1.1
+    # via cryptography
 click==8.4.2
     # via uvicorn
+cryptography==50.0.1
+    # via ceo-voice-platform (pyproject.toml)
 fastapi==0.139.0
     # via ceo-voice-platform (pyproject.toml)
 h11==0.16.0
@@ -35,6 +39,8 @@ idna==3.18
     # via
     #   anyio
     #   httpx
+pycparser==3.0
+    # via cffi
 pydantic==2.13.4
     # via
     #   ceo-voice-platform (pyproject.toml)

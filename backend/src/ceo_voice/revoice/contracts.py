@@ -51,25 +51,6 @@ class ReVoicePolicy(ContractModel):
         return self
 
 
-class EditedDraft(ContractModel):
-    """Human revision paired with the exact generated draft it modified."""
-
-    original: GeneratedDraft
-    content: NonBlankText
-    edited_at: UtcDatetime
-
-
-class ReVoiceInput(ContractModel):
-    """Complete sealed input needed to restore voice without hidden lookups."""
-
-    edited_draft: EditedDraft
-    context: GenerationContext
-    retrieval: RetrievalBundle
-    voice_profile: PublishedVoiceProfile
-    virality_profile: ViralityProfile
-    requested_at: UtcDatetime
-
-
 class TextChange(ContractModel):
     kind: ChangeKind
     original_start: int = Field(ge=0)
@@ -186,3 +167,38 @@ class ReVoicedDraft(ContractModel):
     thread: tuple[NonBlankText, ...]
     report: ReVoiceReport
     created_at: UtcDatetime
+
+
+class EditedDraft(ContractModel):
+    """Human edit with the initial generation and immediate prior accepted revision."""
+
+    original: GeneratedDraft
+    content: NonBlankText
+    edited_at: UtcDatetime
+    previous_revision: ReVoicedDraft | None = None
+
+    @model_validator(mode="after")
+    def validate_previous_revision(self) -> Self:
+        previous = self.previous_revision
+        if previous is not None and (
+            previous.original_draft_id != self.original.id
+            or previous.report.original_draft_id != self.original.id
+            or previous.report.retrieval_bundle_id != self.original.report.retrieval_bundle_id
+        ):
+            raise ValueError("previous revision must belong to the original generated draft")
+        return self
+
+    @property
+    def baseline_content(self) -> str:
+        return self.previous_revision.content if self.previous_revision else self.original.content
+
+
+class ReVoiceInput(ContractModel):
+    """Complete sealed input needed to restore voice without hidden lookups."""
+
+    edited_draft: EditedDraft
+    context: GenerationContext
+    retrieval: RetrievalBundle
+    voice_profile: PublishedVoiceProfile
+    virality_profile: ViralityProfile
+    requested_at: UtcDatetime

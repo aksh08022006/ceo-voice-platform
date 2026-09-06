@@ -4,6 +4,7 @@ from typing import cast
 
 from pydantic import JsonValue
 
+from ceo_voice.models.communication import COMMENT_SYSTEM_INSTRUCTIONS, REPLY_INTENT_GUIDANCE
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.revoice.contracts import RegionPlan, ReVoiceInput
 from ceo_voice.utils.json import dumps_json
@@ -29,6 +30,16 @@ class ReVoicePromptBuilder:
     ) -> tuple[str, str]:
         payload = {
             "edited_draft": value.edited_draft.content,
+            "comment_context": (
+                value.context.intent.comment_context.model_dump(mode="json")
+                if value.context.intent.comment_context
+                else None
+            ),
+            "reply_intent_requirement": (
+                REPLY_INTENT_GUIDANCE[value.context.intent.comment_context.reply_intent]
+                if value.context.intent.comment_context
+                else None
+            ),
             "editable_lines": [item.model_dump(mode="json") for item in regions.editable],
             "protected_regions": [item.model_dump(mode="json") for item in regions.protected],
             "voice_targets": [
@@ -55,4 +66,7 @@ class ReVoicePromptBuilder:
             "platform": value.context.platform.model_dump(mode="json"),
             "repair_only": list(repair_feedback),
         }
-        return SYSTEM_INSTRUCTIONS, dumps_json(cast(JsonValue, payload))
+        instructions = SYSTEM_INSTRUCTIONS
+        if value.context.intent.comment_context:
+            instructions += "\n\n" + COMMENT_SYSTEM_INSTRUCTIONS
+        return instructions, dumps_json(cast(JsonValue, payload))

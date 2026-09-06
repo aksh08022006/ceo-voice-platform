@@ -51,7 +51,7 @@ class ReVoiceEngine:
     async def restore(self, value: ReVoiceInput) -> ReVoicedDraft:
         validate_revoice_input(value)
         difference = self._analyzer.analyze(
-            value.edited_draft.original.content, value.edited_draft.content
+            value.edited_draft.baseline_content, value.edited_draft.content
         )
         regions = self._detector.detect(value.edited_draft.content, difference)
         preflight = self._validator.validate(

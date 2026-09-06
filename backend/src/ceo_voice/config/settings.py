@@ -56,6 +56,11 @@ class ApiSettings(BaseModel):
         default=None,
         description="Validated immutable profile catalog served instead of showcase fixtures.",
     )
+    continuation_key: SecretStr | None = Field(
+        default=None,
+        description="Fernet key for encrypted browser-held workflow continuation across instances.",
+    )
+    continuation_ttl_seconds: int = Field(default=604800, ge=60, le=2592000)
 
 
 class ModelSettings(BaseModel):

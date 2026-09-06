@@ -99,6 +99,10 @@ def validate_generation_input(value: GenerationInput) -> None:
         ),
         (value.request.content_type == value.context.intent.content_type, "content_type_mismatch"),
         (
+            value.request.comment_context == value.context.intent.comment_context,
+            "comment_context_mismatch",
+        ),
+        (
             value.request.thread_post_count == value.context.intent.thread_post_count,
             "thread_count_mismatch",
         ),

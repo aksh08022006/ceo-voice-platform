@@ -19,7 +19,17 @@ const schema = z.object({
   profile_slug: z.string().min(1, "Select a CEO profile."),
   platform: z.enum(["linkedin", "x"]),
   idea: z.string().min(20, "Describe the idea in at least 20 characters.").max(1200),
+  content_kind: z.enum(["original_post", "comment"]),
+  parent_post: z.string().max(8000),
+  reply_intent: z.enum(["add_perspective", "ask_question", "respectfully_disagree", "acknowledge", "answer"]),
+  content_type: z.enum(["post", "thread"]),
+  thread_post_count: z.number().int().min(2).max(5),
+  virality_influence: z.number().min(0).max(0.25),
+  linkedin_length: z.enum(["standard", "profile"]),
 }).superRefine((value, context) => {
+  if (value.content_kind === "comment" && !value.parent_post.trim()) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "Paste the post you want to reply to.", path: ["parent_post"] });
+  }
   const filler = new Set(["a", "am", "ceo", "cto", "draft", "hello", "hey", "hi", "i", "im", "make", "me", "post", "the", "write"]);
   const profileTerms = new Set(value.profile_slug.toLowerCase().split("-"));
   const ideaTerms = (value.idea.toLowerCase().match(/[\p{L}\p{N}'-]+/gu) ?? [])
@@ -42,8 +52,19 @@ export function GenerateWorkspace() {
       profile_slug: "ali-ghodsi",
       platform: "linkedin",
       idea: "",
+      content_kind: "original_post",
+      parent_post: "",
+      reply_intent: "add_perspective",
+      content_type: "post",
+      thread_post_count: 3,
+      virality_influence: 0.12,
+      linkedin_length: "standard",
     },
   });
+  const platform = form.watch("platform");
+  const contentType = form.watch("content_type");
+  const contentKind = form.watch("content_kind");
+  const structureInfluence = form.watch("virality_influence");
   const generation = useMutation({
     mutationFn: api.generate,
     onSuccess: () => toast.success("Draft generated through the complete evidence pipeline."),
@@ -52,23 +73,53 @@ export function GenerateWorkspace() {
 
   return (
     <div className="grid gap-12 lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)] lg:gap-16">
-      <form className="space-y-6" onSubmit={form.handleSubmit((value) => generation.mutate(value))}>
+      <form className="space-y-6" onSubmit={form.handleSubmit((value) => generation.mutate({
+        profile_slug: value.profile_slug,
+        platform: value.platform,
+        idea: value.idea,
+        content_kind: value.content_kind,
+        parent_post: value.content_kind === "comment" ? value.parent_post : undefined,
+        reply_intent: value.content_kind === "comment" ? value.reply_intent : undefined,
+        content_type: value.content_kind === "original_post" && value.platform === "x" ? value.content_type : "post",
+        thread_post_count: value.content_kind === "original_post" && value.platform === "x" && value.content_type === "thread" ? value.thread_post_count : undefined,
+        virality_influence: value.virality_influence,
+        minimum_words: value.content_kind === "original_post" && value.platform === "linkedin" && value.linkedin_length === "standard" ? 150 : undefined,
+        maximum_words: value.content_kind === "original_post" && value.platform === "linkedin" && value.linkedin_length === "standard" ? 300 : undefined,
+      }))}>
         <Field label="CEO identity" error={form.formState.errors.profile_slug?.message}>
           <Select disabled={profiles.isPending} {...form.register("profile_slug")}>
             {profiles.data?.map((profile) => <option key={profile.slug} value={profile.slug}>{profile.name} · {profile.status}</option>)}
           </Select>
         </Field>
         <Field label="Platform"><Select {...form.register("platform")}><option value="linkedin">LinkedIn</option><option value="x">X</option></Select></Field>
-        <Field label="Idea / angle" error={form.formState.errors.idea?.message}><Textarea rows={8} placeholder="Describe what the post is about and the narrative angle." {...form.register("idea")} /></Field>
+        <Field label={contentKind === "comment" ? "Your contribution / angle" : "Idea / angle"} error={form.formState.errors.idea?.message}><Textarea rows={8} placeholder={contentKind === "comment" ? "Describe the point you want to contribute, including your stance and any facts to preserve." : "Describe what the post is about and the narrative angle."} {...form.register("idea")} /></Field>
+        <details className="border-y border-border py-4">
+          <summary className="cursor-pointer text-sm font-medium">Format and structure</summary>
+          <div className="mt-5 space-y-5">
+            <Field label="Write a"><Select {...form.register("content_kind")}><option value="original_post">Post</option><option value="comment">Comment / reply</option></Select></Field>
+            {contentKind === "comment" ? <>
+              <Field label="Post you are replying to" error={form.formState.errors.parent_post?.message}><Textarea rows={5} placeholder="Paste the original post. Its claims remain attributed to its author." {...form.register("parent_post")} /></Field>
+              <Field label="Reply intent"><Select {...form.register("reply_intent")}><option value="add_perspective">Add perspective</option><option value="ask_question">Ask a question</option><option value="respectfully_disagree">Respectfully disagree</option><option value="acknowledge">Acknowledge</option><option value="answer">Answer</option></Select></Field>
+              <p className="text-xs leading-5 text-muted-foreground">{platform === "linkedin" ? "A concise reply of 40–100 words." : "A single reply within 280 characters."} Your chosen stance and supplied points guide the comment. Voice evidence currently comes from original posts.</p>
+            </> : platform === "x" ? <>
+              <Field label="X format"><Select {...form.register("content_type")}><option value="post">Single post</option><option value="thread">Thread</option></Select></Field>
+              {contentType === "thread" ? <Field label="Posts in thread" error={form.formState.errors.thread_post_count?.message}><Select {...form.register("thread_post_count", { valueAsNumber: true })}>{[2, 3, 4, 5].map((count) => <option key={count} value={count}>{count} posts</option>)}</Select></Field> : null}
+            </> : <Field label="LinkedIn length"><Select {...form.register("linkedin_length")}><option value="standard">150–300 words</option><option value="profile">Let the voice profile guide length</option></Select></Field>}
+            <Field label={`Structural influence · ${Math.round(structureInfluence * 100)}%`} error={form.formState.errors.virality_influence?.message}>
+              <input className="mt-1 w-full accent-primary" type="range" min="0" max="0.25" step="0.01" {...form.register("virality_influence", { valueAsNumber: true })} />
+              <span className="mt-2 block text-xs font-normal leading-5 text-muted-foreground">A subtle 12% by default. Adjust how much structural guidance shapes the draft while preserving voice.</span>
+            </Field>
+          </div>
+        </details>
         <Button disabled={generation.isPending || profiles.isError} size="lg" type="submit">
           {generation.isPending ? "Running full pipeline…" : "Generate draft"}<ArrowRight className="h-4 w-4" />
         </Button>
-        {profiles.isError ? <p className="text-sm text-destructive">Backend unavailable. Start the API on port 8000.</p> : null}
+        {profiles.isError ? <p className="text-sm text-destructive">The writing service is unavailable. Please try again shortly.</p> : null}
       </form>
 
       <section aria-busy={generation.isPending} aria-live="polite">
         <div className="flex items-center justify-between border-b border-border pb-4">
-          <div><p className="eyebrow">Generated draft</p><p className="mt-2 text-xs text-muted-foreground">{generation.data ? `${generation.data.platform} · ${generation.data.content_type} · ${generation.data.profile_name}` : "Waiting for a governed request"}</p></div>
+          <div><p className="eyebrow">Generated draft</p><p className="mt-2 text-xs text-muted-foreground">{generation.data ? `${generation.data.platform} · ${generation.data.content_kind === "comment" ? "comment" : generation.data.content_type} · ${generation.data.profile_name}` : "Waiting for a governed request"}</p></div>
           {generation.data ? <Button size="icon" variant="ghost" onClick={() => { void navigator.clipboard.writeText(generation.data.content); toast.success("Draft copied."); }}><Copy className="h-4 w-4" /></Button> : null}
         </div>
         {generation.isPending ? <div className="space-y-4 py-10"><Skeleton className="h-5 w-4/5" /><Skeleton className="h-5 w-3/5" /><Skeleton className="mt-8 h-5 w-full" /></div> : (
