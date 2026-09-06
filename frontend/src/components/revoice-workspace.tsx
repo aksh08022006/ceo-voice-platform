@@ -33,7 +33,8 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
   const queryClient = useQueryClient();
   const [workflow, setWorkflow] = useState(initialWorkflow);
   const [edited, setEdited] = useState(() => {
-    const savedEdit = typeof window === "undefined" ? null : sessionStorage.getItem(`ceo-voice-edit:${initialWorkflow.session_id}`);
+    let savedEdit: string | null = null;
+    try { savedEdit = sessionStorage.getItem(`ceo-voice-edit:${initialWorkflow.session_id}`); } catch { /* Storage can be disabled by browser policy. */ }
     return initialWorkflow.revoiced_content ?? savedEdit ?? initialWorkflow.edited_content ?? initialWorkflow.content;
   });
   const editorRef = useRef<HTMLTextAreaElement>(null);
@@ -44,7 +45,7 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
       setWorkflow(response);
       setEdited(response.revoiced_content ?? response.edited_content ?? response.content);
       queryClient.setQueryData(["workflow", response.session_id], response);
-      sessionStorage.removeItem(`ceo-voice-edit:${response.session_id}`);
+      try { sessionStorage.removeItem(`ceo-voice-edit:${response.session_id}`); } catch { /* The accepted revision remains in page state. */ }
       toast.success(response.revoice_applied ? "Voice refined. This version is ready for your next edit." : "Your edit is preserved and ready for another pass.");
     },
     onError: (error) => toast.error(error.message),
@@ -59,8 +60,9 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
   const blankPost = postCounts.some((count) => count === 0);
   const overLimitPosts = postCounts.flatMap((count, index) => count > maximumCharacters ? [{ index, excess: count - maximumCharacters }] : []);
   const invalidEdit = countError || blankPost || overLimitPosts.length > 0;
-  const result = restoration.data?.revoiced_content ?? edited;
-  const compared = compareLines(restoration.variables?.content ?? edited, result);
+  const restored = restoration.data ?? (edited === baseline && workflow.revoiced_content ? workflow : null);
+  const result = restored?.revoiced_content ?? edited;
+  const compared = compareLines(restoration.variables?.content ?? restored?.edited_content ?? edited, result);
 
   return (
     <div>
@@ -102,19 +104,19 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
         <ArrowDown className="mt-6 h-4 w-4 text-muted-foreground" />
       </div>
       <section aria-live="polite" className="border-t border-border pt-10">
-        <div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Comparison</p><h2 className="mt-4 font-display text-3xl font-medium tracking-tight">Your structure. A closer voice.</h2></div><span className="font-mono text-xs text-muted-foreground">{restoration.data?.changed_regions.length ?? 0} voice changes</span></div>
+        <div className="flex items-end justify-between gap-4"><div><p className="eyebrow">Comparison</p><h2 className="mt-4 font-display text-3xl font-medium tracking-tight">Your structure. A closer voice.</h2></div><span className="font-mono text-xs text-muted-foreground">{restored?.changed_regions.length ?? 0} voice changes</span></div>
         <div className="mt-8 whitespace-pre-wrap border-y border-border py-8 font-display text-lg leading-8 sm:text-xl">{compared.map((line, index) => <span className={line.changed ? "rounded-sm bg-primary/10" : undefined} key={`${index}-${line.text}`}>{line.text}{index < compared.length - 1 ? "\n" : ""}</span>)}</div>
-        {restoration.data ? <div className="mt-8 border-t border-border">
+        {restored ? <div className="mt-8 border-t border-border">
           <ReportSection title="Re-Voice report">
             <p>
-              Structure validation passed. {restoration.data.revoice_applied
-                ? `${restoration.data.changed_regions.length} edited region(s) received voice changes.`
-                : restoration.data.revoice_fallback_used
+              Structure validation passed. {restored.revoice_applied
+                ? `${restored.changed_regions.length} edited region(s) received voice changes.`
+                : restored.revoice_fallback_used
                   ? "The model's proposed changes did not preserve your edit, so your version was kept."
                   : "The human edit was preserved without additional voice changes."}
             </p>
           </ReportSection>
-          <ReportSection title="Preserved details"><p>{restoration.data.preserved.length ? restoration.data.preserved.join(", ") : "Paragraph order and the human edit were preserved."}</p></ReportSection>
+          <ReportSection title="Preserved details"><p>{restored.preserved.length ? restored.preserved.join(", ") : "Paragraph order and the human edit were preserved."}</p></ReportSection>
           <div className="flex flex-wrap gap-4 pt-8">
             <Button variant="secondary" onClick={() => { restoration.reset(); editorRef.current?.focus(); }}>Edit this version again</Button>
             <Link className={buttonStyles()} href={`/evaluation?session=${workflow.session_id}`}>Evaluate this draft</Link>
