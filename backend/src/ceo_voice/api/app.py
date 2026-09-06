@@ -79,6 +79,7 @@ def create_app(
         ):
             raise ConfigurationError("development profile artifacts are forbidden in production")
         workflows = ShowcaseWorkflowService(
+            artifact_storage=resolved.api.artifact_storage,
             provider=create_model_provider(resolved.model, transport),
             model=resolved.model.generation_model,
             model_context_tokens=resolved.model.context_window_tokens,
@@ -91,7 +92,8 @@ def create_app(
         )
     else:
         workflows = ShowcaseWorkflowService(
-            retrieval_ranking=ConfiguredRetrievalRanking(resolved.retrieval, resolved.model)
+            artifact_storage=resolved.api.artifact_storage,
+            retrieval_ranking=ConfiguredRetrievalRanking(resolved.retrieval, resolved.model),
         )
 
     @asynccontextmanager

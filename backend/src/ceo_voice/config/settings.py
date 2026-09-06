@@ -61,6 +61,10 @@ class ApiSettings(BaseModel):
         description="Fernet key for encrypted browser-held workflow continuation across instances.",
     )
     continuation_ttl_seconds: int = Field(default=604800, ge=60, le=2592000)
+    artifact_storage: Literal["memory", "filesystem"] = Field(
+        default="memory",
+        description="HTTP workflows retain artifacts in memory; filesystem is an explicit local diagnostic opt-in.",
+    )
 
 
 class ModelSettings(BaseModel):

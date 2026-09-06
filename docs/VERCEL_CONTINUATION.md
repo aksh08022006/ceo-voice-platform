@@ -37,4 +37,19 @@ The regression suite creates a draft in application A, resumes and revoices it i
 then evaluates it in application C. It also checks expiry, tampering, key rotation, release changes,
 payload limits, malformed authenticated data and thread/revision preservation.
 
+HTTP-created workflow services default to `CEO_VOICE_API__ARTIFACT_STORAGE=memory`. Generation
+retains the complete integration outcome for editing, evaluation, and encrypted continuation but
+does not serialize profile copies into temporary files or create artifact directories. This avoids
+filling Vercel's temporary volume during batch generation. `artifact_directory` is a logical run
+location in this mode, not a persisted export. The in-process cache retains at most 32 recently
+generated or resumed sessions; an authenticated continuation restores an evicted workflow.
+
+CLI/batch integration runners and directly constructed workflow services retain filesystem artifact
+exports by default. A local API can explicitly select `artifact_storage=filesystem` for diagnostics.
+An explicitly injected workflow service retains its own storage setting; API settings configure
+only services built by the API factory. Set `artifact_storage="memory"` on injected serverless services.
+Filesystem storage failures still propagate for those callers; memory mode does not hide a failed
+write because it never attempts one. Tests simulate both full and read-only volumes during API
+generation, cold continuation, re-voice, and evaluation. No shared temporary files are deleted.
+
 Reference: [Fernet documentation](https://cryptography.io/en/latest/fernet/).

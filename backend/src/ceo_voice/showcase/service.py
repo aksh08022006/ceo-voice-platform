@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from itertools import count
 from pathlib import Path
 from tempfile import gettempdir
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from ceo_voice.context import create_context_compiler
@@ -26,6 +26,7 @@ from ceo_voice.integration import (
     PublishedIntegrationInput,
     PublishedIntegrationRunner,
 )
+from ceo_voice.integration.artifacts import ArtifactWriter
 from ceo_voice.integration.ports import RetrievalRankingPreparer
 from ceo_voice.models.communication import CommentContext, ReplyIntent
 from ceo_voice.models.enums import ContentType, Platform
@@ -47,6 +48,8 @@ from ceo_voice.voice import DownstreamPermission, FeatureRegistry
 from .catalog import PROFILES, WALKTHROUGHS, ShowcaseProfile, Walkthrough, profile_by_slug
 from .fixtures import NOW, ReviewedShowcaseProfileBuilder, profile_manifest, virality_corpus
 from .provider import ShowcaseProvider
+
+SESSION_CACHE_LIMIT = 32
 
 
 @dataclass(slots=True)
@@ -76,8 +79,14 @@ class ShowcaseWorkflowService:
         maximum_provider_retries: int = 2,
         published_bundles: tuple[PublishedProfileBundle, ...] = (),
         retrieval_ranking: RetrievalRankingPreparer | None = None,
+        artifact_storage: Literal["filesystem", "memory"] = "filesystem",
     ) -> None:
-        self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
+        self._artifacts = ArtifactWriter(storage=artifact_storage)
+        self._output = output_directory or (
+            Path(gettempdir()) / "ceo-voice-showcase"
+            if artifact_storage == "filesystem"
+            else Path("memory-artifacts")
+        )
         self._sessions: dict[UUID, WorkflowSession] = {}
         self._variation_sequence = count()
         self._provider = provider
@@ -231,8 +240,7 @@ class ShowcaseWorkflowService:
                 details={"reason": failure.code if failure else "unknown"},
             )
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
-        self._sessions[run_id] = session
-        return session
+        return self._remember(session)
 
     async def _generate_published(
         self,
@@ -302,8 +310,7 @@ class ShowcaseWorkflowService:
             )
         profile = next(item for item in self.profiles if item.slug == profile_slug)
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
-        self._sessions[run_id] = session
-        return session
+        return self._remember(session)
 
     async def revoice(self, session_id: UUID, edited_content: str) -> WorkflowSession:
         """Restore voice against the exact artifacts generated for the session."""
@@ -385,9 +392,14 @@ class ShowcaseWorkflowService:
 
         if session.profile.slug not in self._bundles:
             raise KeyError(session.profile.slug)
+        return self._remember(session)
+
+    def _remember(self, session: WorkflowSession) -> WorkflowSession:
+        """Bound generated and resumed sessions; portable continuation retains evicted state."""
+
+        self._sessions.pop(session.id, None)
         self._sessions[session.id] = session
-        # Portable snapshots make keeping every old request in process memory unnecessary.
-        while len(self._sessions) > 32:
+        while len(self._sessions) > SESSION_CACHE_LIMIT:
             self._sessions.pop(next(iter(self._sessions)))
         return session
 
@@ -526,6 +538,7 @@ class ShowcaseWorkflowService:
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
         return IntegrationRunner(
+            artifacts=self._artifacts,
             profile_builder=cast(VoiceProfileBuilder, builder),
             virality_builder=create_virality_builder(workspace=virality_workspace),
             virality_workspace=virality_workspace,
@@ -556,6 +569,7 @@ class ShowcaseWorkflowService:
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
         return PublishedIntegrationRunner(
+            artifacts=self._artifacts,
             feature_registry=bundle.feature_registry,
             retrieval_ranking=self._retrieval_ranking,
             context_compiler=create_context_compiler(),

@@ -36,7 +36,10 @@ def _variation_directive(request_id: UUID) -> dict[str, JsonValue]:
         "composition_route": route,
         "instruction": (
             "Write fresh wording for this request. Do not reuse a stock hook, stock closing, "
-            "or question-led frame merely because it appeared in an example."
+            "or question-led frame merely because it appeared in an example. The route is optional "
+            "and subordinate to the brief's prohibitions, uncertainty, attribution, and time frame. "
+            "Use it only when supplied facts support its mechanism, change, or consequence. "
+            "Otherwise use a direct factual summary or the permitted general argument."
         ),
     }
 
@@ -134,7 +137,8 @@ class PromptBuilder:
                 {
                     "influence": context.virality.influence,
                     "instruction": (
-                        "Apply structural guidance proportionally and never override voice targets"
+                        "Apply structural guidance proportionally. Never override the brief's "
+                        "prohibitions or claim strength, factual limits, or voice targets."
                     ),
                     "structure_targets": [
                         {
@@ -157,6 +161,7 @@ class PromptBuilder:
                     "topic": value.request.topic,
                     "objective": value.request.objective,
                     "audience": value.request.audience,
+                    "explicit_constraints": list(value.request.constraints),
                     "platform": value.request.platform.value,
                     "content_type": value.request.content_type.value,
                     "thread_post_count": value.request.thread_post_count,
