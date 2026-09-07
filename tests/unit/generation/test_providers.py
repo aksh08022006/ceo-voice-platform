@@ -128,3 +128,19 @@ def test_gemini_incomplete_candidate_is_not_returned_as_a_draft(reason: str) -> 
         asyncio.run(provider.generate(request()))
     assert error.value.details == {"finish_reason": reason}
     assert not error.value.retryable
+
+
+def test_gemini_native_json_schema_is_only_requested_for_structured_calls() -> None:
+    transport = Transport({"candidates": [{"content": {"parts": [{"text": "{}"}]}}]})
+    provider = GeminiProvider(transport, SecretStr("secret"))
+    schema: dict[str, JsonValue] = {"type": "object", "properties": {"units": {"type": "array"}}}
+    asyncio.run(provider.generate(request().model_copy(update={"response_json_schema": schema})))
+    assert transport.call is not None
+    config = transport.call[2]["generationConfig"]
+    assert isinstance(config, dict)
+    assert config["responseMimeType"] == "application/json"
+    assert config["responseJsonSchema"] == schema
+    asyncio.run(provider.generate(request()))
+    config = transport.call[2]["generationConfig"]
+    assert isinstance(config, dict)
+    assert "responseMimeType" not in config and "responseJsonSchema" not in config

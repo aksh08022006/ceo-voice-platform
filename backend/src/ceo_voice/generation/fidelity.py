@@ -12,6 +12,7 @@ from typing import Any
 from uuid import UUID
 
 from ceo_voice.generation.contracts import GenerationInput, ProviderRequest
+from ceo_voice.generation.enums import ProviderName
 from ceo_voice.generation.fidelity_contracts import (
     BriefSource,
     CandidateUnit,
@@ -43,7 +44,15 @@ def candidate_units(candidate: str) -> tuple[CandidateUnit, ...]:
     units: list[CandidateUnit] = []
     for match in re.finditer(r"\S[^\n]*?(?:[.!?\u3002\uff01\uff1f](?=\s|$)|(?=\n)|$)", candidate):
         text = match.group().rstrip()
-        if text:
+        if text and not (
+            text == "---"
+            and match.start() > 0
+            and candidate[match.start() - 1] == "\n"
+            and (
+                match.start() + len(text) == len(candidate)
+                or candidate[match.start() + len(text)] == "\n"
+            )
+        ):
             units.append(
                 CandidateUnit(
                     unit_id=f"u{len(units):03d}",
@@ -224,6 +233,13 @@ class FidelityReviewer:
             ):
                 raise ValueError("review unit/source count exceeds bounds")
             covered = {i for unit in units for i in range(unit.start, unit.end)}
+            # Thread separators are formatting, not claims. Bind the full candidate
+            # hash while excluding only exact standalone separators from review.
+            covered.update(
+                i
+                for match in re.finditer(r"(?<=\n)---(?=\n|$)", candidate)
+                for i in range(match.start(), match.end())
+            )
             if any(not char.isspace() and i not in covered for i, char in enumerate(candidate)):
                 raise ValueError("unit partition does not cover the candidate")
             compact = self.policy.review_format == "sentence_verdicts"
@@ -259,6 +275,11 @@ class FidelityReviewer:
                         user=user,
                         model=self.policy.model,
                         maximum_output_tokens=self.policy.maximum_output_tokens,
+                        response_json_schema=(
+                            (SentenceVerdicts if compact else FidelityPayload).model_json_schema()
+                            if self.provider.name == ProviderName.GEMINI
+                            else None
+                        ),
                     )
                 )
             metrics = {

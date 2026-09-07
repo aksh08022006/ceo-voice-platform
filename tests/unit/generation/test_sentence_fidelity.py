@@ -99,3 +99,36 @@ def test_parent_source_is_only_accepted_as_attributed_material() -> None:
         [verdict(kind="attributed_statement", source_ids=["parent"])], authority="parent"
     )
     assert result.status == "clear"
+
+
+def test_thread_separator_is_formatting_and_sentence_offsets_still_bind() -> None:
+    from ceo_voice.generation.fidelity import candidate_units
+    from ceo_voice.utils.hashing import sha256_text
+
+    candidate = "Systems may help.\n---\nEvaluation matters."
+    units = candidate_units(candidate)
+    assert [u.text for u in units] == ["Systems may help.", "Evaluation matters."]
+    assert units[1].start == candidate.index("Evaluation")
+    provider = FakeProvider((json.dumps({"units": [verdict(), verdict(unit_id="u001")]}),))
+    reviewer = FidelityReviewer(
+        provider,
+        policy=FidelityPolicy(enabled=True, model="test-model", review_format="sentence_verdicts"),
+    )
+    result = asyncio.run(
+        reviewer.review_sources(
+            candidate,
+            request_id=UUID(int=1),
+            sources=(
+                BriefSource(
+                    source_id="brief",
+                    authority="brief",
+                    text="Systems may help. Evaluation matters.",
+                ),
+            ),
+        )
+    )
+    assert result.status == "clear"
+    assert result.candidate_sha256 == sha256_text(candidate)
+    # Arbitrary punctuation and embedded dashes cannot disappear from assessment.
+    assert [u.text for u in candidate_units("Systems---may help.")] == ["Systems---may help."]
+    assert [u.text for u in candidate_units("---")] == ["---"]

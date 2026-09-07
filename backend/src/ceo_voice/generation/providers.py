@@ -184,6 +184,9 @@ class GeminiProvider(HttpModelProvider):
 
     def _payload(self, request: ProviderRequest) -> dict[str, JsonValue]:
         config: dict[str, JsonValue] = {"maxOutputTokens": request.maximum_output_tokens}
+        if request.response_json_schema is not None:
+            config["responseMimeType"] = "application/json"
+            config["responseJsonSchema"] = request.response_json_schema
         if self._thinking_level is not None:
             config["thinkingConfig"] = {"thinkingLevel": self._thinking_level}
         return {
