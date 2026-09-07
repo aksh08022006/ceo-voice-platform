@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ArrowRight, Copy } from "lucide-react";
 import Link from "next/link";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -61,10 +61,10 @@ export function GenerateWorkspace() {
       linkedin_length: "standard",
     },
   });
-  const platform = form.watch("platform");
-  const contentType = form.watch("content_type");
-  const contentKind = form.watch("content_kind");
-  const structureInfluence = form.watch("virality_influence");
+  const platform = useWatch({ control: form.control, name: "platform" });
+  const contentType = useWatch({ control: form.control, name: "content_type" });
+  const contentKind = useWatch({ control: form.control, name: "content_kind" });
+  const structureInfluence = useWatch({ control: form.control, name: "virality_influence" });
   const generation = useMutation({
     mutationFn: api.generate,
     onSuccess: () => toast.success("Draft generated through the complete evidence pipeline."),

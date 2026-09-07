@@ -1,5 +1,6 @@
 """FastAPI application wiring for browser product workflows."""
 
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
@@ -7,19 +8,25 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from ceo_voice.config import Settings, get_settings
 from ceo_voice.core.constants import Environment
 from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
+from ceo_voice.generation.fidelity import FidelityReviewer
+from ceo_voice.generation.fidelity_contracts import FidelityPolicy
 from ceo_voice.models.communication import CommentContext
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
 from ceo_voice.services.retrieval_ranking import ConfiguredRetrievalRanking
 from ceo_voice.showcase import ShowcaseWorkflowService
 from ceo_voice.showcase.continuation import ContinuationError, WorkflowContinuation
 from ceo_voice.showcase.service import WorkflowSession
+from ceo_voice.workspace import PostgresDatabase, WorkflowRepository
+from ceo_voice.workspace.schema import SCHEMA_VERSION
 
+from .authentication import AccessError, NeonIdentityReader, TokenVerifier, WorkspaceAccess
 from .profile_analytics import project_profile_analytics
 from .schemas import (
     ContinueWorkflowRequest,
@@ -54,11 +61,17 @@ DEVELOPMENT_DISCLAIMER = (
 def create_app(
     settings: Settings | None = None,
     service: ShowcaseWorkflowService | None = None,
+    *,
+    workspace_access: WorkspaceAccess | None = None,
+    workspace_repository: WorkflowRepository | None = None,
+    fidelity_reviewer: FidelityReviewer | None = None,
 ) -> FastAPI:
     """Create an isolated application with injected configuration and workflow service."""
 
     resolved = settings or get_settings()
     transport: HttpxJsonTransport | None = None
+    reviewer = fidelity_reviewer
+    repository: WorkflowRepository | None = workspace_repository
     if service is not None:
         workflows = service
     elif resolved.api.published_profile_catalog is not None and not resolved.model.enabled:
@@ -69,6 +82,16 @@ def create_app(
         transport = HttpxJsonTransport(
             timeout_seconds=resolved.model.request_timeout_seconds,
         )
+        provider = create_model_provider(resolved.model, transport)
+        if resolved.workspace.enabled and reviewer is None:
+            reviewer = FidelityReviewer(
+                provider,
+                policy=FidelityPolicy(
+                    enabled=True,
+                    failure_behavior="return_for_review",
+                    model=resolved.workspace.fidelity_model or resolved.model.generation_model,
+                ),
+            )
         published_bundles = (
             load_published_profile_catalog(resolved.api.published_profile_catalog)
             if resolved.api.published_profile_catalog is not None
@@ -80,11 +103,14 @@ def create_app(
             raise ConfigurationError("development profile artifacts are forbidden in production")
         workflows = ShowcaseWorkflowService(
             artifact_storage=resolved.api.artifact_storage,
-            provider=create_model_provider(resolved.model, transport),
+            provider=provider,
             model=resolved.model.generation_model,
             model_context_tokens=resolved.model.context_window_tokens,
             maximum_output_tokens=resolved.model.maximum_output_tokens,
-            maximum_provider_retries=resolved.model.max_retries,
+            maximum_provider_retries=(
+                0 if resolved.workspace.enabled else resolved.model.max_retries
+            ),
+            fidelity_reviewer=reviewer,
             published_bundles=published_bundles,
             retrieval_ranking=ConfiguredRetrievalRanking(
                 resolved.retrieval, resolved.model, transport
@@ -103,6 +129,8 @@ def create_app(
             output_format=resolved.logging.format,
             service_name=resolved.application.service_name,
         )
+        if resolved.workspace.enabled and repository is not None:
+            await run_in_threadpool(_verify_workspace_schema, repository)
         yield
         if transport is not None:
             await transport.aclose()
@@ -146,23 +174,78 @@ def create_app(
         except ContinuationError as exc:
             raise HTTPException(status_code=410, detail=exc.message) from exc
 
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=list(resolved.api.allowed_origins),
-        allow_credentials=False,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Request-ID"],
-    )
+    access = workspace_access
+    if resolved.workspace.enabled:
+        from .editor import create_editor_router
+
+        if continuation is None or reviewer is None:
+            raise ConfigurationError(
+                "workspace requires published profiles, continuation and claim review"
+            )
+        assert resolved.workspace.database_url is not None
+        assert resolved.workspace.encryption_key is not None
+        repository = workspace_repository or WorkflowRepository(
+            PostgresDatabase(resolved.workspace.database_url.get_secret_value())
+        )
+        access = access or WorkspaceAccess(
+            resolved.workspace,
+            repository,
+            NeonIdentityReader(resolved.workspace.database_url.get_secret_value()),
+            TokenVerifier(resolved.workspace),
+        )
+        application.state.workspace_repository = repository
+        application.include_router(
+            create_editor_router(
+                repository=repository,
+                service=workflows,
+                continuation=continuation,
+                reviewer=reviewer,
+                encryption_key=resolved.workspace.encryption_key.get_secret_value(),
+                workspace_id=resolved.workspace.workspace_id,
+                allowed_profiles=resolved.workspace.allowed_profiles,
+                maximum_runs_per_hour=resolved.workspace.maximum_runs_per_hour,
+                run_lease_seconds=resolved.workspace.run_lease_seconds,
+            )
+        )
 
     @application.middleware("http")
     async def request_id_middleware(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        identifier = request.headers.get("X-Request-ID") or uuid4().hex
+        supplied_identifier = request.headers.get("X-Request-ID", "")
+        identifier = (
+            supplied_identifier
+            if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", supplied_identifier)
+            else uuid4().hex
+        )
+        response: Response
         with request_context(identifier):
-            response = await call_next(request)
+            try:
+                protected = (
+                    resolved.workspace.enabled
+                    and request.url.path.startswith("/api/v1/")
+                    and request.url.path != "/api/v1/health"
+                )
+                if protected and request.method != "OPTIONS":
+                    assert access is not None
+                    request.state.actor = await run_in_threadpool(
+                        access.authorize, request.headers.get("Authorization")
+                    )
+                    if request.url.path.startswith("/api/v1/workflows"):
+                        response = JSONResponse(
+                            status_code=410,
+                            content={
+                                "detail": "Open the saved editor workspace to create or revise drafts."
+                            },
+                        )
+                    else:
+                        response = await call_next(request)
+                else:
+                    response = await call_next(request)
+            except AccessError as exc:
+                response = JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
         response.headers["X-Request-ID"] = identifier
-        if request.url.path.startswith("/api/v1/workflows"):
+        if request.url.path.startswith("/api/v1/"):
             response.headers["Cache-Control"] = "no-store"
         return response
 
@@ -288,7 +371,24 @@ def create_app(
         resume(session_id, value.continuation_token if value else None)
         return project(await workflows.evaluate(session_id))
 
+    # CORS must also wrap authentication failures so the separate frontend can read 401/403.
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(resolved.api.allowed_origins),
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "X-Request-ID", "Authorization", "Idempotency-Key"],
+        expose_headers=["X-Request-ID"],
+    )
     return application
+
+
+def _verify_workspace_schema(repository: WorkflowRepository) -> None:
+    """Check the deployed dependency without migrating or creating records at startup."""
+    with repository.database.transaction() as transaction:
+        versions = transaction.all("SELECT version FROM cv_schema_migrations")
+    if {row["version"] for row in versions} != {SCHEMA_VERSION}:
+        raise ConfigurationError("workspace database requires its explicit schema migration")
 
 
 def _ensure_available(settings: Settings, service: ShowcaseWorkflowService) -> None:

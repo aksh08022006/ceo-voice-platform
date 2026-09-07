@@ -7,6 +7,7 @@ from pydantic import Field, model_validator
 
 from ceo_voice.context import GenerationContext
 from ceo_voice.generation.enums import AttemptKind, PromptSectionKind, ProviderName, ValidationCode
+from ceo_voice.generation.fidelity_contracts import FidelityPolicy, FidelityReview
 from ceo_voice.models.base import ContractModel, NonBlankText, NonEmptyStr, UtcDatetime
 from ceo_voice.retrieval import RetrievalBundle
 from ceo_voice.schemas.generation import GenerationRequest
@@ -31,6 +32,7 @@ class GenerationPolicy(ContractModel):
     maximum_validation_retries: int = Field(default=1, ge=0, le=5)
     estimated_characters_per_token: float = Field(default=4.0, ge=1, le=10)
     minimum_voice_confidence: float = Field(default=0.5, ge=0, le=1)
+    fidelity: FidelityPolicy = FidelityPolicy()
 
     @model_validator(mode="after")
     def validate_window(self) -> Self:
@@ -121,11 +123,12 @@ class GenerationAttempt(ContractModel):
     usage: TokenUsage | None
     validation: OutputValidation | None
     error_code: str | None = None
+    fidelity_review: FidelityReview | None = None
 
 
 class ConstraintResult(ContractModel):
     constraint_id: NonEmptyStr
-    satisfied: bool
+    satisfied: bool | None
     detail: NonEmptyStr
 
 
@@ -143,6 +146,12 @@ class GenerationReport(ContractModel):
     total_usage: TokenUsage
     final_validation: OutputValidation
     constraint_results: tuple[ConstraintResult, ...]
+    fidelity_review: FidelityReview | None = None
+    generation_call_count: int | None = Field(default=None, ge=0)
+    fidelity_call_count: int | None = Field(default=None, ge=0)
+    total_model_calls: int | None = Field(default=None, ge=0)
+    maximum_generation_calls: int | None = Field(default=None, ge=1)
+    maximum_fidelity_calls: int | None = Field(default=None, ge=0)
 
 
 class GeneratedDraft(ContractModel):

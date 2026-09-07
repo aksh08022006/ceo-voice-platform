@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { AccountMenu } from "@/components/auth/account-menu";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navigation = [
+  ...(AUTH_ENABLED ? [{ label: "Workspace", href: "/workspace" }] : []),
   { label: "Generate", href: "/generate" },
   { label: "Profiles", href: "/profiles" },
   { label: "Benchmarks", href: "/benchmarks" },
@@ -51,6 +54,7 @@ export function SiteHeader() {
           </a>
         </nav>
         <div className="flex items-center gap-1">
+          <AccountMenu />
           <ThemeToggle />
           <Button
             aria-expanded={open}

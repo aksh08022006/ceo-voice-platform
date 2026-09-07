@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { EditorGenerate } from "@/components/editor/editor-generate";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 import { GenerateWorkspace } from "@/components/generate-workspace";
 
 export const metadata: Metadata = { title: "Generate" };
@@ -13,11 +15,11 @@ export default function GeneratePage() {
           Turn an idea into accountable communication.
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground">
-          Voice and structure are retrieved independently. Every decision remains traceable to a
-          published release and its evidence.
+          Start with an identity, platform, and idea. Add source evidence when the draft needs
+          factual support, then review and approve the saved wording.
         </p>
       </header>
-      <GenerateWorkspace />
+      {AUTH_ENABLED ? <EditorGenerate /> : <GenerateWorkspace />}
     </div>
   );
 }

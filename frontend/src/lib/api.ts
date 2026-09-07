@@ -1,3 +1,6 @@
+import { AUTH_ENABLED } from "@/lib/auth/config";
+import { getJWTToken } from "@/lib/auth/token";
+
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
@@ -181,14 +184,28 @@ export type Walkthrough = {
   human_edit: string;
 };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+export class ApiError extends Error {
+  constructor(message: string, public readonly status: number) { super(message); this.name = "ApiError"; }
+}
+
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  headers.set("Content-Type", "application/json");
+  const protectedRequest = path.startsWith("/api/v1/") && path !== "/api/v1/health";
+  if (AUTH_ENABLED && protectedRequest) {
+    const token = await getJWTToken();
+    if (!token) throw new Error("Sign in to use the workspace.");
+    headers.set("Authorization", `Bearer ${token}`);
+  }
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers,
+    cache: protectedRequest ? "no-store" : init?.cache,
   });
   if (!response.ok) {
-    const body = (await response.json().catch(() => null)) as { message?: string; detail?: string } | null;
-    throw new Error(body?.message ?? body?.detail ?? `Request failed (${response.status})`);
+    const body = (await response.json().catch(() => null)) as { message?: unknown; detail?: unknown } | null;
+    const message = typeof body?.message === "string" ? body.message : typeof body?.detail === "string" ? body.detail : response.status === 422 ? "Some inputs could not be accepted. Check the brief and try again." : `Request failed (${response.status}). Please try again.`;
+    throw new ApiError(message, response.status);
   }
   return response.json() as Promise<T>;
 }

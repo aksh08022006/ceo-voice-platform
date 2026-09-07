@@ -4,6 +4,8 @@ Generation prompt `generation-prompt/1.3.0` explicitly preserves the brief's pro
 
 This is prompt hardening, not a semantic verifier. The deterministic output validator checks formatting, length, topic term overlap, selected blocked phrases, voice evidence confidence, and supported explicit phrase requirements. A passing result does not establish factual entailment, causal support, preserved uncertainty, recognizable voice, naturalness, or readiness to publish. Drafts require editorial review.
 
+The subsequently added optional [claim-review subsystem](SEMANTIC_FIDELITY.md) records a separate structured semantic assessment with exact evidence and candidate spans. Its model judgments still require calibration and named human approval; they do not change the limits of the prompt or deterministic validator described here.
+
 ## Observed failure motivating the change
 
 An unedited live LinkedIn draft about the February 9, 2026 Databricks disclosure preserved the date and revenue run-rate distinction but asserted that the result stemmed from engineering decisions. The supplied brief explicitly prohibited adding causal proof and supplied no evidence for that explanation. A separate X draft stated that designing compound AI systems improves results despite a prohibition on universal performance claims. These are failures to preserve the brief's limits, even though the format and topic checks passed.

@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 
 import { RevoiceWorkspace } from "@/components/revoice-workspace";
 
 export const metadata: Metadata = { title: "Re-Voice" };
 
 export default function RevoicePage() {
+  if (AUTH_ENABLED) redirect("/workspace");
   return (
     <div className="page-shell py-16 sm:py-24">
       <header className="mb-14 max-w-3xl sm:mb-20">

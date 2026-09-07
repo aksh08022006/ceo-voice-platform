@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery } from "@tanstack/react-query";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { redirect, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ import { ReportSection } from "@/components/report-section";
 import { Button, buttonStyles } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 import { api } from "@/lib/api";
 
 const diagnosticLabels: Record<string, { label: string; description: string }> = {
@@ -43,7 +44,8 @@ const diagnosticLabels: Record<string, { label: string; description: string }> =
   },
 };
 
-export default function EvaluationPage() { return <Suspense fallback={<EvaluationSkeleton />}><EvaluationContent /></Suspense>; }
+export default function EvaluationPage() {
+  if (AUTH_ENABLED) redirect("/workspace"); return <Suspense fallback={<EvaluationSkeleton />}><EvaluationContent /></Suspense>; }
 
 function EvaluationContent() {
   const session = useSearchParams().get("session") ?? "";

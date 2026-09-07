@@ -18,6 +18,9 @@ from ceo_voice.generation import (
     PromptRenderer,
     TokenBudgetManager,
 )
+from ceo_voice.generation.editor_revision import RevisionProposal, revise_flagged_spans
+from ceo_voice.generation.fidelity import FidelityReviewer
+from ceo_voice.generation.fidelity_contracts import BriefSource, FidelityPolicy, FidelityReview
 from ceo_voice.generation.ports import ModelProvider
 from ceo_voice.integration import (
     IntegrationInput,
@@ -80,6 +83,7 @@ class ShowcaseWorkflowService:
         published_bundles: tuple[PublishedProfileBundle, ...] = (),
         retrieval_ranking: RetrievalRankingPreparer | None = None,
         artifact_storage: Literal["filesystem", "memory"] = "filesystem",
+        fidelity_reviewer: FidelityReviewer | None = None,
     ) -> None:
         self._artifacts = ArtifactWriter(storage=artifact_storage)
         self._output = output_directory or (
@@ -95,6 +99,7 @@ class ShowcaseWorkflowService:
         self._model_context_tokens = model_context_tokens
         self._maximum_output_tokens = maximum_output_tokens
         self._maximum_provider_retries = maximum_provider_retries
+        self._fidelity_reviewer = fidelity_reviewer
         self._bundles = {bundle.slug: bundle for bundle in published_bundles}
         if self._bundles and provider is None:
             raise IntegrationError("published profile serving requires a configured model provider")
@@ -169,6 +174,7 @@ class ShowcaseWorkflowService:
         minimum_words: int | None = None,
         maximum_words: int | None = None,
         comment_context: CommentContext | None = None,
+        reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
 
@@ -184,10 +190,11 @@ class ShowcaseWorkflowService:
                 minimum_words=minimum_words,
                 maximum_words=maximum_words,
                 comment_context=comment_context,
+                reserved_session_id=reserved_session_id,
             )
         profile = profile_by_slug(profile_slug)
         manifest = profile_manifest(profile)
-        request_id, run_id = uuid4(), uuid4()
+        request_id, run_id = uuid4(), reserved_session_id or uuid4()
         request = GenerationRequest(
             request_id=request_id,
             tenant_id=manifest.corpus.identity.tenant_id,
@@ -255,6 +262,7 @@ class ShowcaseWorkflowService:
         minimum_words: int | None,
         maximum_words: int | None,
         comment_context: CommentContext | None,
+        reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Serve one request from exact immutable release artifacts without rebuilding them."""
 
@@ -265,7 +273,7 @@ class ShowcaseWorkflowService:
         provider = self._require(self._provider, "model provider")
         assert isinstance(provider, ModelProvider)
         release = bundle.voice_profile.managed_release.release
-        run_id = uuid4()
+        run_id = reserved_session_id or uuid4()
         started_at = utc_now()
         request = GenerationRequest(
             request_id=uuid4(),
@@ -330,7 +338,11 @@ class ShowcaseWorkflowService:
         provider = self._provider or ShowcaseProvider(self._restore(edited_content))
         revoiced = await ReVoiceEngine(
             provider,
-            policy=ReVoicePolicy(provider=provider.name, model=self._model),
+            policy=ReVoicePolicy(
+                provider=provider.name,
+                model=self._model,
+                maximum_provider_retries=self._maximum_provider_retries,
+            ),
         ).restore(
             ReVoiceInput(
                 edited_draft=edited,
@@ -353,6 +365,27 @@ class ShowcaseWorkflowService:
         session.revision_count += 1
         session.evaluation = None
         return session
+
+    async def revise_editor(
+        self,
+        *,
+        request_id: UUID,
+        content: str,
+        review: FidelityReview,
+        sources: tuple[BriefSource, ...],
+    ) -> RevisionProposal:
+        """One shared-provider call, without retries, for exact-span editorial correction."""
+        if self._provider is None:
+            raise IntegrationError("editor revision requires a configured model provider")
+        return await revise_flagged_spans(
+            self._provider,
+            model=self._model,
+            maximum_output_tokens=self._maximum_output_tokens,
+            request_id=request_id,
+            content=content,
+            review=review,
+            sources=sources,
+        )
 
     async def evaluate(self, session_id: UUID) -> WorkflowSession:
         """Evaluate the latest candidate deterministically with evidence traceability."""
@@ -534,6 +567,9 @@ class ShowcaseWorkflowService:
             model_context_tokens=self._model_context_tokens,
             maximum_output_tokens=self._maximum_output_tokens,
             maximum_provider_retries=self._maximum_provider_retries,
+            fidelity=(
+                self._fidelity_reviewer.policy if self._fidelity_reviewer else FidelityPolicy()
+            ),
         )
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
@@ -553,6 +589,7 @@ class ShowcaseWorkflowService:
                 renderer,
                 OutputValidator(),
                 policy=policy,
+                fidelity_reviewer=self._fidelity_reviewer,
             ),
         )
 
@@ -565,6 +602,9 @@ class ShowcaseWorkflowService:
             model_context_tokens=self._model_context_tokens,
             maximum_output_tokens=self._maximum_output_tokens,
             maximum_provider_retries=self._maximum_provider_retries,
+            fidelity=(
+                self._fidelity_reviewer.policy if self._fidelity_reviewer else FidelityPolicy()
+            ),
         )
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
@@ -581,5 +621,6 @@ class ShowcaseWorkflowService:
                 renderer,
                 OutputValidator(),
                 policy=policy,
+                fidelity_reviewer=self._fidelity_reviewer,
             ),
         )

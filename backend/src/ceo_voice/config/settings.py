@@ -164,6 +164,56 @@ class RetrievalSettings(BaseModel):
     embedding_cache_items: int = Field(default=2048, ge=0, le=10000)
 
 
+class WorkspaceSettings(BaseModel):
+    """Explicit production workspace dependencies; incomplete setup never falls back to anonymous access."""
+
+    enabled: bool = False
+    database_url: SecretStr | None = None
+    encryption_key: SecretStr | None = None
+    workspace_id: str = Field(default="narrative-company", min_length=1, max_length=160)
+    workspace_name: str = Field(default="The Narrative Company", min_length=1, max_length=160)
+    auth_issuer: str | None = None
+    auth_audience: str | None = None
+    auth_jwks_url: str | None = None
+    bootstrap_admin_emails: tuple[str, ...] = ()
+    allowed_profiles: tuple[str, ...] = ("ali-ghodsi", "matei-zaharia")
+    maximum_runs_per_hour: int = Field(default=30, ge=1, le=1000)
+    run_lease_seconds: int = Field(default=240, ge=60, le=600)
+    fidelity_enabled: bool = False
+    fidelity_model: str | None = None
+
+    @model_validator(mode="after")
+    def production_dependencies(self) -> Self:
+        if self.enabled and not all(
+            (
+                self.database_url,
+                self.encryption_key,
+                self.auth_issuer,
+                self.auth_audience,
+                self.auth_jwks_url,
+            )
+        ):
+            raise ValueError(
+                "enabled workspace requires database, encryption, and managed authentication"
+            )
+        if self.enabled and not self.fidelity_enabled:
+            raise ValueError("enabled workspace requires claim review")
+        if (
+            self.enabled
+            and self.database_url
+            and not self.database_url.get_secret_value().startswith(
+                ("postgresql://", "postgres://")
+            )
+        ):
+            raise ValueError(
+                "production workspace requires PostgreSQL, never an ephemeral SQLite file"
+            )
+        for value in (self.auth_issuer, self.auth_audience, self.auth_jwks_url):
+            if value and not value.startswith("https://"):
+                raise ValueError("managed authentication endpoints must use HTTPS")
+        return self
+
+
 class Settings(BaseSettings):
     """Root settings object populated from environment variables and an optional .env file."""
 
@@ -172,6 +222,7 @@ class Settings(BaseSettings):
     api: ApiSettings = Field(default_factory=ApiSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
     retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
+    workspace: WorkspaceSettings = Field(default_factory=WorkspaceSettings)
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),

@@ -107,10 +107,21 @@ class WorkflowContinuation:
         return token
 
     def open(self, token: str, session_id: UUID) -> WorkflowSession:
+        return self._open(token, session_id, ttl=self._ttl)
+
+    def open_stored(self, token: str, session_id: UUID) -> WorkflowSession:
+        """Trusted database boundary only: retain MAC, size, identity, and artifact checks.
+
+        Browser bearer lifetime is not a retention policy for an authorized persisted revision.
+        Never expose this method as a browser-supplied-token endpoint.
+        """
+        return self._open(token, session_id, ttl=None)
+
+    def _open(self, token: str, session_id: UUID, *, ttl: int | None) -> WorkflowSession:
         if not token or len(token) > MAX_TOKEN_CHARACTERS:
             raise ContinuationError("workflow continuation is invalid or expired")
         try:
-            compressed = self._cipher.decrypt(token, ttl=self._ttl)
+            compressed = self._cipher.decrypt(token, ttl=ttl)
             decoder = zlib.decompressobj()
             payload = decoder.decompress(compressed, MAX_SNAPSHOT_BYTES + 1)
             if len(payload) > MAX_SNAPSHOT_BYTES or not decoder.eof or decoder.unused_data:

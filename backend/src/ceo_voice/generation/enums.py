@@ -31,6 +31,7 @@ class ValidationCode(StrEnum):
     TOPIC_ALIGNMENT = "topic_alignment"
     UNSAFE_CONTENT = "unsafe_content"
     LOW_VOICE_CONFIDENCE = "low_voice_confidence"
+    BRIEF_FIDELITY = "brief_fidelity"
 
 
 class AttemptKind(StrEnum):
