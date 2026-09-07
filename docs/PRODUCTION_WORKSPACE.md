@@ -25,7 +25,7 @@ The API deploys in `iad1` beside the database, with a 300-second function limit.
 
 ## Sign-in dependency and rollout
 
-The selected managed identity service is Neon Auth. Its official SDK currently carries a beta version; the Next.js integration was inspected and tested rather than assumed stable from older examples. The application uses the API integration, with no anonymous-token fallback. The identity boundary is separated from editorial persistence to make a future provider migration possible. Replacing an identity provider requires an explicit subject-to-membership migration, not just a configuration swap.
+The selected managed identity service is Neon Auth. Its official SDK currently carries a beta version; the Next.js integration was inspected and tested rather than assumed stable from older examples. The application uses the API integration, with no anonymous-token fallback. Browser API calls obtain a JWT from the authenticated `/token` endpoint. Neon's signed session cache can contain an opaque session token without the upstream `set-auth-jwt` header; treating that field as a JWT failed during live sign-in and is covered by a regression test. Authentication responses explicitly use `private, no-store`. The identity boundary is separated from editorial persistence to make a future provider migration possible. Replacing an identity provider requires an explicit subject-to-membership migration, not just a configuration swap.
 
 Verified provider configuration:
 
