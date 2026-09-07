@@ -63,6 +63,9 @@ class ExpressionProfile(ContractModel):
 EXPRESSION_INSTRUCTIONS = (
     "The EXPRESSION layer separates emotion, interpersonal warmth, emoji behavior, and viewpoint. "
     "Realize the editor's requested emotion in the selected person's platform-specific wording "
+    "and allow an explicit editorial direction to override historical style tendencies for this "
+    "post. A curious register may ask a genuine question even when questions are uncommon in "
+    "the profile. The factual brief and the latest human edit remain authoritative. "
     "and rhythm. Auto selects a register appropriate to this brief using the observed examples; "
     "it does not mean every post should be excited. Make explicit registers perceptible: curiosity "
     "explores an unresolved question, concern names the supplied reservation, gratitude credits "
@@ -85,3 +88,14 @@ EXPRESSION_INSTRUCTIONS = (
     "Preserve attribution and credit without inventing tags. Avoid stock excitement, forced "
     "questions and corporate launch language in a technical observation."
 )
+
+EMOTION_GUIDANCE: dict[str, str] = {
+    "auto": "Choose a fitting register from this brief and the person's observed expression; do not force a stock mood.",
+    "neutral": "State the supplied point plainly, with no added excitement or alarm.",
+    "enthusiastic": "Express enthusiasm about the supplied event or idea using this person's wording, without upgrading its promised benefits.",
+    "grateful": "Recognize the supplied contribution and give credit without inventing people, relationships or assistance.",
+    "reflective": "Consider what the supplied event or idea means; do not invent a memory or lesson from personal experience.",
+    "curious": "Explore a genuine unresolved question about this idea. Let the question be visible in the text rather than merely providing a neutral summary.",
+    "concerned": "Name the supplied reservation or tradeoff directly, without inventing harms or turning uncertainty into a prediction of failure.",
+    "determined": "Express commitment to the stated direction, without adding promises, certainty or a new company plan.",
+}

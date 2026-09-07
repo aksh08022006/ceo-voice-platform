@@ -14,7 +14,11 @@ from ceo_voice.generation.contracts import (
 )
 from ceo_voice.generation.enums import PromptSectionKind
 from ceo_voice.models.communication import COMMENT_SYSTEM_INSTRUCTIONS, REPLY_INTENT_GUIDANCE
-from ceo_voice.models.expression import EXPRESSION_INSTRUCTIONS, ExpressionDirection
+from ceo_voice.models.expression import (
+    EMOTION_GUIDANCE,
+    EXPRESSION_INSTRUCTIONS,
+    ExpressionDirection,
+)
 from ceo_voice.prompts import PROMPT_VERSION, SYSTEM_INSTRUCTIONS, THREAD_SEPARATOR
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.utils.json import dumps_json
@@ -209,6 +213,17 @@ class PromptBuilder:
                     "requested_thread_posts": value.request.thread_post_count,
                     "minimum_words": value.request.minimum_words,
                     "maximum_words": value.request.maximum_words,
+                    "word_count_requirement": (
+                        f"The complete draft MUST contain at least {value.request.minimum_words} words"
+                        + (
+                            f" and at most {value.request.maximum_words} words"
+                            if value.request.maximum_words is not None
+                            else ""
+                        )
+                        + ". This requested length overrides historical post-length averages. Keep the person's wording and sentence rhythm, but use enough short paragraphs to develop the supplied argument. Do not pad with new facts or promised benefits. Count the words before returning the draft."
+                        if value.request.minimum_words is not None
+                        else None
+                    ),
                     "thread_separator": THREAD_SEPARATOR,
                     "format": "plain text only",
                     "hard_requirement": (
@@ -240,6 +255,9 @@ class PromptBuilder:
                             "editor_direction": (
                                 value.request.expression or ExpressionDirection()
                             ).model_dump(mode="json"),
+                            "emotion_requirement": EMOTION_GUIDANCE[
+                                (value.request.expression or ExpressionDirection()).emotion
+                            ],
                             "observed_person_platform_profile": (
                                 profile.model_dump(mode="json") if profile else None
                             ),

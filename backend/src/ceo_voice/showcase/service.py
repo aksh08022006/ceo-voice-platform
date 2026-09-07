@@ -321,8 +321,19 @@ class ShowcaseWorkflowService:
         if outcome.artifacts.draft is None:
             failure = outcome.failure
             raise IntegrationError(
-                "published workflow did not produce a draft",
-                details={"reason": failure.code if failure else "unknown"},
+                "The model could not return an acceptable draft. Try again or review the requested constraints.",
+                details={
+                    "reason": failure.code if failure else "unknown",
+                    **(
+                        {
+                            key: value
+                            for key, value in failure.details.items()
+                            if key in {"findings", "status_code", "finish_reason"}
+                        }
+                        if failure
+                        else {}
+                    ),
+                },
             )
         profile = next(item for item in self.profiles if item.slug == profile_slug)
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)

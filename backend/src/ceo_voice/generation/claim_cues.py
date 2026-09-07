@@ -5,6 +5,7 @@ import re
 # These bounded cues target observed failures. They deliberately do not claim to exhaust claims
 # or prove truth. An allowed phrase can still misattribute a fact or distort its scope.
 _CUES = (
+    r"\bstate.of.the.art\s+(?:results|performance|accuracy)\b",
     r"\b(?:we|I)\s+(?:(?:are|have|have been)\s+)?(?:seeing|seen|observed|measured|achieved|benchmarked)\b[^.!?\n]{0,80}",
     r"\b(?:real|measurable|proven)\s+(?:gains|improvements|savings|results)\b",
     r"\b(?:superior|better|improved|higher)\s+(?:performance|reliability|throughput|accuracy|quality)\b",

@@ -80,6 +80,10 @@ meaning defects, assistant editorial review and pending founder scores. The firs
 run is retained even though it was too corporate and introduced unsupported benefit claims.
 Prompt revision 1.5 clarifies first-person editorial copy, discourages filler and separates
 acquiring teams from integrating projects, and system composition from proven performance.
+Revision 1.7 makes explicit requested length take precedence over historical length averages
+and gives each emotional register a concrete writing instruction. An explicit curious register
+can use a question even when questions are uncommon in the historical profile. None of these
+instructions establish semantic compliance without reviewing the actual generated text.
 
 The PDF's primary gate remains founder scores averaging at least 4/5 for voice accuracy, post
 quality and naturalness. Software test coverage and successful model requests cannot satisfy
@@ -111,3 +115,16 @@ Gemini provider handling now exposes a configurable thinking level, rejects non-
 finish reasons, excludes thought parts from draft text, and counts reasoning output tokens.
 Re-Voice uses the configured output budget too. This prevents a short legacy budget from
 silently turning a truncated or reasoning-only response into a supposed completed draft.
+
+The deployment experiments also separated transport failures from quality failures: Gemini 2.5
+returned HTTP 404, Gemini 3.8 returned HTTP 503, and Gemini 3.7 produced usable responses but
+also temporary HTTP 503 failures. One local run encountered DNS failure. These are retained,
+not scored as bad writing or excluded to manufacture a success rate. Gemini 3.7 subsequently
+returned HTTP 429 quota/rate-limit errors, including on the candidate with bounded retries.
+The release therefore retains Gemini 3.1 Flash-Lite, with an 8192-token output budget and the
+existing bounded two-retry transport policy. No new account or paid billing was enabled.
+Provider availability and usage capacity are not guaranteed by a successful run.
+
+The experiments changed several prompt and model settings during development. They are
+exploratory regression runs, not a controlled ablation or evidence of a general quality gain.
+The independent human gate remains open; no founder ratings have been supplied.

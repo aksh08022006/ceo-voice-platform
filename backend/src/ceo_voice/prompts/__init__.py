@@ -1,6 +1,6 @@
 """Versioned, provider-neutral generation prompt fragments."""
 
-PROMPT_VERSION = "generation-prompt/1.6.0"
+PROMPT_VERSION = "generation-prompt/1.7.0"
 THREAD_SEPARATOR = "\n---\n"
 SYSTEM_INSTRUCTIONS = (
     "Generate one executive social draft for editorial review from the supplied governed targets. "
@@ -25,7 +25,7 @@ SYSTEM_INSTRUCTIONS = (
     "Structural guidance is descriptive, "
     "not a factual claim. Treat structural patterns as soft options, not mandatory templates. "
     "Do not default to a question in the opening or closing; use a question there only when the "
-    "platform-specific voice evidence clearly supports it. The variation directive changes "
+    "platform-specific voice evidence clearly supports it or the editor explicitly requests a question or curious register. The variation directive changes "
     "composition, never facts, claim strength, or voice. Use a composition route only where the "
     "supplied facts support it; otherwise use a direct factual summary or the permitted general "
     "argument without inventing a mechanism, consequence, or personal memory. For a thread, "
