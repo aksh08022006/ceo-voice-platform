@@ -15,8 +15,8 @@ const navigation = [
   ...(AUTH_ENABLED ? [{ label: "Workspace", href: "/workspace" }] : []),
   { label: "Generate", href: "/generate" },
   { label: "Profiles", href: "/profiles" },
-  { label: "Benchmarks", href: "/benchmarks" },
-  { label: "Documentation", href: "/documentation" },
+  { label: "Examples", href: "/benchmarks" },
+  { label: "Guide", href: "/documentation" },
 ];
 
 export function SiteHeader() {
@@ -44,14 +44,6 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <a
-            className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            href="https://github.com/akshhkaushik/ceo-voice-platform"
-            rel="noreferrer"
-            target="_blank"
-          >
-            GitHub
-          </a>
         </nav>
         <div className="flex items-center gap-1">
           <AccountMenu />
@@ -80,14 +72,6 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <a
-            className="block py-3 text-sm text-muted-foreground hover:text-foreground"
-            href="https://github.com/akshhkaushik/ceo-voice-platform"
-            rel="noreferrer"
-            target="_blank"
-          >
-            GitHub
-          </a>
         </nav>
       ) : null}
     </header>

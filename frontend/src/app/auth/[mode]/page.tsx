@@ -13,7 +13,7 @@ export default async function AuthPage({ params, searchParams }: {
 }) {
   const { mode } = await params;
   if (mode !== "sign-in" && mode !== "sign-up") notFound();
-  if (!serverAuthConfigured()) return <div className="page-shell py-16"><h1 className="font-display text-3xl">Offline development mode</h1><p className="mt-4 text-muted-foreground">Authentication is not configured for this environment.</p><Link className="mt-6 inline-block underline" href="/generate">Open generation</Link></div>;
+  if (!serverAuthConfigured()) return <div className="page-shell py-16"><h1 className="font-display text-3xl">You can start writing</h1><p className="mt-4 text-muted-foreground">No sign-in is needed to use the generator.</p><Link className="mt-6 inline-block underline" href="/generate">Open generator</Link></div>;
   const query = await searchParams;
   return <div className="page-shell"><AuthForm mode={mode} returnTo={safeReturnPath(query.redirectTo ?? query.redirect ?? query.callbackURL)} /></div>;
 }

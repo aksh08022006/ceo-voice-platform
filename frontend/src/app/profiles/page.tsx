@@ -10,11 +10,10 @@ export default function ProfilesPage() {
       <header className="mb-16 max-w-3xl">
         <p className="eyebrow">Profiles</p>
         <h1 className="balanced mt-5 font-display text-5xl font-medium tracking-[-0.05em] sm:text-7xl">
-          Inspectable voice knowledge.
+          Meet the voices.
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground">
-          Inspect coverage, evidence, version history, and authorization before a profile reaches
-          generation.
+          Explore each person’s writing patterns, source examples, and platform habits.
         </p>
       </header>
 

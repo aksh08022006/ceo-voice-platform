@@ -98,7 +98,7 @@ export function GenerateWorkspace() {
         maximum_words: value.content_kind === "original_post" && value.platform === "linkedin" && value.linkedin_length === "standard" ? 300 : undefined,
       }))}>
         <div className="rounded-lg border border-border p-4">
-          <p className="text-sm font-medium">Try the founder’s examples</p>
+          <p className="text-sm font-medium">Start with an idea</p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button type="button" variant="secondary" size="sm" onClick={() => {
               form.setValue("profile_slug", "ali-ghodsi"); form.setValue("platform", "linkedin");
@@ -108,7 +108,7 @@ export function GenerateWorkspace() {
               form.setValue("emotion", "auto"); form.setValue("intensity", "balanced");
               form.setValue("warmth", "profile"); form.setValue("emoji_policy", "match_profile");
               form.setValue("viewpoint", ""); form.setValue("rationale", ""); form.setValue("virality_influence", 0.12);
-            }}>1 · Ali / Tabular</Button>
+            }}>Open infrastructure</Button>
             <Button type="button" variant="secondary" size="sm" onClick={() => {
               form.setValue("profile_slug", "matei-zaharia"); form.setValue("platform", "x");
               form.setValue("content_kind", "original_post"); form.setValue("content_type", "thread");
@@ -117,13 +117,13 @@ export function GenerateWorkspace() {
               form.setValue("emotion", "auto"); form.setValue("intensity", "balanced");
               form.setValue("warmth", "profile"); form.setValue("emoji_policy", "match_profile");
               form.setValue("viewpoint", ""); form.setValue("rationale", ""); form.setValue("virality_influence", 0.12);
-            }}>2 · Matei / Compound AI</Button>
+            }}>Compound AI</Button>
           </div>
-          <p className="mt-3 text-xs leading-5 text-muted-foreground">Historical briefs from the task PDF. For example 3, generate Ali’s draft, then choose Edit and Re-Voice to replace the hook and reorder paragraphs.</p>
+          <p className="mt-3 text-xs leading-5 text-muted-foreground">Choose a sample brief, or write your own below. Each sample sets the person and format for you.</p>
         </div>
         <Field label="CEO identity" error={form.formState.errors.profile_slug?.message}>
           <Select disabled={profiles.isPending} {...form.register("profile_slug")}>
-            {profiles.data?.map((profile) => <option key={profile.slug} value={profile.slug}>{profile.name} · {profile.status}</option>)}
+            {profiles.data?.map((profile) => <option key={profile.slug} value={profile.slug}>{profile.name}</option>)}
           </Select>
         </Field>
         <Field label="Platform"><Select {...form.register("platform")}><option value="linkedin">LinkedIn</option><option value="x">X</option></Select></Field>
@@ -180,7 +180,7 @@ export function GenerateWorkspace() {
           </article>
         )}
         {generation.data ? <>
-          <p className="border-s-2 border-primary px-4 text-xs leading-5 text-muted-foreground">{generation.data.disclaimer}</p>
+          <p className="border-s-2 border-primary px-4 text-xs leading-5 text-muted-foreground">Draft for editorial review. Confirm facts, attribution, and personal details before publishing.</p>
           <div className="mt-8 border-t border-border">
             <ReportSection title="Generation report"><dl className="grid grid-cols-2 gap-5 sm:grid-cols-4">{generation.data.report.map((item) => <Metric key={item.label} {...item} />)}</dl></ReportSection>
             {generation.data.thread.length > 1 ? <ReportSection title={`Thread · ${generation.data.thread.length} posts`}><ol className="space-y-5">{generation.data.thread.map((post, index) => <li className="border-s-2 border-border ps-4" key={`${index}-${post.slice(0, 16)}`}><span className="font-mono text-[10px] text-muted-foreground">{index + 1}/{generation.data.thread.length}</span><p className="mt-2 whitespace-pre-wrap text-sm leading-6">{post}</p></li>)}</ol></ReportSection> : null}

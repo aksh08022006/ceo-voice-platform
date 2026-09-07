@@ -67,7 +67,7 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
 
   return (
     <div>
-      <p className="mb-8 border-s-2 border-primary px-4 text-xs leading-5 text-muted-foreground">{workflow.disclaimer}</p>
+      <p className="mb-8 border-s-2 border-primary px-4 text-xs leading-5 text-muted-foreground">Review the revised wording before publishing. Check that your facts, meaning, and chosen voice are preserved.</p>
       {workflow.continuation_token ? <p className="mb-6 text-xs leading-5 text-muted-foreground">This draft can resume in this browser tab{workflow.continuation_expires_in_seconds ? ` for ${formatLifetime(workflow.continuation_expires_in_seconds)}` : " until this session expires"}. Copy the text before closing the tab.</p> : null}
       {workflow.content_kind === "comment" ? <details className="mb-6 border-y border-border py-4"><summary className="cursor-pointer text-sm">Reply context · {workflow.reply_intent?.replaceAll("_", " ")}</summary><blockquote className="mt-4 whitespace-pre-wrap border-s-2 border-border ps-4 text-sm text-muted-foreground">{workflow.parent_post}</blockquote><p className="mt-3 text-xs text-muted-foreground">The rewrite is instructed to keep claims attributed and follow your selected reply intent. Check that the result does so.</p></details> : null}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 text-sm">
