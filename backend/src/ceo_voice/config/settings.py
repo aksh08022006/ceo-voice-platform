@@ -88,6 +88,10 @@ class ModelSettings(BaseModel):
         min_length=1,
         description="Provider model identifier used for generation workloads.",
     )
+    gemini_thinking_level: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Optional Gemini reasoning level; omitted preserves provider defaults.",
+    )
     embedding_model: str | None = Field(
         default=None,
         min_length=1,

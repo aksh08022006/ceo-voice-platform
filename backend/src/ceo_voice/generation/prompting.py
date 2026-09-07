@@ -14,6 +14,7 @@ from ceo_voice.generation.contracts import (
 )
 from ceo_voice.generation.enums import PromptSectionKind
 from ceo_voice.models.communication import COMMENT_SYSTEM_INSTRUCTIONS, REPLY_INTENT_GUIDANCE
+from ceo_voice.models.expression import EXPRESSION_INSTRUCTIONS, ExpressionDirection
 from ceo_voice.prompts import PROMPT_VERSION, SYSTEM_INSTRUCTIONS, THREAD_SEPARATOR
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.utils.json import dumps_json
@@ -101,6 +102,11 @@ class PromptBuilder:
             priority=100,
             content=(
                 SYSTEM_INSTRUCTIONS
+                + (
+                    "\n\n" + EXPRESSION_INSTRUCTIONS
+                    if value.request.expression or value.request.expression_profile
+                    else ""
+                )
                 + ("\n\n" + COMMENT_SYSTEM_INSTRUCTIONS if value.request.comment_context else "")
             ),
         )
@@ -219,6 +225,34 @@ class PromptBuilder:
             ),
         )
         mandatory = [system, voice, structure, request, output]
+        if value.request.expression or value.request.expression_profile:
+            profile = value.request.expression_profile
+            mandatory.append(
+                PromptSection(
+                    kind=PromptSectionKind.EXPRESSION,
+                    mandatory=True,
+                    priority=95,
+                    source_ids=(
+                        tuple(item.document_id for item in profile.examples) if profile else ()
+                    ),
+                    content=dumps_json(
+                        {
+                            "editor_direction": (
+                                value.request.expression or ExpressionDirection()
+                            ).model_dump(mode="json"),
+                            "observed_person_platform_profile": (
+                                profile.model_dump(mode="json") if profile else None
+                            ),
+                            "evidence_status": "descriptive lexical observations; semantic interpretation is not calibrated",
+                            "comment_limitation": (
+                                "Post observations are not validated comment habits."
+                                if value.request.comment_context
+                                else None
+                            ),
+                        }
+                    ),
+                )
+            )
         if repair_feedback:
             mandatory.append(
                 PromptSection(

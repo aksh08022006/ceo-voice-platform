@@ -3,6 +3,7 @@
 import re
 
 from ceo_voice.core.exceptions import GenerationError
+from ceo_voice.generation.claim_cues import unsupported_claim_cues
 from ceo_voice.generation.contracts import (
     GenerationInput,
     GenerationPolicy,
@@ -12,6 +13,8 @@ from ceo_voice.generation.contracts import (
 from ceo_voice.generation.enums import ValidationCode
 from ceo_voice.models.enums import Platform
 from ceo_voice.prompts import THREAD_SEPARATOR
+from ceo_voice.retrieval.enums import EvidencePurpose
+from ceo_voice.services.expression import emoji_sequences
 
 _TOKEN = re.compile(r"[\w'-]+", re.UNICODE)
 _TOPIC_STOP_WORDS = {
@@ -103,6 +106,11 @@ def validate_generation_input(value: GenerationInput) -> None:
             "comment_context_mismatch",
         ),
         (
+            value.request.expression == value.context.intent.expression
+            and value.request.expression_profile == value.context.intent.expression_profile,
+            "expression_mismatch",
+        ),
+        (
             value.request.thread_post_count == value.context.intent.thread_post_count,
             "thread_count_mismatch",
         ),
@@ -131,6 +139,39 @@ class OutputValidator:
             "",
         )
         findings: list[ValidationFinding] = []
+        supplied = "\n".join(
+            (
+                value.request.topic,
+                *(
+                    item.content
+                    for item in value.retrieval.evidence
+                    if EvidencePurpose.FACTUAL_SUPPORT in item.purposes
+                ),
+            )
+        )
+        for phrase in unsupported_claim_cues(content, supplied):
+            self._add(
+                True,
+                ValidationCode.BRIEF_FIDELITY,
+                f"Remove the unsupported outcome or firsthand claim '{phrase}'. No supplied fact establishes it. Express the brief's argument without adding a measured benefit, guarantee or new experience.",
+                findings,
+            )
+        direction = value.request.expression
+        profile = value.request.expression_profile
+        emojis = emoji_sequences(content)
+        emoji_policy = direction.emoji_policy if direction else "match_profile"
+        self._add(
+            (emoji_policy == "none" and bool(emojis))
+            or (emoji_policy == "one" and len(emojis) > 1)
+            or (
+                emoji_policy == "match_profile"
+                and profile is not None
+                and any(symbol not in profile.emoji_inventory for symbol in emojis)
+            ),
+            ValidationCode.EMOJI_POLICY,
+            "Emoji choice violates the requested policy; omit unsupported emoji and respect the count limit.",
+            findings,
+        )
         self._add(not content.strip(), ValidationCode.EMPTY, "output is empty", findings)
         if len(posts) > 1 and not value.context.platform.thread_output_supported:
             self._add(

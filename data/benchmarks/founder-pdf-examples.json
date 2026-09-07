@@ -1,0 +1,47 @@
+{
+  "source": "Engineering_Side_Quest (1).pdf, pages 6–7",
+  "brief_status": "historical assignment input, not current news",
+  "examples": [
+    {
+      "id": "ali-tabular",
+      "profile_slug": "ali-ghodsi",
+      "platform": "linkedin",
+      "idea": "Databricks just acquired Tabular, the company behind Apache Iceberg. The angle is that this validates the open-source approach to data infrastructure. The best technology wins when it is open, and this acquisition brings together the teams behind Spark and Iceberg under one roof.",
+      "minimum_words": 150,
+      "maximum_words": 300,
+      "checks": [
+        "single post",
+        "person-specific opening and closing",
+        "company detail without invented personal story",
+        "open-source angle",
+        "paragraph and emoji habits"
+      ]
+    },
+    {
+      "id": "matei-compound-ai",
+      "profile_slug": "matei-zaharia",
+      "platform": "x",
+      "idea": "The AI industry is converging on compound AI systems rather than monolithic models. The angle is that the next wave of AI progress will come from how you orchestrate multiple models, retrieval, and tools together, not from making a single model bigger. This is what Databricks has been building toward with Mosaic and their ML platform.",
+      "content_type": "thread",
+      "thread_post_count": 3,
+      "checks": [
+        "2–3 posts or single post permitted by PDF",
+        "each post at most 280 characters",
+        "technical observation, not corporate announcement",
+        "no unsupported performance claims"
+      ]
+    },
+    {
+      "id": "editor-loop",
+      "input_example": "ali-tabular",
+      "editor_note": "Re-voice this. Keep my structural changes, refine for Ali’s voice.",
+      "checks": [
+        "new first paragraph kept",
+        "reordered middle paragraphs kept",
+        "only permitted wording changes",
+        "repeat uses latest revision"
+      ]
+    }
+  ],
+  "primary_acceptance": "Founder scores average at least 4/5 for voice accuracy, post quality and naturalness; missing scores remain pending."
+}

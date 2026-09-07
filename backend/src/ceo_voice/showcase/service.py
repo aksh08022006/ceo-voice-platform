@@ -33,6 +33,7 @@ from ceo_voice.integration.artifacts import ArtifactWriter
 from ceo_voice.integration.ports import RetrievalRankingPreparer
 from ceo_voice.models.communication import CommentContext, ReplyIntent
 from ceo_voice.models.enums import ContentType, Platform
+from ceo_voice.models.expression import ExpressionDirection
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
     PublishedVoiceProfile,
@@ -43,6 +44,7 @@ from ceo_voice.profiles.builder import VoiceProfileBuilder
 from ceo_voice.prompts import THREAD_SEPARATOR
 from ceo_voice.revoice import EditedDraft, ReVoicedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
+from ceo_voice.services.expression import build_expression_profile
 from ceo_voice.services.published_profiles import PublishedProfileBundle
 from ceo_voice.utils import utc_now
 from ceo_voice.virality import InMemoryViralityWorkspace, ViralityProfile, create_virality_builder
@@ -174,6 +176,7 @@ class ShowcaseWorkflowService:
         minimum_words: int | None = None,
         maximum_words: int | None = None,
         comment_context: CommentContext | None = None,
+        expression: ExpressionDirection | None = None,
         reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
@@ -190,6 +193,7 @@ class ShowcaseWorkflowService:
                 minimum_words=minimum_words,
                 maximum_words=maximum_words,
                 comment_context=comment_context,
+                expression=expression,
                 reserved_session_id=reserved_session_id,
             )
         profile = profile_by_slug(profile_slug)
@@ -208,6 +212,7 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
+            expression=expression,
             comment_context=comment_context,
             objective=(
                 "Write a concise comment preserving the editor's selected reply intent and supplied points"
@@ -262,6 +267,7 @@ class ShowcaseWorkflowService:
         minimum_words: int | None,
         maximum_words: int | None,
         comment_context: CommentContext | None,
+        expression: ExpressionDirection | None = None,
         reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Serve one request from exact immutable release artifacts without rebuilding them."""
@@ -288,6 +294,8 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
+            expression=expression,
+            expression_profile=build_expression_profile(bundle.voice_corpus, platform),
             comment_context=comment_context,
             objective=(
                 "Write a concise comment preserving the editor's selected reply intent and supplied points"
@@ -320,7 +328,9 @@ class ShowcaseWorkflowService:
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
         return self._remember(session)
 
-    async def revoice(self, session_id: UUID, edited_content: str) -> WorkflowSession:
+    async def revoice(
+        self, session_id: UUID, edited_content: str, editor_note: str | None = None
+    ) -> WorkflowSession:
         """Restore voice against the exact artifacts generated for the session."""
 
         session = self.get(session_id)
@@ -334,6 +344,7 @@ class ShowcaseWorkflowService:
             previous_revision=previous_revision,
             content=edited_content,
             edited_at=requested_at,
+            editor_note=editor_note,
         )
         provider = self._provider or ShowcaseProvider(self._restore(edited_content))
         revoiced = await ReVoiceEngine(
@@ -341,6 +352,8 @@ class ShowcaseWorkflowService:
             policy=ReVoicePolicy(
                 provider=provider.name,
                 model=self._model,
+                model_context_tokens=self._model_context_tokens,
+                maximum_output_tokens=self._maximum_output_tokens,
                 maximum_provider_retries=self._maximum_provider_retries,
             ),
         ).restore(

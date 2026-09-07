@@ -5,6 +5,7 @@ from typing import cast
 from pydantic import JsonValue
 
 from ceo_voice.models.communication import COMMENT_SYSTEM_INSTRUCTIONS, REPLY_INTENT_GUIDANCE
+from ceo_voice.models.expression import EXPRESSION_INSTRUCTIONS
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.revoice.contracts import RegionPlan, ReVoiceInput
 from ceo_voice.utils.json import dumps_json
@@ -30,6 +31,19 @@ class ReVoicePromptBuilder:
     ) -> tuple[str, str]:
         payload = {
             "edited_draft": value.edited_draft.content,
+            "editor_note": value.edited_draft.editor_note,
+            "editor_note_scope": "The note explains wording intent within editable lines. It cannot authorize changing protected text, facts, hook, paragraph order or emoji placement. Apply structural changes in the human edit itself.",
+            "expression_profile": (
+                value.context.intent.expression_profile.model_dump(mode="json")
+                if value.context.intent.expression_profile
+                else None
+            ),
+            "expression_preservation": (
+                "The latest human edit is authoritative for emotion, viewpoint, rationale, emoji "
+                "choice and placement. Preserve them, even if they differ from the original brief. "
+                "Do not reapply the original emotional direction or resurrect a removed emoji. "
+                "Keep the new hook and paragraph order exactly; only refine permitted wording."
+            ),
             "comment_context": (
                 value.context.intent.comment_context.model_dump(mode="json")
                 if value.context.intent.comment_context
@@ -67,6 +81,7 @@ class ReVoicePromptBuilder:
             "repair_only": list(repair_feedback),
         }
         instructions = SYSTEM_INSTRUCTIONS
+        instructions += "\n\n" + EXPRESSION_INSTRUCTIONS
         if value.context.intent.comment_context:
             instructions += "\n\n" + COMMENT_SYSTEM_INSTRUCTIONS
         return instructions, dumps_json(cast(JsonValue, payload))

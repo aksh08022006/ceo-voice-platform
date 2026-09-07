@@ -8,6 +8,7 @@ from ceo_voice.models.base import NonBlankText, NonEmptyStr, UtcDatetime
 from ceo_voice.models.communication import CommentContext
 from ceo_voice.models.enums import ContentType, GenerationStatus, Platform
 from ceo_voice.models.evaluation import EvaluationResult
+from ceo_voice.models.expression import ExpressionDirection, ExpressionProfile
 from ceo_voice.schemas.base import BoundarySchema
 
 
@@ -64,6 +65,12 @@ class GenerationRequest(BoundarySchema):
         description="Attributed parent text and editor-selected intent for a single-post comment.",
     )
     topic: NonEmptyStr = Field(description="Subject or supplied comment contribution.")
+    expression: ExpressionDirection | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    expression_profile: ExpressionProfile | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     objective: NonEmptyStr = Field(description="Intended communication outcome.")
     audience: NonEmptyStr = Field(description="Intended reader segment.")
     source_document_ids: tuple[UUID, ...] = Field(
@@ -85,6 +92,11 @@ class GenerationRequest(BoundarySchema):
     def validate_output_shape(self) -> "GenerationRequest":
         """Keep thread and word bounds internally consistent before orchestration."""
 
+        if self.expression_profile is not None and (
+            self.expression_profile.leader_id != self.ceo_id
+            or self.expression_profile.platform != self.platform
+        ):
+            raise ValueError("expression profile must match the leader and platform")
         if self.comment_context is not None and (
             self.content_type is not ContentType.POST
             or self.platform not in {Platform.X, Platform.LINKEDIN}

@@ -9,6 +9,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from ceo_voice.models.communication import ReplyIntent
 from ceo_voice.models.enums import ContentType, Platform
+from ceo_voice.models.expression import ExpressionDirection, ExpressionProfile
 
 
 class GenerateWorkflowRequest(BaseModel):
@@ -27,6 +28,7 @@ class GenerateWorkflowRequest(BaseModel):
     virality_influence: float = Field(default=0.12, ge=0, le=0.25)
     minimum_words: int | None = Field(default=None, ge=1, le=2_000)
     maximum_words: int | None = Field(default=None, ge=1, le=2_000)
+    expression: ExpressionDirection | None = None
 
     @model_validator(mode="after")
     def require_consistent_output_shape(self) -> "GenerateWorkflowRequest":
@@ -95,6 +97,7 @@ class ReVoiceWorkflowRequest(BaseModel):
     """Human-edited draft submitted to the Re-Voice engine."""
 
     content: str = Field(min_length=1, max_length=20_000)
+    editor_note: str | None = Field(default=None, max_length=1_000)
     expected_revision: int | None = Field(default=None, ge=0)
     continuation_token: str | None = Field(default=None, max_length=2_000_000)
 
@@ -127,6 +130,8 @@ class WorkflowResponse(BaseModel):
     """Compact product projection of the sealed workflow session."""
 
     session_id: UUID
+    expression: ExpressionDirection | None = None
+    expression_profile: ExpressionProfile | None = None
     continuation_token: str | None = None
     continuation_expires_in_seconds: int | None = None
     revision_count: int = Field(default=0, ge=0)

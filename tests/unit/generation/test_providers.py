@@ -78,3 +78,53 @@ def test_provider_translation(
 def test_empty_provider_response_is_rejected() -> None:
     with pytest.raises(ProviderError, match="no text"):
         asyncio.run(OpenAIProvider(Transport({}), SecretStr("secret")).generate(request()))
+
+
+def test_gemini_reasoning_controls_do_not_leak_thoughts_and_account_for_tokens() -> None:
+    transport = Transport(
+        {
+            "candidates": [
+                {
+                    "finishReason": "STOP",
+                    "content": {
+                        "parts": [
+                            {"text": "private reasoning", "thought": True},
+                            {"text": "Final draft"},
+                        ]
+                    },
+                }
+            ],
+            "usageMetadata": {
+                "promptTokenCount": 20,
+                "candidatesTokenCount": 5,
+                "thoughtsTokenCount": 30,
+            },
+        }
+    )
+    provider = GeminiProvider(transport, SecretStr("secret"), thinking_level="low")
+    result = asyncio.run(provider.generate(request()))
+    assert result.text == "Final draft"
+    assert result.usage.output_tokens == 35
+    assert transport.call is not None
+    assert transport.call[2]["generationConfig"] == {
+        "maxOutputTokens": 100,
+        "thinkingConfig": {"thinkingLevel": "low"},
+    }
+
+
+@pytest.mark.parametrize("reason", ["MAX_TOKENS", "SAFETY", "RECITATION"])
+def test_gemini_incomplete_candidate_is_not_returned_as_a_draft(reason: str) -> None:
+    provider = GeminiProvider(
+        Transport(
+            {
+                "candidates": [
+                    {"finishReason": reason, "content": {"parts": [{"text": "Partial draft"}]}}
+                ]
+            }
+        ),
+        SecretStr("secret"),
+    )
+    with pytest.raises(ProviderError) as error:
+        asyncio.run(provider.generate(request()))
+    assert error.value.details == {"finish_reason": reason}
+    assert not error.value.retryable

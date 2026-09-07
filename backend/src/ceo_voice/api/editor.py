@@ -527,6 +527,7 @@ class EditorBackend:
             platform=request.platform,
             content_type=request.content_type.value,
             idea=canonical_brief(request),
+            expression=request.expression,
             constraints=request.constraints,
             thread_post_count=request.thread_post_count,
             virality_influence=request.virality_influence,

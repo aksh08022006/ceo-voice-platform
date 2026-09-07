@@ -131,7 +131,29 @@ export type Dimension = {
 
 export type ReplyIntent = "add_perspective" | "ask_question" | "respectfully_disagree" | "acknowledge" | "answer";
 
+export type ExpressionDirection = {
+  emotion: "auto" | "neutral" | "enthusiastic" | "grateful" | "reflective" | "curious" | "concerned" | "determined";
+  intensity: "restrained" | "balanced" | "expressive";
+  warmth: "profile" | "reserved" | "warm";
+  emoji_policy: "match_profile" | "none" | "one";
+  viewpoint?: string | null;
+  rationale?: string | null;
+};
+
+export type ExpressionProfile = {
+  version: string;
+  platform: string;
+  document_count: number;
+  documents_with_emoji: number;
+  emoji_inventory: string[];
+  cue_document_counts: Record<string, number>;
+  examples: { document_id: string; text: string; cues: string[] }[];
+  limitations: string[];
+};
+
 export type Workflow = {
+  expression?: ExpressionDirection | null;
+  expression_profile?: ExpressionProfile | null;
   session_id: string;
   continuation_token: string | null;
   continuation_expires_in_seconds: number | null;
@@ -259,11 +281,12 @@ export const api = {
     virality_influence?: number;
     minimum_words?: number;
     maximum_words?: number;
+    expression?: ExpressionDirection;
   }) => workflowRequest("/api/v1/workflows/generate", { method: "POST", body: JSON.stringify(body) }),
-  revoice: (id: string, content: string, expectedRevision?: number) =>
+  revoice: (id: string, content: string, expectedRevision?: number, editorNote?: string) =>
     workflowRequest(`/api/v1/workflows/${id}/revoice`, {
       method: "POST",
-      body: JSON.stringify({ content, expected_revision: expectedRevision, continuation_token: continuationToken(id) }),
+      body: JSON.stringify({ content, expected_revision: expectedRevision, editor_note: editorNote, continuation_token: continuationToken(id) }),
     }),
   evaluate: (id: string) =>
     workflowRequest(`/api/v1/workflows/${id}/evaluate`, {

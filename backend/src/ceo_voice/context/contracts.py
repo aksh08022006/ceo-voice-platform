@@ -17,6 +17,7 @@ from ceo_voice.context.enums import (
 from ceo_voice.models.base import ContractModel, NonEmptyStr, UtcDatetime
 from ceo_voice.models.communication import CommentContext
 from ceo_voice.models.enums import ContentType, ContextRole, Platform
+from ceo_voice.models.expression import ExpressionDirection, ExpressionProfile
 from ceo_voice.models.retrieval import RetrievedContext, RetrievedItem
 from ceo_voice.schemas.generation import GenerationRequest
 from ceo_voice.utils.hashing import sha256_text
@@ -342,6 +343,12 @@ class GenerationIntent(ContractModel):
     tenant_id: UUID
     leader_id: UUID
     topic: NonEmptyStr
+    expression: ExpressionDirection | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    expression_profile: ExpressionProfile | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     objective: NonEmptyStr
     audience: NonEmptyStr
     platform: Platform

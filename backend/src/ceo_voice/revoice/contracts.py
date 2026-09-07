@@ -34,7 +34,7 @@ class ReVoicePolicy(ContractModel):
     """Conservative limits governing one restoration operation."""
 
     version: ReVoiceEngineVersion = ReVoiceEngineVersion(major=1, minor=0, patch=0)
-    prompt_version: NonEmptyStr = "revoice-prompt/1.0.0"
+    prompt_version: NonEmptyStr = "revoice-prompt/1.1.0"
     provider: ProviderName
     model: NonEmptyStr
     model_context_tokens: int = Field(default=32_000, ge=512)
@@ -175,6 +175,9 @@ class EditedDraft(ContractModel):
     original: GeneratedDraft
     content: NonBlankText
     edited_at: UtcDatetime
+    editor_note: str | None = Field(
+        default=None, max_length=1_000, exclude_if=lambda value: value is None
+    )
     previous_revision: ReVoicedDraft | None = None
 
     @model_validator(mode="after")

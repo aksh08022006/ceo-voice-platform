@@ -333,6 +333,7 @@ def create_app(
                     else None
                 ),
                 idea=value.idea,
+                expression=value.expression,
                 constraints=(),
                 thread_post_count=value.thread_post_count,
                 virality_influence=value.virality_influence,
@@ -362,7 +363,7 @@ def create_app(
                 status_code=409,
                 detail="A newer revision is available. Reload the current draft before re-voicing.",
             )
-        return project(await workflows.revoice(session_id, value.content))
+        return project(await workflows.revoice(session_id, value.content, value.editor_note))
 
     @application.post("/api/v1/workflows/{session_id}/evaluate", response_model=WorkflowResponse)
     async def evaluate(
@@ -442,6 +443,10 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     )
     return WorkflowResponse(
         session_id=session.id,
+        expression=artifacts.context.intent.expression if artifacts.context else None,
+        expression_profile=(
+            artifacts.context.intent.expression_profile if artifacts.context else None
+        ),
         revision_count=session.revision_count,
         current_candidate_id=revoice.id if revoice else draft.id,
         profile_slug=session.profile.slug,
@@ -467,7 +472,8 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
                 value=str(report.total_usage.input_tokens + report.total_usage.output_tokens),
             ),
             MetricResponse(
-                label="Validation", value="Passed" if report.final_validation.valid else "Failed"
+                label="Mechanical checks",
+                value="Passed" if report.final_validation.valid else "Failed",
             ),
         ),
         voice_features=voice,

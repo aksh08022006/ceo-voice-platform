@@ -2,7 +2,7 @@
 
 from abc import ABC, abstractmethod
 from time import monotonic
-from typing import cast
+from typing import Literal, cast
 
 from pydantic import JsonValue, SecretStr
 
@@ -168,8 +168,10 @@ class GeminiProvider(HttpModelProvider):
         api_key: SecretStr,
         *,
         base_url: str = "https://generativelanguage.googleapis.com/v1beta",
+        thinking_level: Literal["low", "medium", "high"] | None = None,
     ) -> None:
         super().__init__(transport, api_key, base_url=base_url)
+        self._thinking_level = thinking_level
 
     def _url(self, request: ProviderRequest) -> str:
         return f"{self._base_url}/models/{request.model}:generateContent"
@@ -181,17 +183,27 @@ class GeminiProvider(HttpModelProvider):
         }
 
     def _payload(self, request: ProviderRequest) -> dict[str, JsonValue]:
+        config: dict[str, JsonValue] = {"maxOutputTokens": request.maximum_output_tokens}
+        if self._thinking_level is not None:
+            config["thinkingConfig"] = {"thinkingLevel": self._thinking_level}
         return {
             "systemInstruction": {"parts": [{"text": request.system}]},
             "contents": [{"role": "user", "parts": [{"text": request.user}]}],
-            "generationConfig": {"maxOutputTokens": request.maximum_output_tokens},
+            "generationConfig": config,
         }
 
     def _parse(self, payload: dict[str, JsonValue]) -> tuple[str, str | None, TokenUsage]:
         candidates = cast(list[dict[str, JsonValue]], payload.get("candidates") or [])
+        finish = candidates[0].get("finishReason") if candidates else None
+        if finish is not None and finish != "STOP":
+            raise ProviderError(
+                "Gemini did not return a complete draft", details={"finish_reason": finish}
+            )
         content = cast(dict[str, JsonValue], candidates[0].get("content") if candidates else {})
         parts = cast(list[dict[str, JsonValue]], content.get("parts") or [])
-        text = "".join(str(item.get("text", "")) for item in parts)
+        text = "".join(
+            str(item.get("text", "")) for item in parts if item.get("thought") is not True
+        )
         usage = cast(dict[str, JsonValue], payload.get("usageMetadata") or {})
         if not text.strip():
             raise ProviderError("Gemini returned no text")
@@ -200,6 +212,7 @@ class GeminiProvider(HttpModelProvider):
             cast(str | None, payload.get("responseId")),
             TokenUsage(
                 input_tokens=_integer(usage.get("promptTokenCount")),
-                output_tokens=_integer(usage.get("candidatesTokenCount")),
+                output_tokens=_integer(usage.get("candidatesTokenCount"))
+                + _integer(usage.get("thoughtsTokenCount")),
             ),
         )

@@ -37,10 +37,11 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
     try { savedEdit = sessionStorage.getItem(`ceo-voice-edit:${initialWorkflow.session_id}`); } catch { /* Storage can be disabled by browser policy. */ }
     return initialWorkflow.revoiced_content ?? savedEdit ?? initialWorkflow.edited_content ?? initialWorkflow.content;
   });
+  const [editorNote, setEditorNote] = useState("");
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const restoration = useMutation({
-    mutationFn: (revision: { content: string; expectedRevision: number }) =>
-      api.revoice(workflow.session_id, revision.content, revision.expectedRevision),
+    mutationFn: (revision: { content: string; expectedRevision: number; note: string }) =>
+      api.revoice(workflow.session_id, revision.content, revision.expectedRevision, revision.note || undefined),
     onSuccess: (response) => {
       setWorkflow(response);
       setEdited(response.revoiced_content ?? response.edited_content ?? response.content);
@@ -92,8 +93,12 @@ function RevisionEditor({ initialWorkflow }: { initialWorkflow: Workflow }) {
           </span>
         </label>
       </div>
+      <label className="mt-6 block text-sm font-medium">Re-Voice note (optional)
+        <Textarea className="mt-3" rows={2} maxLength={1000} disabled={restoration.isPending} value={editorNote} onChange={(event) => setEditorNote(event.target.value)} placeholder="Keep my personal opening and paragraph order. Refine the wording for Ali’s voice." />
+        <span className="mt-2 block text-xs font-normal text-muted-foreground">Make structural changes in the draft above. Your note guides wording; your chosen emotion, viewpoint and emoji stay with the edit.</span>
+      </label>
       <div className="flex flex-col items-center py-10">
-        <Button disabled={restoration.isPending || edited === baseline || invalidEdit} onClick={() => restoration.mutate({ content: edited, expectedRevision: workflow.revision_count })} size="lg">
+        <Button disabled={restoration.isPending || edited === baseline || invalidEdit} onClick={() => restoration.mutate({ content: edited, expectedRevision: workflow.revision_count, note: editorNote })} size="lg">
           {restoration.isPending ? "Refining voice…" : "Re-Voice"}
         </Button>
         {invalidEdit ? <p className="mt-4 max-w-lg text-center text-xs leading-5 text-muted-foreground" role="alert">

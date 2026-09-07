@@ -12,11 +12,11 @@ export default function GeneratePage() {
       <header className="mb-14 max-w-3xl sm:mb-20">
         <p className="eyebrow">Generate</p>
         <h1 className="balanced mt-5 font-display text-5xl font-medium tracking-[-0.05em] sm:text-7xl">
-          Turn an idea into accountable communication.
+          Your idea. Their voice.
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground">
-          Start with an identity, platform, and idea. Add source evidence when the draft needs
-          factual support, then review and approve the saved wording.
+          Choose a person, platform, and angle. Shape the emotion and viewpoint, then edit
+          and re-voice while keeping your structure.
         </p>
       </header>
       {AUTH_ENABLED ? <EditorGenerate /> : <GenerateWorkspace />}

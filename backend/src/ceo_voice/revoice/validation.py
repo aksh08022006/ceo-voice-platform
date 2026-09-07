@@ -15,6 +15,7 @@ from ceo_voice.revoice.contracts import (
     ReVoiceValidation,
 )
 from ceo_voice.revoice.enums import ProtectionKind, ReVoiceValidationCode
+from ceo_voice.services.expression import emoji_sequences
 from ceo_voice.virality.enums import PublicationStatus
 from ceo_voice.voice.enums import ReleaseStatus
 
@@ -90,6 +91,15 @@ class ReVoiceValidator:
             findings,
         )
         if len(edited_lines) == len(candidate_lines):
+            self._add(
+                any(
+                    emoji_sequences(before) != emoji_sequences(after)
+                    for before, after in zip(edited_lines, candidate_lines, strict=True)
+                ),
+                ReVoiceValidationCode.FORMATTING_CHANGED,
+                "editor emoji choice, order or line placement changed",
+                findings,
+            )
             self._add(
                 any(
                     self._format_signature(before) != self._format_signature(after)
