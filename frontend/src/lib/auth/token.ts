@@ -1,5 +1,5 @@
 import { AUTH_ENABLED } from "./config";
-import { resolveSessionJWT } from "./session-jwt";
+import { requestSessionJWT, resolveSessionJWT } from "./session-jwt";
 
 let inFlight: Promise<string> | undefined;
 
@@ -9,7 +9,7 @@ export async function getJWTToken(): Promise<string | null> {
   if (typeof window === "undefined") throw new Error("Sign in through the workspace to continue.");
   const { authClient } = await import("./client");
   if (!inFlight) {
-    inFlight = resolveSessionJWT(() => authClient.getSession(), () => authClient.token()).finally(() => {
+    inFlight = resolveSessionJWT(() => authClient.getSession(), requestSessionJWT).finally(() => {
       inFlight = undefined;
     });
   }

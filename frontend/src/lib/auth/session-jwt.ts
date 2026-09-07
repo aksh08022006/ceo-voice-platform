@@ -1,6 +1,22 @@
 type SessionResult = { data: { user?: unknown } | null; error: unknown };
 type TokenResult = { data: { token?: unknown } | null; error: unknown };
 
+/** The SDK aliases /token to its in-memory session cache; use the same-origin proxy directly. */
+export async function requestSessionJWT(fetcher: typeof fetch = fetch): Promise<TokenResult> {
+  try {
+    const response = await fetcher("/api/auth/token", {
+      method: "GET", credentials: "same-origin", cache: "no-store", redirect: "error",
+      signal: AbortSignal.timeout(15000),
+    });
+    if (!response.ok) return { data: null, error: true };
+    const body: unknown = await response.json();
+    if (!body || typeof body !== "object" || !("token" in body)) return { data: null, error: true };
+    return { data: { token: body.token }, error: null };
+  } catch {
+    return { data: null, error: true };
+  }
+}
+
 /** Session cookies can contain opaque session tokens. Only /token supplies an API JWT. */
 export async function resolveSessionJWT(
   readSession: () => Promise<SessionResult>,

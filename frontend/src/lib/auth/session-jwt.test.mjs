@@ -1,6 +1,25 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { resolveSessionJWT } from "./session-jwt.ts";
+import { requestSessionJWT, resolveSessionJWT } from "./session-jwt.ts";
+
+test("JWT requests reach the authenticated same-origin proxy without the SDK session cache", async () => {
+  const result = await requestSessionJWT(async (url, options) => {
+    assert.equal(url, "/api/auth/token");
+    assert.equal(options.method, "GET");
+    assert.equal(options.credentials, "same-origin");
+    assert.equal(options.cache, "no-store");
+    assert.equal(options.redirect, "error");
+    return Response.json({ token: "header.payload.signature" });
+  });
+  assert.deepEqual(result, { data: { token: "header.payload.signature" }, error: null });
+});
+
+test("token HTTP errors, invalid bodies and transport failures cannot fall back to session data", async () => {
+  for (const response of [new Response(null, { status: 401 }), Response.json(null), Response.json({ session: { token: "opaque" } }), new Response("invalid JSON")]) {
+    assert.deepEqual(await requestSessionJWT(async () => response), { data: null, error: true });
+  }
+  assert.deepEqual(await requestSessionJWT(async () => { throw new Error("transport secret"); }), { data: null, error: true });
+});
 
 test("an opaque cached session token is never forwarded as an API bearer", async () => {
   let calls = 0;
