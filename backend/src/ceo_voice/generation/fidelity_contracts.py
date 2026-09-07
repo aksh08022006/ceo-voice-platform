@@ -15,6 +15,7 @@ ClaimVerdict = Literal["supported", "contradicted", "unsupported", "uncertain"]
 
 class FidelityPolicy(ContractModel):
     enabled: bool = False
+    review_format: Literal["atomic_spans", "sentence_verdicts"] = "atomic_spans"
     failure_behavior: Literal["raise", "return_for_review"] = "raise"
     model: str = Field(default="", max_length=200)
     maximum_prompt_bytes: int = Field(default=48_000, ge=1_000, le=200_000)

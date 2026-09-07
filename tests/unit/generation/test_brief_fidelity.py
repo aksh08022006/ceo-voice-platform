@@ -22,9 +22,9 @@ _BRIEF = (
 )
 
 
-@pytest.mark.parametrize("route_index", range(5))
-def test_brief_prohibitions_remain_mandatory_across_all_routes_and_repair(
-    route_index: int,
+@pytest.mark.parametrize("request_index", range(5))
+def test_brief_prohibitions_remain_mandatory_across_request_ids_and_repair(
+    request_index: int,
 ) -> None:
     value = _generation_input()
     explicit = ("Preserve reported attribution and historical status.", "Do not invent causality.")
@@ -34,7 +34,7 @@ def test_brief_prohibitions_remain_mandatory_across_all_routes_and_repair(
                 update={
                     "topic": _BRIEF,
                     "constraints": explicit,
-                    "request_id": UUID(int=route_index),
+                    "request_id": UUID(int=request_index),
                 }
             )
         }
@@ -53,18 +53,18 @@ def test_brief_prohibitions_remain_mandatory_across_all_routes_and_repair(
     assert request_section.mandatory
     assert request["topic"] == _BRIEF
     assert request["explicit_constraints"] == list(explicit)
-    assert "subordinate to the brief's prohibitions" in request["variation"]["instruction"]
-    assert "only when supplied facts support" in request["variation"]["instruction"]
+    assert request["variation"]["variation_key"] == str(UUID(int=request_index))
+    assert "composition_route" not in request["variation"]
     repair = json.loads(
         next(s.content for s in prompt.sections if s.kind is PromptSectionKind.REPAIR)
     )
     assert repair["preserve_all_other_requirements"] is True
     assert repair["repair_only_these_validation_failures"] == list(feedback)
     rendered = PromptRenderer(budget).render(prompt)
-    assert "draft for editorial review" in rendered.system
-    assert "An editorial angle or general argument is not evidence" in rendered.system
-    assert "adding a hedge does not make an unsupported claim acceptable" in rendered.system
-    assert "never facts, claim strength, or voice" in rendered.system
+    assert "post for editorial review" in rendered.system
+    assert "An argument is not proof of a result" in rendered.system
+    assert "remove any sentence that introduces an unsupported real-world claim" in rendered.system
+    assert "uncertainty, attribution, timing, negation and explicit exclusions" in rendered.system
 
 
 def test_uncertain_attributed_claim_is_preserved_without_promoting_it_to_a_fact() -> None:
@@ -82,5 +82,5 @@ def test_uncertain_attributed_claim_is_preserved_without_promoting_it_to_a_fact(
     )
     assert request["topic"] == brief
     rendered = PromptRenderer(budget).render(prompt)
-    assert "Keep a possibility a possibility, a reported claim attributed" in rendered.system
-    assert "Do not turn an agreement into a completed event" in rendered.system
+    assert "Keep may as may" in rendered.system
+    assert "agreement as agreement" in rendered.system

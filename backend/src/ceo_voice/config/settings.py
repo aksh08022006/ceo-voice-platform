@@ -78,6 +78,10 @@ class ModelSettings(BaseModel):
         default=False,
         description="Whether model-backed capabilities may be initialized.",
     )
+    brief_review_enabled: bool = Field(
+        default=False,
+        description="Run a separate sentence-level brief review and bounded repair before returning a draft.",
+    )
     provider: str | None = Field(
         default=None,
         min_length=1,

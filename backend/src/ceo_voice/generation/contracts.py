@@ -147,6 +147,7 @@ class GenerationReport(ContractModel):
     final_validation: OutputValidation
     constraint_results: tuple[ConstraintResult, ...]
     fidelity_review: FidelityReview | None = None
+    returned_attempt_number: int | None = Field(default=None, ge=1)
     generation_call_count: int | None = Field(default=None, ge=0)
     fidelity_call_count: int | None = Field(default=None, ge=0)
     total_model_calls: int | None = Field(default=None, ge=0)

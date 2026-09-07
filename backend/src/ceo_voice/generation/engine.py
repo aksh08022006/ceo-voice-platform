@@ -1,5 +1,6 @@
 """Product-facing generation orchestration."""
 
+import asyncio
 from uuid import NAMESPACE_URL, uuid5
 
 from ceo_voice.core.exceptions import GenerationValidationError, ProviderError
@@ -10,7 +11,10 @@ from ceo_voice.generation.contracts import (
     GenerationInput,
     GenerationPolicy,
     GenerationReport,
+    OutputValidation,
     ProviderRequest,
+    ProviderResult,
+    RenderedPrompt,
     TokenUsage,
 )
 from ceo_voice.generation.enums import AttemptKind
@@ -65,10 +69,22 @@ class GenerationEngine:
         validate_generation_input(value)
         attempts: list[GenerationAttempt] = []
         feedback: tuple[str, ...] = ()
+        retry_wait_ms = 0
         provider_failures = 0
         validation_failures = 0
+        previous_candidate: str | None = None
+        retained: (
+            tuple[ProviderResult, OutputValidation, FidelityReview | None, RenderedPrompt, str, int]
+            | None
+        ) = None
+        returned_attempt = 0
+        fidelity_review: FidelityReview | None = None
         while True:
-            rendered = self._renderer.render(self._builder.build(value, repair_feedback=feedback))
+            rendered = self._renderer.render(
+                self._builder.build(
+                    value, repair_feedback=feedback, previous_candidate=previous_candidate
+                )
+            )
             kind = (
                 AttemptKind.INITIAL
                 if not attempts
@@ -103,11 +119,23 @@ class GenerationEngine:
                     )
                 )
                 if not self._retry.provider_allowed(error, provider_failures):
+                    if (
+                        retained is not None
+                        and self._policy.fidelity.failure_behavior == "return_for_review"
+                    ):
+                        result, validation, fidelity_review, rendered, content, returned_attempt = (
+                            retained
+                        )
+                        break
                     raise
+                delay = self._retry.delay_seconds(error, provider_failures)
+                if delay:
+                    await asyncio.sleep(delay)
+                    retry_wait_ms += round(delay * 1000)
                 provider_failures += 1
                 continue
             validation = self._validator.validate(result.text, value, self._policy)
-            fidelity_review: FidelityReview | None = None
+            fidelity_review = None
             if validation.valid:
                 content = self._post_processor.process(result.text)
                 if self._policy.fidelity.enabled and self._fidelity_reviewer is not None:
@@ -125,6 +153,16 @@ class GenerationEngine:
                     fidelity_review=fidelity_review,
                 )
             )
+            returned_attempt = len(attempts)
+            if validation.valid:
+                retained = (
+                    result,
+                    validation,
+                    fidelity_review,
+                    rendered,
+                    content,
+                    returned_attempt,
+                )
             if fidelity_review is not None and fidelity_review.status == "error":
                 if self._policy.fidelity.failure_behavior == "return_for_review":
                     break
@@ -136,9 +174,12 @@ class GenerationEngine:
                 break
             if not self._retry.repair_allowed(validation_failures):
                 if (
-                    validation.valid
+                    retained is not None
                     and self._policy.fidelity.failure_behavior == "return_for_review"
                 ):
+                    result, validation, fidelity_review, rendered, content, returned_attempt = (
+                        retained
+                    )
                     break
                 raise GenerationValidationError(
                     "provider could not produce a valid draft",
@@ -150,6 +191,7 @@ class GenerationEngine:
                     },
                 )
             validation_failures += 1
+            previous_candidate = result.text
             feedback = tuple(item.message for item in validation.findings if item.blocking)
             if fidelity_review is not None:
                 feedback += repair_feedback(fidelity_review)
@@ -174,7 +216,8 @@ class GenerationEngine:
             provider=result.provider,
             model=result.model,
             attempts=tuple(attempts),
-            total_latency_ms=sum(
+            total_latency_ms=retry_wait_ms
+            + sum(
                 item.latency_ms + (item.fidelity_review.latency_ms if item.fidelity_review else 0)
                 for item in attempts
             ),
@@ -196,6 +239,7 @@ class GenerationEngine:
             constraint_results=constraint_results,
             fidelity_review=fidelity_review,
             generation_call_count=len(attempts),
+            returned_attempt_number=returned_attempt,
             fidelity_call_count=sum(
                 bool(item.fidelity_review and item.fidelity_review.provider_call_attempted)
                 for item in attempts

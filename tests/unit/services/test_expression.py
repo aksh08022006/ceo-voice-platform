@@ -216,7 +216,7 @@ def test_expression_and_note_flow_to_generation_then_latest_edit_governs_revoice
             json={"content": edited, "editor_note": note},
         )
         assert restored.status_code == 200, restored.text
-    assert "never the strength, certainty" in provider.requests[0].system
+    assert "without changing facts or claim strength" in provider.requests[0].system
     assert "[EXPRESSION]" in provider.requests[0].user
     payload = json.loads(provider.requests[-1].user)
     assert payload["editor_note"] == note

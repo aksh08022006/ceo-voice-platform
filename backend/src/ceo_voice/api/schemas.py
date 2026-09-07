@@ -106,6 +106,18 @@ class ContinueWorkflowRequest(BaseModel):
     continuation_token: str = Field(min_length=1, max_length=2_000_000)
 
 
+class ReviewWorkflowTextRequest(ContinueWorkflowRequest):
+    model_config = ConfigDict(extra="forbid")
+
+    content: str = Field(min_length=1, max_length=12_000)
+
+
+class BriefReviewFinding(BaseModel):
+    text: str
+    verdict: str
+    reason: str
+
+
 class MetricResponse(BaseModel):
     label: str
     value: str
@@ -160,6 +172,11 @@ class WorkflowResponse(BaseModel):
     revoice_applied: bool | None = None
     revoice_fallback_used: bool | None = None
     revoice_attempt_count: int | None = Field(default=None, ge=0)
+    generation_call_count: int = Field(default=0, ge=0)
+    fidelity_call_count: int = Field(default=0, ge=0)
+    initial_brief_review_status: str | None = None
+    initial_brief_review_error: str | None = None
+    initial_brief_review_findings: tuple[BriefReviewFinding, ...] = ()
     evaluation_score: float | None = None
     evaluation_status: str | None = None
     dimensions: tuple[DimensionResponse, ...] = ()

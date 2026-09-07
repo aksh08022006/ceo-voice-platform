@@ -25,6 +25,12 @@ class GenerationRequest(BoundarySchema):
     )
     tenant_id: UUID = Field(description="Tenant authorizing and owning the request.")
     ceo_id: UUID = Field(description="Leader whose voice should govern the output.")
+    author_display_name: NonEmptyStr | None = Field(
+        default=None,
+        max_length=200,
+        exclude_if=lambda value: value is None,
+        description="Editorial author label supplied by the selected profile, not factual authority.",
+    )
     voice_profile_id: UUID = Field(description="Explicit voice-profile lineage to use.")
     voice_profile_version: int = Field(
         ge=1,

@@ -36,6 +36,8 @@ def call(name, path, body):
                 "--yes",
                 "vercel@59.11.7",
                 "curl",
+                "--scope",
+                "aksh08022006s-projects",
                 path,
                 "--deployment",
                 DEPLOY,
@@ -74,6 +76,7 @@ def call(name, path, body):
         data = json.loads(out.read_text())
     except (ValueError, FileNotFoundError):
         data = {}
+    meta["completed"] = p.returncode == 0 and p.stdout.strip() == "200" and bool(data.get("content", "").strip())
     if "content" in data:
         text = data.get("revoiced_content") or data["content"]
         meta.update(
@@ -86,6 +89,11 @@ def call(name, path, body):
             expression=data.get("expression"),
             expression_profile=data.get("expression_profile"),
             report=data.get("report"),
+            generation_call_count=data.get("generation_call_count"),
+            fidelity_call_count=data.get("fidelity_call_count"),
+            initial_brief_review_status=data.get("initial_brief_review_status"),
+            initial_brief_review_error=data.get("initial_brief_review_error"),
+            initial_brief_review_findings=data.get("initial_brief_review_findings"),
         )
     else:
         meta["error"] = data

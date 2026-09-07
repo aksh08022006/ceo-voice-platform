@@ -622,3 +622,28 @@ def test_benchmark_contains_actual_failures_and_matched_semantic_controls() -> N
     for case in cases:
         assert candidate_units(case["candidate"])
         assert all(claim["text"] in case["candidate"] for claim in case["expected_claims"])
+
+
+@pytest.mark.parametrize(
+    "failure", [ProviderError("quota exhausted", details={"status_code": 429}), "x" * 4000]
+)
+def test_editor_preserves_reviewed_candidate_when_a_repair_cannot_finish(
+    failure: str | ProviderError,
+) -> None:
+    candidate = "Ownership creates speed.\n\nClear decisions compound."
+    generator = FakeProvider((candidate, failure))
+    reviewer = ReviewProvider(("unsupported",))
+    draft = asyncio.run(
+        engine_with_review(generator, reviewer, behavior="return_for_review").generate(
+            _generation_input()
+        )
+    )
+    assert draft.content == candidate
+    assert draft.report.returned_attempt_number == 1
+    assert draft.report.generation_call_count == 2
+    assert draft.report.fidelity_call_count == 1
+    assert draft.report.fidelity_review is not None
+    assert draft.report.fidelity_review.status == "blocked"
+    assert draft.report.fidelity_review.candidate_sha256 == sha256_text(candidate)
+    assert draft.report.final_validation.valid
+    assert len(draft.report.attempts) == 2

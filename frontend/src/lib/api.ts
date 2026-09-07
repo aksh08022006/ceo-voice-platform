@@ -152,6 +152,8 @@ export type ExpressionProfile = {
 };
 
 export type Workflow = {
+  initial_brief_review_status?: "clear" | "blocked" | "error" | null;
+  initial_brief_review_findings?: { text: string; verdict: string; reason: string }[];
   expression?: ExpressionDirection | null;
   expression_profile?: ExpressionProfile | null;
   session_id: string;

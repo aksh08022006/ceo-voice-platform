@@ -21,6 +21,11 @@ from ceo_voice.generation.fidelity_contracts import (
     SourceDigest,
 )
 from ceo_voice.generation.ports import ModelProvider
+from ceo_voice.generation.sentence_fidelity import (
+    SENTENCE_REVIEW_SYSTEM,
+    SentenceVerdicts,
+    bind_sentence_verdicts,
+)
 from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.utils.hashing import sha256_text
 
@@ -58,6 +63,15 @@ def brief_sources(value: GenerationInput) -> tuple[BriefSource, ...]:
         BriefSource(source_id=f"request.constraint.{index}", authority="constraint", text=text)
         for index, text in enumerate(value.request.constraints)
     )
+    if value.request.expression:
+        sources.extend(
+            BriefSource(source_id=f"expression.{name}", authority="constraint", text=text)
+            for name, text in (
+                ("viewpoint", value.request.expression.viewpoint),
+                ("rationale", value.request.expression.rationale),
+            )
+            if text
+        )
     sources.extend(
         BriefSource(
             source_id=f"factual:{item.evidence_id}", authority="factual_source", text=item.content
@@ -212,25 +226,36 @@ class FidelityReviewer:
             covered = {i for unit in units for i in range(unit.start, unit.end)}
             if any(not char.isspace() and i not in covered for i, char in enumerate(candidate)):
                 raise ValueError("unit partition does not cover the candidate")
+            compact = self.policy.review_format == "sentence_verdicts"
+            system = SENTENCE_REVIEW_SYSTEM if compact else FIDELITY_SYSTEM
             user = json.dumps(
                 {
                     "candidate_sha256": sha256_text(candidate),
-                    "candidate": candidate,
-                    "units": [unit.model_dump() for unit in units],
+                    **({} if compact else {"candidate": candidate}),
+                    "units": [
+                        (
+                            {"unit_id": unit.unit_id, "text": unit.text}
+                            if compact
+                            else unit.model_dump()
+                        )
+                        for unit in units
+                    ],
                     "sources": [source.model_dump() for source in sources],
-                    "response_schema": FidelityPayload.model_json_schema(),
+                    "response_schema": (
+                        SentenceVerdicts if compact else FidelityPayload
+                    ).model_json_schema(),
                 },
                 ensure_ascii=False,
                 separators=(",", ":"),
             )
-            if len((FIDELITY_SYSTEM + user).encode("utf-8")) > self.policy.maximum_prompt_bytes:
+            if len((system + user).encode("utf-8")) > self.policy.maximum_prompt_bytes:
                 raise ValueError("fidelity prompt exceeds byte budget; no source truncation")
             stage = "provider_error"
             async with asyncio.timeout(self.policy.timeout_seconds):
                 result = await self.provider.generate(
                     ProviderRequest(
                         request_id=request_id,
-                        system=FIDELITY_SYSTEM,
+                        system=system,
                         user=user,
                         model=self.policy.model,
                         maximum_output_tokens=self.policy.maximum_output_tokens,
@@ -251,8 +276,17 @@ class FidelityReviewer:
             if len(result.text.encode("utf-8")) > self.policy.maximum_response_bytes:
                 raise ValueError("fidelity response exceeds byte budget")
             parsed = json.loads(result.text, object_pairs_hook=_unique_object)
-            aligned = align_exact_quotes(parsed, units, sources)
-            payload = FidelityPayload.model_validate(parsed)
+            if compact:
+                aligned = 0
+                payload = bind_sentence_verdicts(
+                    SentenceVerdicts.model_validate(parsed),
+                    candidate_sha256=sha256_text(candidate),
+                    units=units,
+                    sources=sources,
+                )
+            else:
+                aligned = align_exact_quotes(parsed, units, sources)
+                payload = FidelityPayload.model_validate(parsed)
             validate_assessment(payload, candidate, units, sources)
             return FidelityReview(
                 candidate_sha256=sha256_text(candidate),

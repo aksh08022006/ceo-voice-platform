@@ -16,8 +16,9 @@ from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
 from ceo_voice.generation.fidelity import FidelityReviewer
-from ceo_voice.generation.fidelity_contracts import FidelityPolicy
+from ceo_voice.generation.fidelity_contracts import BriefSource, FidelityPolicy, FidelityReview
 from ceo_voice.models.communication import CommentContext
+from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
 from ceo_voice.services.retrieval_ranking import ConfiguredRetrievalRanking
 from ceo_voice.showcase import ShowcaseWorkflowService
@@ -29,6 +30,7 @@ from ceo_voice.workspace.schema import SCHEMA_VERSION
 from .authentication import AccessError, NeonIdentityReader, TokenVerifier, WorkspaceAccess
 from .profile_analytics import project_profile_analytics
 from .schemas import (
+    BriefReviewFinding,
     ContinueWorkflowRequest,
     DimensionResponse,
     EvidenceResponse,
@@ -37,6 +39,7 @@ from .schemas import (
     MetricResponse,
     ProfileAnalyticsResponse,
     ProfileResponse,
+    ReviewWorkflowTextRequest,
     ReVoiceWorkflowRequest,
     WalkthroughResponse,
     WorkflowResponse,
@@ -83,6 +86,21 @@ def create_app(
             timeout_seconds=resolved.model.request_timeout_seconds,
         )
         provider = create_model_provider(resolved.model, transport)
+        if (
+            resolved.model.brief_review_enabled
+            and not resolved.workspace.enabled
+            and reviewer is None
+        ):
+            reviewer = FidelityReviewer(
+                provider,
+                policy=FidelityPolicy(
+                    enabled=True,
+                    review_format="sentence_verdicts",
+                    failure_behavior="return_for_review",
+                    model=resolved.model.generation_model,
+                    maximum_output_tokens=6_000,
+                ),
+            )
         if resolved.workspace.enabled and reviewer is None:
             reviewer = FidelityReviewer(
                 provider,
@@ -372,6 +390,56 @@ def create_app(
         resume(session_id, value.continuation_token if value else None)
         return project(await workflows.evaluate(session_id))
 
+    @application.post("/api/v1/workflows/{session_id}/brief-review", response_model=FidelityReview)
+    async def review_workflow_text(
+        session_id: UUID, value: ReviewWorkflowTextRequest
+    ) -> FidelityReview:
+        session = resume(session_id, value.continuation_token)
+        if reviewer is None:
+            raise HTTPException(status_code=409, detail="Brief review is not enabled.")
+        context = session.outcome.artifacts.context
+        retrieval = session.outcome.artifacts.retrieval
+        if context is None or retrieval is None:
+            raise HTTPException(status_code=409, detail="The saved brief is unavailable.")
+        sources = [
+            BriefSource(source_id="request.topic", authority="brief", text=context.intent.topic)
+        ]
+        sources.extend(
+            BriefSource(
+                source_id=f"factual:{item.evidence_id}",
+                authority="factual_source",
+                text=item.content,
+            )
+            for item in retrieval.evidence
+            if EvidencePurpose.FACTUAL_SUPPORT in item.purposes
+        )
+        sources.extend(
+            BriefSource(source_id=item.constraint_id, authority="constraint", text=str(item.value))
+            for item in context.constraints.constraints
+            if item.source == "generation_request"
+        )
+        direction = context.intent.expression
+        if direction:
+            sources.extend(
+                BriefSource(source_id=f"expression.{name}", authority="constraint", text=text)
+                for name, text in (
+                    ("viewpoint", direction.viewpoint),
+                    ("rationale", direction.rationale),
+                )
+                if text
+            )
+        if context.intent.comment_context:
+            sources.append(
+                BriefSource(
+                    source_id="comment.parent_post",
+                    authority="attributed_context",
+                    text=context.intent.comment_context.parent_post,
+                )
+            )
+        return await reviewer.review_sources(
+            value.content, request_id=uuid4(), sources=tuple(sources)
+        )
+
     # CORS must also wrap authentication failures so the separate frontend can read 401/403.
     application.add_middleware(
         CORSMiddleware,
@@ -493,6 +561,24 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
             bool(last_revoice_validation and not last_revoice_validation.valid) if revoice else None
         ),
         revoice_attempt_count=len(revoice_attempts) if revoice else None,
+        generation_call_count=report.generation_call_count,
+        fidelity_call_count=report.fidelity_call_count,
+        initial_brief_review_status=(
+            report.fidelity_review.status if report.fidelity_review else None
+        ),
+        initial_brief_review_error=(
+            report.fidelity_review.error_code if report.fidelity_review else None
+        ),
+        initial_brief_review_findings=tuple(
+            BriefReviewFinding(text=claim.span.text, verdict=claim.verdict, reason=claim.reason)
+            for unit in (
+                report.fidelity_review.assessment.units
+                if report.fidelity_review and report.fidelity_review.assessment
+                else ()
+            )
+            for claim in unit.claims
+            if claim.verdict != "supported"
+        ),
         evaluation_score=round(evaluation.overall_score * 100, 1) if evaluation else None,
         evaluation_status=evaluation.status.value if evaluation else None,
         dimensions=(

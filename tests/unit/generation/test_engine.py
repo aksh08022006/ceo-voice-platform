@@ -1,6 +1,7 @@
 """Prompt-last orchestration, retry, validation, and reporting tests."""
 
 import asyncio
+import json
 from collections.abc import Iterable
 
 import pytest
@@ -128,6 +129,26 @@ def test_validation_retry_adds_only_targeted_repair_feedback() -> None:
     assert draft.report.attempts[1].kind is AttemptKind.VALIDATION_REPAIR
     assert "[REPAIR]" not in provider.requests[0].user
     assert "[REPAIR]" in provider.requests[1].user
+    repair = json.loads(provider.requests[1].user.split("[REPAIR]\n", 1)[1].split("\n\n[", 1)[0])
+    assert repair["draft_to_revise"] == "x" * 4000
+    assert "not new factual evidence" in repair["instruction"]
+
+
+def test_repair_receives_rejected_claim_and_retains_good_replacement() -> None:
+    provider = FakeProvider(
+        (
+            "Ownership creates better outcomes for every organization.",
+            "Clear ownership makes the decision explicit.",
+        )
+    )
+    draft = asyncio.run(_engine(provider).generate(_generation_input()))
+    assert draft.content == "Clear ownership makes the decision explicit."
+    assert draft.report.generation_call_count == 2
+    assert (
+        '"draft_to_revise":"Ownership creates better outcomes for every organization."'
+        in provider.requests[1].user
+    )
+    assert "better outcomes" in provider.requests[1].user
 
 
 def test_invalid_output_fails_after_configured_repair_limit() -> None:

@@ -1,6 +1,7 @@
 """Prompt compression must retain evidence for every governed generation decision."""
 
 import asyncio
+import json
 from uuid import UUID
 
 import pytest
@@ -99,6 +100,31 @@ def test_prompt_rejects_missing_fact_lane_support_even_when_other_purposes_exist
     requirements = caught.value.details["requirements"]
     assert isinstance(requirements, list)
     assert "request:factual_evidence" in requirements
+
+
+def test_structural_examples_cannot_be_mistaken_for_personal_voice_or_facts() -> None:
+    value = _generation_input()
+    prompt = PromptBuilder(TokenBudgetManager(_policy())).build(value)
+    evidence = {
+        section.source_ids[0]: json.loads(section.content)
+        for section in prompt.sections
+        if section.kind is PromptSectionKind.EVIDENCE
+    }
+    structural = [
+        item
+        for item in value.retrieval.evidence
+        if set(item.purposes) == {EvidencePurpose.STRUCTURAL_SUPPORT}
+    ]
+    assert structural
+    for item in structural:
+        projected = evidence[item.evidence_id]
+        assert projected["text"] is None
+        assert projected["voice_authority"] is False
+        assert projected["content_authority"] == "style_only"
+        assert "NOT this person's voice" in projected["use_restriction"]
+    for item in value.retrieval.evidence:
+        if EvidencePurpose.FACTUAL_SUPPORT in item.purposes:
+            assert evidence[item.evidence_id]["content_authority"] == "factual_source"
 
 
 def test_prompt_preserves_multiple_required_voice_examples_and_prefers_compact_support() -> None:

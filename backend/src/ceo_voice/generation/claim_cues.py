@@ -14,9 +14,29 @@ _CUES = (
     r"\b(?:accelerate|improve|improves|improving|increase|increases)\s+(?:interoperability|portability|scalability|performance|reliability|throughput)\b",
     r"\b(?:work|works|working)\s+seamlessly\b",
     r"\b(?:all users|cannot match)\b",
+    r"\b(?:outperforms?|outperformed)\b[^.!?\n]{0,80}",
+    r"\b(?:best|better|improved)\s+(?:outcomes|results)\b",
+    r"\b(?:accelerate|accelerates|accelerating)\s+(?:development|adoption|innovation)\b",
+    r"\b(?:prevents?|eliminates?|removes?)\s+(?:vendor\s+)?(?:lock.in|friction)\b",
+    r"\b(?:every|all)\s+(?:organizations?|customers?|developers?|applications?)\b",
+    r"\breason\s+reliably\b",
+    r"\bnew\s+failure\s+modes\b",
+    r"\b(?:we|I)\s+(?:have\s+)?(?:always|long|consistently)\s+(?:believed|maintained|said|known|prioritized)\b",
+    r"\b(?:accelerated|faster)\s+(?:development|adoption|innovation)\b",
+    r"\b(?:drive|drives|driving)\s+compatibility\b",
+    r"\b(?:better|more)\s+integrated\s+formats\b",
+    r"\b(?:entire|whole)\s+(?:industry|ecosystem)\b",
 )
 _PATTERNS = tuple(re.compile(pattern, re.IGNORECASE) for pattern in _CUES)
 _NEGATION = re.compile(r"\b(?:not|no|never|without|cannot|doesn't|don't|isn't)\b", re.IGNORECASE)
+_TENTATIVE_BENEFIT = re.compile(
+    r"\b(?:may|might|could)\s+(?:(?:potentially|possibly)\s+)?(?:help|improve|benefit)\b",
+    re.IGNORECASE,
+)
+_STRONGER_BENEFIT = re.compile(
+    r"\b(?:can|will|does|do)\s+(?:(?:certainly|definitely|clearly|reliably)\s+)?(?:help|improve|benefit)\b",
+    re.IGNORECASE,
+)
 
 
 def unsupported_claim_cues(content: str, supplied_text: str) -> tuple[str, ...]:
@@ -28,7 +48,10 @@ def unsupported_claim_cues(content: str, supplied_text: str) -> tuple[str, ...]:
 
     supplied = supplied_text.casefold()
     found: list[str] = []
-    for pattern in _PATTERNS:
+    patterns = (
+        (*_PATTERNS, _STRONGER_BENEFIT) if _TENTATIVE_BENEFIT.search(supplied_text) else _PATTERNS
+    )
+    for pattern in patterns:
         for match in pattern.finditer(content):
             phrase = match.group().strip()
             start = (

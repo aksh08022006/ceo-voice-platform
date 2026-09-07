@@ -285,6 +285,7 @@ class ShowcaseWorkflowService:
             request_id=uuid4(),
             tenant_id=bundle.voice_corpus.identity.tenant_id,
             ceo_id=bundle.voice_corpus.identity.leader_id,
+            author_display_name=bundle.name,
             voice_profile_id=release.lineage_id,
             voice_profile_version=release.version,
             platform=platform,
