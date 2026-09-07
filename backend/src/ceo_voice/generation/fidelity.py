@@ -11,6 +11,7 @@ from time import monotonic
 from typing import Any
 from uuid import UUID
 
+from ceo_voice.core.exceptions import ProviderError
 from ceo_voice.generation.contracts import GenerationInput, ProviderRequest
 from ceo_voice.generation.enums import ProviderName
 from ceo_voice.generation.fidelity_contracts import (
@@ -275,11 +276,7 @@ class FidelityReviewer:
                         user=user,
                         model=self.policy.model,
                         maximum_output_tokens=self.policy.maximum_output_tokens,
-                        response_json_schema=(
-                            (SentenceVerdicts if compact else FidelityPayload).model_json_schema()
-                            if self.provider.name == ProviderName.GEMINI
-                            else None
-                        ),
+                        json_output=self.provider.name == ProviderName.GEMINI,
                     )
                 )
             metrics = {
@@ -331,7 +328,8 @@ class FidelityReviewer:
                 latency_ms=round((monotonic() - started) * 1000),
                 **metrics,
             )
-        except Exception:
+        except Exception as error:
+            status = error.details.get("status_code") if isinstance(error, ProviderError) else None
             # Provider details and malformed output are untrusted; do not expose them as instructions.
             return FidelityReview(
                 candidate_sha256=sha256_text(candidate),
@@ -339,6 +337,9 @@ class FidelityReviewer:
                 provider=self.provider.name,
                 model=self.policy.model,
                 error_code=stage,
+                provider_http_status=(
+                    status if isinstance(status, int) and 100 <= status <= 599 else None
+                ),
                 provider_call_attempted=stage != "input_invalid",
                 latency_ms=round((monotonic() - started) * 1000),
                 **metrics,

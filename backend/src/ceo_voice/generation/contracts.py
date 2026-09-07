@@ -3,7 +3,7 @@
 from typing import Self
 from uuid import UUID
 
-from pydantic import Field, JsonValue, model_validator
+from pydantic import Field, model_validator
 
 from ceo_voice.context import GenerationContext
 from ceo_voice.generation.enums import AttemptKind, PromptSectionKind, ProviderName, ValidationCode
@@ -73,7 +73,7 @@ class RenderedPrompt(ContractModel):
 
 
 class ProviderRequest(ContractModel):
-    response_json_schema: dict[str, JsonValue] | None = None
+    json_output: bool = False
     request_id: UUID
     system: NonBlankText
     user: NonBlankText

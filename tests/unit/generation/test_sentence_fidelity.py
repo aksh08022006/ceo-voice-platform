@@ -132,3 +132,26 @@ def test_thread_separator_is_formatting_and_sentence_offsets_still_bind() -> Non
     # Arbitrary punctuation and embedded dashes cannot disappear from assessment.
     assert [u.text for u in candidate_units("Systems---may help.")] == ["Systems---may help."]
     assert [u.text for u in candidate_units("---")] == ["---"]
+
+
+@pytest.mark.parametrize("status", [400, 429])
+def test_review_reports_safe_provider_status_without_error_body(status: int) -> None:
+    from ceo_voice.core.exceptions import ProviderError
+
+    provider = FakeProvider(
+        (ProviderError("private provider diagnostic", details={"status_code": status}),)
+    )
+    reviewer = FidelityReviewer(
+        provider,
+        policy=FidelityPolicy(enabled=True, model="test-model", review_format="sentence_verdicts"),
+    )
+    result = asyncio.run(
+        reviewer.review_sources(
+            "Systems may help.",
+            request_id=UUID(int=1),
+            sources=(BriefSource(source_id="brief", authority="brief", text="Systems may help."),),
+        )
+    )
+    assert result.status == "error"
+    assert result.provider_http_status == status
+    assert "private provider" not in result.model_dump_json()

@@ -114,6 +114,7 @@ class FidelityReview(ContractModel):
     output_tokens: int | None = Field(default=None, ge=0)
     latency_ms: int = Field(default=0, ge=0)
     error_code: str | None = Field(default=None, max_length=100)
+    provider_http_status: int | None = Field(default=None, ge=100, le=599)
     human_approval_required: Literal[True] = True
     provider_call_attempted: bool = False
     aligned_span_count: int = Field(default=0, ge=0)
