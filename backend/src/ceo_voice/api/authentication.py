@@ -1,5 +1,6 @@
 """Managed identity verification and fresh, server-owned workspace authorization."""
 
+import ssl
 from datetime import UTC, datetime
 from typing import Any, Protocol
 
@@ -10,7 +11,10 @@ from jwt import PyJWKClient
 from pydantic import BaseModel, Field
 
 from ceo_voice.config.settings import WorkspaceSettings
+from ceo_voice.core.logging import get_logger
 from ceo_voice.workspace.contracts import MemberRole, WorkspaceMember, WorkspaceScope
+
+logger = get_logger(__name__)
 
 
 class AccessError(Exception):
@@ -52,7 +56,11 @@ class TokenVerifier:
     def __init__(self, settings: WorkspaceSettings, *, jwks_client: Any = None) -> None:
         self._settings = settings
         self._keys = jwks_client or PyJWKClient(
-            str(settings.auth_jwks_url), timeout=5, lifespan=300, max_cached_keys=16
+            str(settings.auth_jwks_url),
+            timeout=5,
+            lifespan=300,
+            max_cached_keys=16,
+            ssl_context=ssl.create_default_context(cafile=certifi.where()),
         )
 
     def verify(self, authorization: str | None) -> str:
@@ -86,6 +94,8 @@ class TokenVerifier:
                 raise ValueError("invalid subject")
             return subject
         except (jwt.PyJWTError, ValueError, TypeError, KeyError, OSError) as exc:
+            # Record only a bounded failure category, never tokens or exception payloads.
+            logger.warning("workspace_token_rejected", extra={"reason": type(exc).__name__})
             raise AccessError("Your sign-in session could not be verified. Sign in again.") from exc
 
 
