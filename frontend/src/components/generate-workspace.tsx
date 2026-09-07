@@ -131,7 +131,7 @@ export function GenerateWorkspace() {
         <details className="border-y border-border py-4">
           <summary className="cursor-pointer text-sm font-medium">Emotion, emoji &amp; viewpoint</summary>
           <div className="mt-5 space-y-5">
-            <p className="text-xs leading-5 text-muted-foreground">Start with this person’s writing habits. Set the intention for this post; the facts and strength of your claims stay fixed.</p>
+          <p className="text-xs leading-5 text-muted-foreground">Start with this person’s writing habits. Set the intention for this post, then review that facts and claim strength remain faithful to your brief.</p>
             <Field label="Emotional register"><Select {...form.register("emotion")}>
               <option value="auto">Match the person and context</option><option value="neutral">Neutral / matter-of-fact</option>
               <option value="enthusiastic">Enthusiastic</option><option value="grateful">Grateful</option>
