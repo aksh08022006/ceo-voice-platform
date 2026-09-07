@@ -5,15 +5,18 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+import { AccountMenu } from "@/components/auth/account-menu";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navigation = [
+  ...(AUTH_ENABLED ? [{ label: "Workspace", href: "/workspace" }] : []),
   { label: "Generate", href: "/generate" },
   { label: "Profiles", href: "/profiles" },
-  { label: "Benchmarks", href: "/benchmarks" },
-  { label: "Documentation", href: "/documentation" },
+  { label: "Examples", href: "/benchmarks" },
+  { label: "Guide", href: "/documentation" },
 ];
 
 export function SiteHeader() {
@@ -41,16 +44,9 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <a
-            className="rounded-md px-3 py-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            href="https://github.com/aksh08022006/ceo-voice-platform"
-            rel="noreferrer"
-            target="_blank"
-          >
-            GitHub
-          </a>
         </nav>
         <div className="flex items-center gap-1">
+          <AccountMenu />
           <ThemeToggle />
           <Button
             aria-expanded={open}
@@ -76,14 +72,6 @@ export function SiteHeader() {
               {item.label}
             </Link>
           ))}
-          <a
-            className="block py-3 text-sm text-muted-foreground hover:text-foreground"
-            href="https://github.com/aksh08022006/ceo-voice-platform"
-            rel="noreferrer"
-            target="_blank"
-          >
-            GitHub
-          </a>
         </nav>
       ) : null}
     </header>

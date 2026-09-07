@@ -25,6 +25,24 @@ from ceo_voice.voice.components import Interaction, Residual
 from ceo_voice.voice.registry import FeatureRegistry
 from ceo_voice.voice.releases import HVMRelease
 
+# Resolve confidence ties by writing utility, not the alphabetical order of IDs.
+# Eligibility, context-specific resolution and confidence remain authoritative.
+_WRITING_FEATURES = (
+    "analysis.sentence-median-words",
+    "analysis.short-sentence-ratio",
+    "analysis.paragraph-median-words",
+    "analysis.single-sentence-paragraph-ratio",
+    "analysis.first-person-plural-ratio",
+    "analysis.opening-first-person-indicator",
+    "analysis.apostrophized-word-ratio",
+    "analysis.hedge-marker-rate",
+    "analysis.opening-question-indicator",
+    "analysis.closing-question-indicator",
+    "analysis.second-person-pronoun-ratio",
+    "analysis.function-word-ratio",
+)
+_WRITING_PRIORITY = {key: index for index, key in enumerate(_WRITING_FEATURES)}
+
 
 class VoiceCompilationResult:
     """Internal pair of compiled output and audit decisions."""
@@ -148,7 +166,13 @@ class VoiceCompiler:
             )
             candidates.append((compiled.confidence.selection_score, compiled))
 
-        candidates.sort(key=lambda item: (-item[0], item[1].feature_id))
+        candidates.sort(
+            key=lambda item: (
+                -item[0],
+                _WRITING_PRIORITY.get(item[1].feature_id, len(_WRITING_PRIORITY)),
+                item[1].feature_id,
+            )
+        )
         selected = candidates[: self._maximum_features]
         for _, feature in candidates[self._maximum_features :]:
             ignored.append(

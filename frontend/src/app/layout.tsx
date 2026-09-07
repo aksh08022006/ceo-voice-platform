@@ -20,8 +20,8 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: { default: "CEO Voice Platform", template: "%s · CEO Voice" },
-  description: "Evidence-backed, explainable, and governed executive communication.",
+  title: { default: "CEO Voice", template: "%s · CEO Voice" },
+  description: "Draft and refine executive posts and replies with a distinct voice, clear viewpoint, and room for your edits.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

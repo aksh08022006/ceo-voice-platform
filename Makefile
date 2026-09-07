@@ -27,7 +27,7 @@ frontend-setup:
 	cd frontend && npm ci
 
 frontend-check:
-	cd frontend && npm run lint && npm run typecheck && npm run build
+	cd frontend && npm test && npm run lint && npm run typecheck && npm run build
 
 check-all: check frontend-check
 

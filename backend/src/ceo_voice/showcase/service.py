@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from itertools import count
 from pathlib import Path
 from tempfile import gettempdir
-from typing import cast
+from typing import Literal, cast
 from uuid import UUID, uuid4
 
 from ceo_voice.context import create_context_compiler
@@ -18,6 +18,9 @@ from ceo_voice.generation import (
     PromptRenderer,
     TokenBudgetManager,
 )
+from ceo_voice.generation.editor_revision import RevisionProposal, revise_flagged_spans
+from ceo_voice.generation.fidelity import FidelityReviewer
+from ceo_voice.generation.fidelity_contracts import BriefSource, FidelityPolicy, FidelityReview
 from ceo_voice.generation.ports import ModelProvider
 from ceo_voice.integration import (
     IntegrationInput,
@@ -26,7 +29,11 @@ from ceo_voice.integration import (
     PublishedIntegrationInput,
     PublishedIntegrationRunner,
 )
+from ceo_voice.integration.artifacts import ArtifactWriter
+from ceo_voice.integration.ports import RetrievalRankingPreparer
+from ceo_voice.models.communication import CommentContext, ReplyIntent
 from ceo_voice.models.enums import ContentType, Platform
+from ceo_voice.models.expression import ExpressionDirection
 from ceo_voice.profiles import (
     InMemoryProfileWorkspace,
     PublishedVoiceProfile,
@@ -37,6 +44,7 @@ from ceo_voice.profiles.builder import VoiceProfileBuilder
 from ceo_voice.prompts import THREAD_SEPARATOR
 from ceo_voice.revoice import EditedDraft, ReVoicedDraft, ReVoiceEngine, ReVoiceInput, ReVoicePolicy
 from ceo_voice.schemas.generation import GenerationRequest
+from ceo_voice.services.expression import build_expression_profile
 from ceo_voice.services.published_profiles import PublishedProfileBundle
 from ceo_voice.utils import utc_now
 from ceo_voice.virality import InMemoryViralityWorkspace, ViralityProfile, create_virality_builder
@@ -45,6 +53,8 @@ from ceo_voice.voice import DownstreamPermission, FeatureRegistry
 from .catalog import PROFILES, WALKTHROUGHS, ShowcaseProfile, Walkthrough, profile_by_slug
 from .fixtures import NOW, ReviewedShowcaseProfileBuilder, profile_manifest, virality_corpus
 from .provider import ShowcaseProvider
+
+SESSION_CACHE_LIMIT = 32
 
 
 @dataclass(slots=True)
@@ -57,6 +67,7 @@ class WorkflowSession:
     edited: EditedDraft | None = None
     revoiced: ReVoicedDraft | None = None
     evaluation: EvaluationReport | None = None
+    revision_count: int = 0
 
 
 class ShowcaseWorkflowService:
@@ -72,15 +83,25 @@ class ShowcaseWorkflowService:
         maximum_output_tokens: int = 800,
         maximum_provider_retries: int = 2,
         published_bundles: tuple[PublishedProfileBundle, ...] = (),
+        retrieval_ranking: RetrievalRankingPreparer | None = None,
+        artifact_storage: Literal["filesystem", "memory"] = "filesystem",
+        fidelity_reviewer: FidelityReviewer | None = None,
     ) -> None:
-        self._output = output_directory or Path(gettempdir()) / "ceo-voice-showcase"
+        self._artifacts = ArtifactWriter(storage=artifact_storage)
+        self._output = output_directory or (
+            Path(gettempdir()) / "ceo-voice-showcase"
+            if artifact_storage == "filesystem"
+            else Path("memory-artifacts")
+        )
         self._sessions: dict[UUID, WorkflowSession] = {}
         self._variation_sequence = count()
         self._provider = provider
+        self._retrieval_ranking = retrieval_ranking
         self._model = model
         self._model_context_tokens = model_context_tokens
         self._maximum_output_tokens = maximum_output_tokens
         self._maximum_provider_retries = maximum_provider_retries
+        self._fidelity_reviewer = fidelity_reviewer
         self._bundles = {bundle.slug: bundle for bundle in published_bundles}
         if self._bundles and provider is None:
             raise IntegrationError("published profile serving requires a configured model provider")
@@ -154,6 +175,9 @@ class ShowcaseWorkflowService:
         virality_influence: float = 0.125,
         minimum_words: int | None = None,
         maximum_words: int | None = None,
+        comment_context: CommentContext | None = None,
+        expression: ExpressionDirection | None = None,
+        reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Run corpus-to-draft and retain sealed artifacts for later steps."""
 
@@ -168,10 +192,13 @@ class ShowcaseWorkflowService:
                 virality_influence=virality_influence,
                 minimum_words=minimum_words,
                 maximum_words=maximum_words,
+                comment_context=comment_context,
+                expression=expression,
+                reserved_session_id=reserved_session_id,
             )
         profile = profile_by_slug(profile_slug)
         manifest = profile_manifest(profile)
-        request_id, run_id = uuid4(), uuid4()
+        request_id, run_id = uuid4(), reserved_session_id or uuid4()
         request = GenerationRequest(
             request_id=request_id,
             tenant_id=manifest.corpus.identity.tenant_id,
@@ -185,7 +212,13 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
-            objective=f"Create a {content_type} that communicates the idea clearly",
+            expression=expression,
+            comment_context=comment_context,
+            objective=(
+                "Write a concise comment preserving the editor's selected reply intent and supplied points"
+                if comment_context
+                else f"Create a {content_type} that communicates the idea clearly"
+            ),
             audience="executive and technical readers",
             constraints=constraints,
         )
@@ -197,6 +230,8 @@ class ShowcaseWorkflowService:
                 content_type,
                 minimum_words,
                 variation_index=next(self._variation_sequence),
+                thread_post_count=thread_post_count,
+                comment_context=comment_context,
             )
         )
         runner = self._runner(provider)
@@ -217,8 +252,7 @@ class ShowcaseWorkflowService:
                 details={"reason": failure.code if failure else "unknown"},
             )
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
-        self._sessions[run_id] = session
-        return session
+        return self._remember(session)
 
     async def _generate_published(
         self,
@@ -232,6 +266,9 @@ class ShowcaseWorkflowService:
         virality_influence: float,
         minimum_words: int | None,
         maximum_words: int | None,
+        comment_context: CommentContext | None,
+        expression: ExpressionDirection | None = None,
+        reserved_session_id: UUID | None = None,
     ) -> WorkflowSession:
         """Serve one request from exact immutable release artifacts without rebuilding them."""
 
@@ -242,12 +279,13 @@ class ShowcaseWorkflowService:
         provider = self._require(self._provider, "model provider")
         assert isinstance(provider, ModelProvider)
         release = bundle.voice_profile.managed_release.release
-        run_id = uuid4()
+        run_id = reserved_session_id or uuid4()
         started_at = utc_now()
         request = GenerationRequest(
             request_id=uuid4(),
             tenant_id=bundle.voice_corpus.identity.tenant_id,
             ceo_id=bundle.voice_corpus.identity.leader_id,
+            author_display_name=bundle.name,
             voice_profile_id=release.lineage_id,
             voice_profile_version=release.version,
             platform=platform,
@@ -257,7 +295,14 @@ class ShowcaseWorkflowService:
             minimum_words=minimum_words,
             maximum_words=maximum_words,
             topic=idea,
-            objective=f"Create a {content_type} that communicates the idea clearly",
+            expression=expression,
+            expression_profile=build_expression_profile(bundle.voice_corpus, platform),
+            comment_context=comment_context,
+            objective=(
+                "Write a concise comment preserving the editor's selected reply intent and supplied points"
+                if comment_context
+                else f"Create a {content_type} that communicates the idea clearly"
+            ),
             audience="executive and technical readers",
             constraints=constraints,
         )
@@ -277,29 +322,52 @@ class ShowcaseWorkflowService:
         if outcome.artifacts.draft is None:
             failure = outcome.failure
             raise IntegrationError(
-                "published workflow did not produce a draft",
-                details={"reason": failure.code if failure else "unknown"},
+                "The model could not return an acceptable draft. Try again or review the requested constraints.",
+                details={
+                    "reason": failure.code if failure else "unknown",
+                    **(
+                        {
+                            key: value
+                            for key, value in failure.details.items()
+                            if key in {"findings", "status_code", "finish_reason"}
+                        }
+                        if failure
+                        else {}
+                    ),
+                },
             )
         profile = next(item for item in self.profiles if item.slug == profile_slug)
         session = WorkflowSession(id=run_id, profile=profile, outcome=outcome)
-        self._sessions[run_id] = session
-        return session
+        return self._remember(session)
 
-    async def revoice(self, session_id: UUID, edited_content: str) -> WorkflowSession:
+    async def revoice(
+        self, session_id: UUID, edited_content: str, editor_note: str | None = None
+    ) -> WorkflowSession:
         """Restore voice against the exact artifacts generated for the session."""
 
         session = self.get(session_id)
         artifacts = session.outcome.artifacts
         draft = self._require(artifacts.draft, "generated draft")
+        previous_revision = session.revoiced
+        revision_count = session.revision_count
+        requested_at = utc_now()
         edited = EditedDraft(
             original=draft,
+            previous_revision=previous_revision,
             content=edited_content,
-            edited_at=session.outcome.completed_at,
+            edited_at=requested_at,
+            editor_note=editor_note,
         )
         provider = self._provider or ShowcaseProvider(self._restore(edited_content))
         revoiced = await ReVoiceEngine(
             provider,
-            policy=ReVoicePolicy(provider=provider.name, model=self._model),
+            policy=ReVoicePolicy(
+                provider=provider.name,
+                model=self._model,
+                model_context_tokens=self._model_context_tokens,
+                maximum_output_tokens=self._maximum_output_tokens,
+                maximum_provider_retries=self._maximum_provider_retries,
+            ),
         ).restore(
             ReVoiceInput(
                 edited_draft=edited,
@@ -313,12 +381,36 @@ class ShowcaseWorkflowService:
                     ViralityProfile,
                     self._require(artifacts.virality_profile, "virality profile"),
                 ),
-                requested_at=session.outcome.completed_at,
+                requested_at=requested_at,
             )
         )
+        if session.revision_count != revision_count:
+            raise IntegrationError("A newer revision is available. Reload before re-voicing.")
         session.edited, session.revoiced = edited, revoiced
+        session.revision_count += 1
         session.evaluation = None
         return session
+
+    async def revise_editor(
+        self,
+        *,
+        request_id: UUID,
+        content: str,
+        review: FidelityReview,
+        sources: tuple[BriefSource, ...],
+    ) -> RevisionProposal:
+        """One shared-provider call, without retries, for exact-span editorial correction."""
+        if self._provider is None:
+            raise IntegrationError("editor revision requires a configured model provider")
+        return await revise_flagged_spans(
+            self._provider,
+            model=self._model,
+            maximum_output_tokens=self._maximum_output_tokens,
+            request_id=request_id,
+            content=content,
+            review=review,
+            sources=sources,
+        )
 
     async def evaluate(self, session_id: UUID) -> WorkflowSession:
         """Evaluate the latest candidate deterministically with evidence traceability."""
@@ -353,6 +445,22 @@ class ShowcaseWorkflowService:
         except KeyError as exc:
             raise KeyError(str(session_id)) from exc
 
+    def resume(self, session: WorkflowSession) -> WorkflowSession:
+        """Install a server-authenticated continuation snapshot for one request."""
+
+        if session.profile.slug not in self._bundles:
+            raise KeyError(session.profile.slug)
+        return self._remember(session)
+
+    def _remember(self, session: WorkflowSession) -> WorkflowSession:
+        """Bound generated and resumed sessions; portable continuation retains evicted state."""
+
+        self._sessions.pop(session.id, None)
+        self._sessions[session.id] = session
+        while len(self._sessions) > SESSION_CACHE_LIMIT:
+            self._sessions.pop(next(iter(self._sessions)))
+        return session
+
     @staticmethod
     def _require(value: object | None, name: str) -> object:
         if value is None:
@@ -368,9 +476,28 @@ class ShowcaseWorkflowService:
         minimum_words: int | None,
         *,
         variation_index: int,
+        thread_post_count: int | None = None,
+        comment_context: CommentContext | None = None,
     ) -> str:
         idea = idea.strip().rstrip(".")
+        if comment_context:
+            lead = {
+                ReplyIntent.ADD_PERSPECTIVE: "An additional perspective:",
+                ReplyIntent.ASK_QUESTION: "A question worth exploring:",
+                ReplyIntent.RESPECTFULLY_DISAGREE: "I see the point differently:",
+                ReplyIntent.ACKNOWLEDGE: "This is a useful point to recognize:",
+                ReplyIntent.ANSWER: "One way to answer that:",
+            }[comment_context.reply_intent]
+            content = f"{lead} {idea[:180]}{('?') if comment_context.reply_intent is ReplyIntent.ASK_QUESTION else '.'}"
+            if platform is Platform.LINKEDIN and len(content.split()) < 40:
+                content += (
+                    " The practical details deserve attention: what changes for the people using "
+                    "the system, which assumptions need testing, and how we can tell whether the "
+                    "approach works in the context being discussed."
+                )
+            return content
         if platform is Platform.X:
+            idea = idea[:180].rstrip()
             opening_options = (
                 f"A platform shift is underway: {idea}.",
                 f"The practical consequence of {idea} is bigger than the demo.",
@@ -380,8 +507,14 @@ class ShowcaseWorkflowService:
                 opening_options[variation_index % len(opening_options)],
                 "The important change is not the demo. It is the infrastructure that lets builders turn capability into reliable systems.",
                 "The next chapter belongs to teams that connect ambitious technology to useful work.",
+                "Clear interfaces let teams test each component, understand failure modes, and improve the system without replacing every part.",
+                "The useful question is where this approach removes a real constraint for builders and the people using what they build.",
             )
-            return THREAD_SEPARATOR.join(parts) if content_type == "thread" else parts[0]
+            return (
+                THREAD_SEPARATOR.join(parts[:thread_post_count])
+                if content_type == "thread"
+                else parts[0]
+            )
         openings = {
             "ali-ghodsi": "Teams do not need another disconnected demo.",
             "matei-zaharia": "The mechanism matters before the benchmark.",
@@ -459,14 +592,19 @@ class ShowcaseWorkflowService:
             model_context_tokens=self._model_context_tokens,
             maximum_output_tokens=self._maximum_output_tokens,
             maximum_provider_retries=self._maximum_provider_retries,
+            fidelity=(
+                self._fidelity_reviewer.policy if self._fidelity_reviewer else FidelityPolicy()
+            ),
         )
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
         return IntegrationRunner(
+            artifacts=self._artifacts,
             profile_builder=cast(VoiceProfileBuilder, builder),
             virality_builder=create_virality_builder(workspace=virality_workspace),
             virality_workspace=virality_workspace,
             feature_registry=registry,
+            retrieval_ranking=self._retrieval_ranking,
             context_compiler=create_context_compiler(),
             prompt_builder=prompts,
             prompt_renderer=renderer,
@@ -476,6 +614,7 @@ class ShowcaseWorkflowService:
                 renderer,
                 OutputValidator(),
                 policy=policy,
+                fidelity_reviewer=self._fidelity_reviewer,
             ),
         )
 
@@ -488,11 +627,16 @@ class ShowcaseWorkflowService:
             model_context_tokens=self._model_context_tokens,
             maximum_output_tokens=self._maximum_output_tokens,
             maximum_provider_retries=self._maximum_provider_retries,
+            fidelity=(
+                self._fidelity_reviewer.policy if self._fidelity_reviewer else FidelityPolicy()
+            ),
         )
         budget = TokenBudgetManager(policy)
         prompts, renderer = PromptBuilder(budget), PromptRenderer(budget)
         return PublishedIntegrationRunner(
+            artifacts=self._artifacts,
             feature_registry=bundle.feature_registry,
+            retrieval_ranking=self._retrieval_ranking,
             context_compiler=create_context_compiler(),
             prompt_builder=prompts,
             prompt_renderer=renderer,
@@ -502,5 +646,6 @@ class ShowcaseWorkflowService:
                 renderer,
                 OutputValidator(),
                 policy=policy,
+                fidelity_reviewer=self._fidelity_reviewer,
             ),
         )

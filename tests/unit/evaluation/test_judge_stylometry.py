@@ -68,7 +68,8 @@ def test_structured_judge_is_provider_neutral_separate_and_traceable() -> None:
         provider,
         policy=JudgePolicy(provider=ProviderName.OPENAI, model="judge-model"),
     )
-    report = asyncio.run(EvaluationEngine(judge=judge).evaluate(evaluation_input()))
+    value = evaluation_input()
+    report = asyncio.run(EvaluationEngine(judge=judge).evaluate(value))
 
     assert report.judge_review is not None
     assert report.judge_review.dimensions[0].score == 0.75
@@ -80,6 +81,10 @@ def test_structured_judge_is_provider_neutral_separate_and_traceable() -> None:
     ), "judge does not affect authoritative score by default"
     assert "hidden chain-of-thought" in provider.requests[0].system
     assert "voice_targets" in provider.requests[0].user
+    request = json.loads(provider.requests[0].user)["request"]
+    assert request["topic"] == value.context.intent.topic
+    assert request["objective"] == value.context.intent.objective
+    assert request["audience"] == value.context.intent.audience
 
 
 def test_judge_can_be_explicitly_included_and_retries_transient_failure() -> None:

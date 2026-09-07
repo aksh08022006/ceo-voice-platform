@@ -7,6 +7,12 @@
 **Audience:** Product, engineering, ML/AI, security, data, and operations
 **Decision state:** Recommended baseline, subject to the validation gates in Section 1.10
 
+> Historical research proposal. Its phase restrictions, capacity assumptions, technology choices,
+> and roadmap describe the original design exercise, not current shipped behavior. Use the
+> [Architecture Overview](ARCHITECTURE.md), [product thesis](NARRATIVE_PRODUCT_THESIS.md), and
+> subsystem guides for the implemented release. In particular, the full staged generation and
+> scientific calibration program below are not established by a working reference demo.
+
 ## 0. Executive position
 
 This product is a multi-tenant writing system that learns a CEO's **written communication process at multiple linguistic levels**, separates that process from subject matter and content structure, realizes new drafts under measurable voice constraints, and improves through controlled evaluation and feedback. Retrieval supplies facts and selected evidence; it is not the mechanism that creates voice fidelity.

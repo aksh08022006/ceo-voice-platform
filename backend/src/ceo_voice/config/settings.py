@@ -2,7 +2,7 @@
 
 from functools import lru_cache
 from pathlib import Path
-from typing import Self
+from typing import Literal, Self
 
 from pydantic import BaseModel, Field, SecretStr, ValidationError, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict, SettingsError
@@ -56,18 +56,31 @@ class ApiSettings(BaseModel):
         default=None,
         description="Validated immutable profile catalog served instead of showcase fixtures.",
     )
+    continuation_key: SecretStr | None = Field(
+        default=None,
+        description="Fernet key for encrypted browser-held workflow continuation across instances.",
+    )
+    continuation_ttl_seconds: int = Field(default=604800, ge=60, le=2592000)
+    artifact_storage: Literal["memory", "filesystem"] = Field(
+        default="memory",
+        description="HTTP workflows retain artifacts in memory; filesystem is an explicit local diagnostic opt-in.",
+    )
 
 
 class ModelSettings(BaseModel):
-    """Provider-neutral model configuration reserved for later AI integrations.
+    """Provider-neutral model configuration for generation and optional embeddings.
 
-    No provider SDK or model is selected in this phase. The contract prevents future modules
-    from reading ad-hoc environment variables or embedding credentials in code.
+    The contract prevents consumers from reading ad-hoc environment variables or embedding
+    credentials in code.
     """
 
     enabled: bool = Field(
         default=False,
         description="Whether model-backed capabilities may be initialized.",
+    )
+    brief_review_enabled: bool = Field(
+        default=False,
+        description="Run a separate sentence-level brief review and bounded repair before returning a draft.",
     )
     provider: str | None = Field(
         default=None,
@@ -79,10 +92,14 @@ class ModelSettings(BaseModel):
         min_length=1,
         description="Provider model identifier used for generation workloads.",
     )
+    gemini_thinking_level: Literal["low", "medium", "high"] | None = Field(
+        default=None,
+        description="Optional Gemini reasoning level; omitted preserves provider defaults.",
+    )
     embedding_model: str | None = Field(
         default=None,
         min_length=1,
-        description="Provider model identifier used for future embedding workloads.",
+        description="Provider model identifier used for explicitly enabled hybrid retrieval.",
     )
     api_key: SecretStr | None = Field(
         default=None,
@@ -140,6 +157,71 @@ class ModelSettings(BaseModel):
         return self
 
 
+class RetrievalSettings(BaseModel):
+    """Explicit experiment selection and bounded embedding preparation settings."""
+
+    mode: Literal["baseline", "bm25", "hybrid"] = "baseline"
+    relevance_weight: float = Field(default=0.35, gt=0, le=0.5, allow_inf_nan=False)
+    sparse_weight: float = Field(default=0.5, gt=0, lt=1, allow_inf_nan=False)
+    rrf_k: int = Field(default=60, ge=1, le=1000)
+    embedding_revision: str | None = Field(default=None, min_length=1)
+    embedding_dimensions: int = Field(default=1536, ge=1, le=65536)
+    embedding_batch_size: int = Field(default=16, ge=1, le=32)
+    maximum_embedding_input_bytes: int = Field(default=8000, ge=1, le=8000)
+    maximum_embedding_items: int = Field(default=512, ge=1, le=2048)
+    embedding_cache_items: int = Field(default=2048, ge=0, le=10000)
+
+
+class WorkspaceSettings(BaseModel):
+    """Explicit production workspace dependencies; incomplete setup never falls back to anonymous access."""
+
+    enabled: bool = False
+    database_url: SecretStr | None = None
+    encryption_key: SecretStr | None = None
+    workspace_id: str = Field(default="narrative-company", min_length=1, max_length=160)
+    workspace_name: str = Field(default="The Narrative Company", min_length=1, max_length=160)
+    auth_issuer: str | None = None
+    auth_audience: str | None = None
+    auth_jwks_url: str | None = None
+    bootstrap_admin_emails: tuple[str, ...] = ()
+    allowed_profiles: tuple[str, ...] = ("ali-ghodsi", "matei-zaharia")
+    maximum_runs_per_hour: int = Field(default=30, ge=1, le=1000)
+    run_lease_seconds: int = Field(default=240, ge=60, le=600)
+    fidelity_enabled: bool = False
+    fidelity_model: str | None = None
+
+    @model_validator(mode="after")
+    def production_dependencies(self) -> Self:
+        if self.enabled and not all(
+            (
+                self.database_url,
+                self.encryption_key,
+                self.auth_issuer,
+                self.auth_audience,
+                self.auth_jwks_url,
+            )
+        ):
+            raise ValueError(
+                "enabled workspace requires database, encryption, and managed authentication"
+            )
+        if self.enabled and not self.fidelity_enabled:
+            raise ValueError("enabled workspace requires claim review")
+        if (
+            self.enabled
+            and self.database_url
+            and not self.database_url.get_secret_value().startswith(
+                ("postgresql://", "postgres://")
+            )
+        ):
+            raise ValueError(
+                "production workspace requires PostgreSQL, never an ephemeral SQLite file"
+            )
+        for value in (self.auth_issuer, self.auth_audience, self.auth_jwks_url):
+            if value and not value.startswith("https://"):
+                raise ValueError("managed authentication endpoints must use HTTPS")
+        return self
+
+
 class Settings(BaseSettings):
     """Root settings object populated from environment variables and an optional .env file."""
 
@@ -147,6 +229,8 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
     api: ApiSettings = Field(default_factory=ApiSettings)
     model: ModelSettings = Field(default_factory=ModelSettings)
+    retrieval: RetrievalSettings = Field(default_factory=RetrievalSettings)
+    workspace: WorkspaceSettings = Field(default_factory=WorkspaceSettings)
 
     model_config = SettingsConfigDict(
         env_file=(".env", ".env.local"),
@@ -161,6 +245,17 @@ class Settings(BaseSettings):
     def validate_environment_policy(self) -> Self:
         """Enforce production-safe defaults at configuration load time."""
 
+        if self.retrieval.mode == "hybrid" and (
+            not self.model.enabled
+            or self.model.provider is None
+            or self.model.provider.lower() != "openai"
+            or not self.model.embedding_model
+            or not self.retrieval.embedding_revision
+        ):
+            raise ValueError(
+                "hybrid retrieval requires enabled OpenAI-compatible model access, "
+                "an embedding model and an explicit embedding revision"
+            )
         if self.application.environment is not Environment.PRODUCTION:
             return self
         if self.application.debug:

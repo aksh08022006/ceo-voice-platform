@@ -1,8 +1,10 @@
 # Release gap analysis
 
 This audit compares the repository with the assignment requirements. It is intentionally based on
-observable code and artifacts, not intended future work. The architecture is frozen; remaining
-work is limited to making implemented capabilities safe, reproducible, and evaluable.
+observable code and artifacts, not intended future work. “Satisfied” below describes the reference
+release's engineering capability, not empirical proof of voice fidelity or the full research
+blueprint. Subsequent ranking and comparative-evaluation work is recorded in
+[ADR 001](adr/001-governed-retrieval-experiments.md).
 
 ## Requirement matrix
 
@@ -13,10 +15,10 @@ work is limited to making implemented capabilities safe, reproducible, and evalu
 | Separate voice from viral structure | Independent HVM and VKR release lifecycles and compilation policies | Satisfied | No change. |
 | Automated voice-profile construction | Restartable profile builder, corpus health, inspection report, immutable release publication, and CLI | Satisfied | Expose it through a clearer command surface and onboarding manifest. |
 | Structural/virality library | Governed VKR extraction, aggregation, comparison, inspection, and publication | Satisfied | No change. |
-| Request-specific context and retrieval | Deterministic context compiler and compact explainable retrieval bundles | Satisfied | No change. |
+| Request-specific context and retrieval | Deterministic context compiler, compact explainable bundles, optional BM25/hybrid span ranking | Satisfied at platform level | Preserve baseline behavior; compare ranking modes on held-out drafts before claiming improvement. |
 | LinkedIn and X generation | Prompt-last engine, platform validators, pooled HTTP transport, and OpenAI/Anthropic/Gemini adapters | Satisfied at platform level | Real calls require operator credentials, approved models, and a generation-authorized profile. |
 | Human-edit Re-Voice | Protected/editable region analysis, constrained restoration, validation, and trace report | Satisfied | Include in the reproducible demonstration evidence. |
-| Multidimensional evaluation | Independent voice, structure, compliance, preservation, readability, judge, benchmark, regression, and reporting modules | Satisfied | Publish clearly labelled benchmark fixtures and commands. |
+| Multidimensional evaluation | Independent candidate metrics plus a separate blinded human-comparison workflow | Satisfied at platform level | Publish synthetic fixtures separately from actual human evidence; empirical voice validation remains incomplete. |
 | End-to-end orchestration | Offline runner and published-profile runner produce stage artifacts, diagnostics, timing, metrics, generation, Re-Voice, and evaluation | Satisfied | Production generation remains fail-closed for unapproved profiles. |
 | New-CEO onboarding without code changes | Manifest-driven preparation, onboarding, HVM/VKR publication, readiness reporting, and deployment bundles | Satisfied | Operators supply reviewed data and calibration authority; adding a leader does not change code. |
 | Scalability to many leaders | Tenant-aware immutable contracts, bounded concurrency, content hashes, incremental reuse, and dependency-inverted storage | Partial | Document that bundled storage is a local reference adapter; horizontally scalable persistence is an adapter deployment concern. |
@@ -49,9 +51,10 @@ work is limited to making implemented capabilities safe, reproducible, and evalu
   official API adapter or a lawful export; the platform will not evade access controls.
 - Automatic promotion of a deterministic Tier-1 profile to generation authority. Tier-1 metrics
   are descriptive. Human/scientific review remains required before a real person's style is used.
-- A vector database, semantic retrieval, cloud-specific deployment, tenant authentication, or a new
-  persistence framework. Deterministic retrieval remains the auditable baseline; organization-scale
-  persistence and identity are deployment responsibilities rather than hidden reference adapters.
+- A vector database, full-corpus semantic discovery, cloud-specific deployment, tenant
+  authentication, or a new persistence framework. Optional BM25/hybrid ranking now operates over
+  the existing eligible span set; baseline selection remains the default. Organization-scale
+  persistence and identity are separate unfinished deployment capabilities.
 - Claimed benchmark accuracy for Ali Ghodsi, Matei Zaharia, Jensen Huang, or any other person without
   a reviewed, licensed corpus and human evaluation. Included named-leader benchmark manifests are
   evaluation templates, not endorsement or authenticity evidence.

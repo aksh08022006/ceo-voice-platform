@@ -11,10 +11,14 @@ requires-python = ">=3.13,<3.14"
 license = "LicenseRef-Proprietary"
 authors = [{ name = "CEO Voice Platform Engineering" }]
 dependencies = [
+    "certifi>=2025.1.31",
+    "cryptography>=46,<51",
     "fastapi>=0.116,<1",
     "httpx>=0.28,<1",
     "pydantic>=2.12,<3",
     "pydantic-settings>=2.14,<3",
+    "psycopg[binary]>=3.2,<4",
+    "PyJWT[crypto]>=2.10,<3",
     "uvicorn[standard]>=0.35,<1",
 ]
 

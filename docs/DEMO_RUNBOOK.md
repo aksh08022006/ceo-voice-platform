@@ -93,12 +93,12 @@ action—without rewriting everything.
 **Say:**
 
 > The expected workflow includes a human editor. Re-Voice compares the generated and edited drafts,
-> detects protected regions, and strengthens style only where it is safe. It preserves meaning,
-> paragraph order, argument structure, factual content, formatting, links, call-to-action intent,
-> and thread boundaries.
+> detects protected regions, and attempts to restore style within those boundaries. It protects
+> unchanged lines, formatting, recognized factual anchors, calls to action, and thread boundaries.
+> The editor still reviews meaning and intent: lexical preservation cannot prove semantic equivalence.
 
 Run Re-Voice and show the comparison plus the report: what changed, what stayed protected, which
-voice features were strengthened, and confidence.
+voice features were targeted, and confidence.
 
 ### 3:10–3:45 — Independent evaluation
 

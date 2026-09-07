@@ -1,5 +1,6 @@
 """FastAPI application wiring for browser product workflows."""
 
+import re
 from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from uuid import UUID, uuid4
@@ -7,19 +8,30 @@ from uuid import UUID, uuid4
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.concurrency import run_in_threadpool
 
 from ceo_voice.config import Settings, get_settings
 from ceo_voice.core.constants import Environment
 from ceo_voice.core.exceptions import ApplicationError, ConfigurationError
 from ceo_voice.core.logging import configure_logging, request_context
 from ceo_voice.generation import HttpxJsonTransport
-from ceo_voice.models.enums import ContentType
+from ceo_voice.generation.fidelity import FidelityReviewer
+from ceo_voice.generation.fidelity_contracts import BriefSource, FidelityPolicy, FidelityReview
+from ceo_voice.models.communication import CommentContext
+from ceo_voice.retrieval.enums import EvidencePurpose
 from ceo_voice.services import create_model_provider, load_published_profile_catalog
+from ceo_voice.services.retrieval_ranking import ConfiguredRetrievalRanking
 from ceo_voice.showcase import ShowcaseWorkflowService
+from ceo_voice.showcase.continuation import ContinuationError, WorkflowContinuation
 from ceo_voice.showcase.service import WorkflowSession
+from ceo_voice.workspace import PostgresDatabase, WorkflowRepository
+from ceo_voice.workspace.schema import SCHEMA_VERSION
 
+from .authentication import AccessError, NeonIdentityReader, TokenVerifier, WorkspaceAccess
 from .profile_analytics import project_profile_analytics
 from .schemas import (
+    BriefReviewFinding,
+    ContinueWorkflowRequest,
     DimensionResponse,
     EvidenceResponse,
     GenerateWorkflowRequest,
@@ -27,6 +39,7 @@ from .schemas import (
     MetricResponse,
     ProfileAnalyticsResponse,
     ProfileResponse,
+    ReviewWorkflowTextRequest,
     ReVoiceWorkflowRequest,
     WalkthroughResponse,
     WorkflowResponse,
@@ -51,11 +64,17 @@ DEVELOPMENT_DISCLAIMER = (
 def create_app(
     settings: Settings | None = None,
     service: ShowcaseWorkflowService | None = None,
+    *,
+    workspace_access: WorkspaceAccess | None = None,
+    workspace_repository: WorkflowRepository | None = None,
+    fidelity_reviewer: FidelityReviewer | None = None,
 ) -> FastAPI:
     """Create an isolated application with injected configuration and workflow service."""
 
     resolved = settings or get_settings()
     transport: HttpxJsonTransport | None = None
+    reviewer = fidelity_reviewer
+    repository: WorkflowRepository | None = workspace_repository
     if service is not None:
         workflows = service
     elif resolved.api.published_profile_catalog is not None and not resolved.model.enabled:
@@ -66,6 +85,31 @@ def create_app(
         transport = HttpxJsonTransport(
             timeout_seconds=resolved.model.request_timeout_seconds,
         )
+        provider = create_model_provider(resolved.model, transport)
+        if (
+            resolved.model.brief_review_enabled
+            and not resolved.workspace.enabled
+            and reviewer is None
+        ):
+            reviewer = FidelityReviewer(
+                provider,
+                policy=FidelityPolicy(
+                    enabled=True,
+                    review_format="sentence_verdicts",
+                    failure_behavior="return_for_review",
+                    model=resolved.model.generation_model,
+                    maximum_output_tokens=6_000,
+                ),
+            )
+        if resolved.workspace.enabled and reviewer is None:
+            reviewer = FidelityReviewer(
+                provider,
+                policy=FidelityPolicy(
+                    enabled=True,
+                    failure_behavior="return_for_review",
+                    model=resolved.workspace.fidelity_model or resolved.model.generation_model,
+                ),
+            )
         published_bundles = (
             load_published_profile_catalog(resolved.api.published_profile_catalog)
             if resolved.api.published_profile_catalog is not None
@@ -76,15 +120,25 @@ def create_app(
         ):
             raise ConfigurationError("development profile artifacts are forbidden in production")
         workflows = ShowcaseWorkflowService(
-            provider=create_model_provider(resolved.model, transport),
+            artifact_storage=resolved.api.artifact_storage,
+            provider=provider,
             model=resolved.model.generation_model,
             model_context_tokens=resolved.model.context_window_tokens,
             maximum_output_tokens=resolved.model.maximum_output_tokens,
-            maximum_provider_retries=resolved.model.max_retries,
+            maximum_provider_retries=(
+                0 if resolved.workspace.enabled else resolved.model.max_retries
+            ),
+            fidelity_reviewer=reviewer,
             published_bundles=published_bundles,
+            retrieval_ranking=ConfiguredRetrievalRanking(
+                resolved.retrieval, resolved.model, transport
+            ),
         )
     else:
-        workflows = ShowcaseWorkflowService()
+        workflows = ShowcaseWorkflowService(
+            artifact_storage=resolved.api.artifact_storage,
+            retrieval_ranking=ConfiguredRetrievalRanking(resolved.retrieval, resolved.model),
+        )
 
     @asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -93,6 +147,8 @@ def create_app(
             output_format=resolved.logging.format,
             service_name=resolved.application.service_name,
         )
+        if resolved.workspace.enabled and repository is not None:
+            await run_in_threadpool(_verify_workspace_schema, repository)
         yield
         if transport is not None:
             await transport.aclose()
@@ -106,22 +162,109 @@ def create_app(
     )
     application.state.workflows = workflows
     application.state.settings = resolved
-    application.add_middleware(
-        CORSMiddleware,
-        allow_origins=list(resolved.api.allowed_origins),
-        allow_credentials=False,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type", "X-Request-ID"],
+    continuation = (
+        WorkflowContinuation(
+            resolved.api.continuation_key.get_secret_value(),
+            workflows.published_bundles,
+            ttl_seconds=resolved.api.continuation_ttl_seconds,
+        )
+        if resolved.api.continuation_key is not None and workflows.published_bundles
+        else None
     )
+
+    def project(session: WorkflowSession) -> WorkflowResponse:
+        result = _project(session)
+        if continuation is not None:
+            result.continuation_token = continuation.seal(session)
+            result.continuation_expires_in_seconds = resolved.api.continuation_ttl_seconds
+        return result
+
+    def resume(session_id: UUID, token: str | None) -> WorkflowSession:
+        if continuation is None:
+            return _session_or_404(workflows, session_id)
+        if token is None:
+            raise HTTPException(
+                status_code=401,
+                detail="This workflow requires its continuation token from the original browser tab.",
+            )
+        try:
+            return workflows.resume(continuation.open(token, session_id))
+        except ContinuationError as exc:
+            raise HTTPException(status_code=410, detail=exc.message) from exc
+
+    access = workspace_access
+    if resolved.workspace.enabled:
+        from .editor import create_editor_router
+
+        if continuation is None or reviewer is None:
+            raise ConfigurationError(
+                "workspace requires published profiles, continuation and claim review"
+            )
+        assert resolved.workspace.database_url is not None
+        assert resolved.workspace.encryption_key is not None
+        repository = workspace_repository or WorkflowRepository(
+            PostgresDatabase(resolved.workspace.database_url.get_secret_value())
+        )
+        access = access or WorkspaceAccess(
+            resolved.workspace,
+            repository,
+            NeonIdentityReader(resolved.workspace.database_url.get_secret_value()),
+            TokenVerifier(resolved.workspace),
+        )
+        application.state.workspace_repository = repository
+        application.include_router(
+            create_editor_router(
+                repository=repository,
+                service=workflows,
+                continuation=continuation,
+                reviewer=reviewer,
+                encryption_key=resolved.workspace.encryption_key.get_secret_value(),
+                workspace_id=resolved.workspace.workspace_id,
+                allowed_profiles=resolved.workspace.allowed_profiles,
+                maximum_runs_per_hour=resolved.workspace.maximum_runs_per_hour,
+                run_lease_seconds=resolved.workspace.run_lease_seconds,
+            )
+        )
 
     @application.middleware("http")
     async def request_id_middleware(
         request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
-        identifier = request.headers.get("X-Request-ID") or uuid4().hex
+        supplied_identifier = request.headers.get("X-Request-ID", "")
+        identifier = (
+            supplied_identifier
+            if re.fullmatch(r"[A-Za-z0-9_-]{1,64}", supplied_identifier)
+            else uuid4().hex
+        )
+        response: Response
         with request_context(identifier):
-            response = await call_next(request)
+            try:
+                protected = (
+                    resolved.workspace.enabled
+                    and request.url.path.startswith("/api/v1/")
+                    and request.url.path != "/api/v1/health"
+                )
+                if protected and request.method != "OPTIONS":
+                    assert access is not None
+                    request.state.actor = await run_in_threadpool(
+                        access.authorize, request.headers.get("Authorization")
+                    )
+                    if request.url.path.startswith("/api/v1/workflows"):
+                        response = JSONResponse(
+                            status_code=410,
+                            content={
+                                "detail": "Open the saved editor workspace to create or revise drafts."
+                            },
+                        )
+                    else:
+                        response = await call_next(request)
+                else:
+                    response = await call_next(request)
+            except AccessError as exc:
+                response = JSONResponse(status_code=exc.status_code, content={"detail": str(exc)})
         response.headers["X-Request-ID"] = identifier
+        if request.url.path.startswith("/api/v1/"):
+            response.headers["Cache-Control"] = "no-store"
         return response
 
     @application.exception_handler(ApplicationError)
@@ -201,29 +344,120 @@ def create_app(
             session = await workflows.generate(
                 profile_slug=value.profile_slug,
                 platform=value.platform,
-                content_type=ContentType.POST,
+                content_type=value.content_type,
+                comment_context=(
+                    CommentContext(parent_post=value.parent_post, reply_intent=value.reply_intent)
+                    if value.parent_post is not None and value.reply_intent is not None
+                    else None
+                ),
                 idea=value.idea,
+                expression=value.expression,
                 constraints=(),
+                thread_post_count=value.thread_post_count,
+                virality_influence=value.virality_influence,
+                minimum_words=value.minimum_words,
+                maximum_words=value.maximum_words,
             )
         except KeyError as exc:
             raise HTTPException(status_code=404, detail="profile not found") from exc
-        return _project(session)
+        return project(session)
 
     @application.get("/api/v1/workflows/{session_id}", response_model=WorkflowResponse)
     async def get_workflow(session_id: UUID) -> WorkflowResponse:
-        return _project(_session_or_404(workflows, session_id))
+        return project(resume(session_id, None))
+
+    @application.post("/api/v1/workflows/{session_id}/resume", response_model=WorkflowResponse)
+    async def resume_workflow(session_id: UUID, value: ContinueWorkflowRequest) -> WorkflowResponse:
+        return project(resume(session_id, value.continuation_token))
 
     @application.post("/api/v1/workflows/{session_id}/revoice", response_model=WorkflowResponse)
     async def revoice(session_id: UUID, value: ReVoiceWorkflowRequest) -> WorkflowResponse:
-        _session_or_404(workflows, session_id)
-        return _project(await workflows.revoice(session_id, value.content))
+        session = resume(session_id, value.continuation_token)
+        if (
+            value.expected_revision is not None
+            and value.expected_revision != session.revision_count
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="A newer revision is available. Reload the current draft before re-voicing.",
+            )
+        return project(await workflows.revoice(session_id, value.content, value.editor_note))
 
     @application.post("/api/v1/workflows/{session_id}/evaluate", response_model=WorkflowResponse)
-    async def evaluate(session_id: UUID) -> WorkflowResponse:
-        _session_or_404(workflows, session_id)
-        return _project(await workflows.evaluate(session_id))
+    async def evaluate(
+        session_id: UUID, value: ContinueWorkflowRequest | None = None
+    ) -> WorkflowResponse:
+        resume(session_id, value.continuation_token if value else None)
+        return project(await workflows.evaluate(session_id))
 
+    @application.post("/api/v1/workflows/{session_id}/brief-review", response_model=FidelityReview)
+    async def review_workflow_text(
+        session_id: UUID, value: ReviewWorkflowTextRequest
+    ) -> FidelityReview:
+        session = resume(session_id, value.continuation_token)
+        if reviewer is None:
+            raise HTTPException(status_code=409, detail="Brief review is not enabled.")
+        context = session.outcome.artifacts.context
+        retrieval = session.outcome.artifacts.retrieval
+        if context is None or retrieval is None:
+            raise HTTPException(status_code=409, detail="The saved brief is unavailable.")
+        sources = [
+            BriefSource(source_id="request.topic", authority="brief", text=context.intent.topic)
+        ]
+        sources.extend(
+            BriefSource(
+                source_id=f"factual:{item.evidence_id}",
+                authority="factual_source",
+                text=item.content,
+            )
+            for item in retrieval.evidence
+            if EvidencePurpose.FACTUAL_SUPPORT in item.purposes
+        )
+        sources.extend(
+            BriefSource(source_id=item.constraint_id, authority="constraint", text=str(item.value))
+            for item in context.constraints.constraints
+            if item.source == "generation_request"
+        )
+        direction = context.intent.expression
+        if direction:
+            sources.extend(
+                BriefSource(source_id=f"expression.{name}", authority="constraint", text=text)
+                for name, text in (
+                    ("viewpoint", direction.viewpoint),
+                    ("rationale", direction.rationale),
+                )
+                if text
+            )
+        if context.intent.comment_context:
+            sources.append(
+                BriefSource(
+                    source_id="comment.parent_post",
+                    authority="attributed_context",
+                    text=context.intent.comment_context.parent_post,
+                )
+            )
+        return await reviewer.review_sources(
+            value.content, request_id=uuid4(), sources=tuple(sources)
+        )
+
+    # CORS must also wrap authentication failures so the separate frontend can read 401/403.
+    application.add_middleware(
+        CORSMiddleware,
+        allow_origins=list(resolved.api.allowed_origins),
+        allow_credentials=False,
+        allow_methods=["GET", "POST"],
+        allow_headers=["Content-Type", "X-Request-ID", "Authorization", "Idempotency-Key"],
+        expose_headers=["X-Request-ID"],
+    )
     return application
+
+
+def _verify_workspace_schema(repository: WorkflowRepository) -> None:
+    """Check the deployed dependency without migrating or creating records at startup."""
+    with repository.database.transaction() as transaction:
+        versions = transaction.all("SELECT version FROM cv_schema_migrations")
+    if {row["version"] for row in versions} != {SCHEMA_VERSION}:
+        raise ConfigurationError("workspace database requires its explicit schema migration")
 
 
 def _ensure_available(settings: Settings, service: ShowcaseWorkflowService) -> None:
@@ -246,6 +480,7 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     report = draft.report
     evaluation = session.evaluation
     revoice = session.revoiced
+    comment = artifacts.context.intent.comment_context if artifacts.context else None
     revoice_attempts = revoice.report.attempts if revoice else ()
     last_revoice_validation = revoice_attempts[-1].validation if revoice_attempts else None
     voice = tuple(
@@ -276,6 +511,12 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
     )
     return WorkflowResponse(
         session_id=session.id,
+        expression=artifacts.context.intent.expression if artifacts.context else None,
+        expression_profile=(
+            artifacts.context.intent.expression_profile if artifacts.context else None
+        ),
+        revision_count=session.revision_count,
+        current_candidate_id=revoice.id if revoice else draft.id,
         profile_slug=session.profile.slug,
         profile_name=session.profile.name,
         platform=artifacts.context.platform.platform.value if artifacts.context else "unknown",
@@ -284,7 +525,10 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
         ),
         content_type=artifacts.context.intent.content_type.value if artifacts.context else "post",
         virality_influence=artifacts.context.virality.influence if artifacts.context else 0.0,
-        thread=draft.thread,
+        content_kind="comment" if comment else "original_post",
+        parent_post=comment.parent_post if comment else None,
+        reply_intent=comment.reply_intent if comment else None,
+        thread=revoice.thread if revoice else draft.thread,
         content=draft.content,
         edited_content=session.edited.content if session.edited else None,
         revoiced_content=revoice.content if revoice else None,
@@ -296,7 +540,8 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
                 value=str(report.total_usage.input_tokens + report.total_usage.output_tokens),
             ),
             MetricResponse(
-                label="Validation", value="Passed" if report.final_validation.valid else "Failed"
+                label="Mechanical checks",
+                value="Passed" if report.final_validation.valid else "Failed",
             ),
         ),
         voice_features=voice,
@@ -316,6 +561,24 @@ def _project(session: WorkflowSession) -> WorkflowResponse:
             bool(last_revoice_validation and not last_revoice_validation.valid) if revoice else None
         ),
         revoice_attempt_count=len(revoice_attempts) if revoice else None,
+        generation_call_count=report.generation_call_count,
+        fidelity_call_count=report.fidelity_call_count,
+        initial_brief_review_status=(
+            report.fidelity_review.status if report.fidelity_review else None
+        ),
+        initial_brief_review_error=(
+            report.fidelity_review.error_code if report.fidelity_review else None
+        ),
+        initial_brief_review_findings=tuple(
+            BriefReviewFinding(text=claim.span.text, verdict=claim.verdict, reason=claim.reason)
+            for unit in (
+                report.fidelity_review.assessment.units
+                if report.fidelity_review and report.fidelity_review.assessment
+                else ()
+            )
+            for claim in unit.claims
+            if claim.verdict != "supported"
+        ),
         evaluation_score=round(evaluation.overall_score * 100, 1) if evaluation else None,
         evaluation_status=evaluation.status.value if evaluation else None,
         dimensions=(

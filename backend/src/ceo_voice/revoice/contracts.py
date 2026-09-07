@@ -34,7 +34,7 @@ class ReVoicePolicy(ContractModel):
     """Conservative limits governing one restoration operation."""
 
     version: ReVoiceEngineVersion = ReVoiceEngineVersion(major=1, minor=0, patch=0)
-    prompt_version: NonEmptyStr = "revoice-prompt/1.0.0"
+    prompt_version: NonEmptyStr = "revoice-prompt/1.1.0"
     provider: ProviderName
     model: NonEmptyStr
     model_context_tokens: int = Field(default=32_000, ge=512)
@@ -49,25 +49,6 @@ class ReVoicePolicy(ContractModel):
         if self.maximum_output_tokens >= self.model_context_tokens:
             raise ValueError("output budget must be smaller than model context")
         return self
-
-
-class EditedDraft(ContractModel):
-    """Human revision paired with the exact generated draft it modified."""
-
-    original: GeneratedDraft
-    content: NonBlankText
-    edited_at: UtcDatetime
-
-
-class ReVoiceInput(ContractModel):
-    """Complete sealed input needed to restore voice without hidden lookups."""
-
-    edited_draft: EditedDraft
-    context: GenerationContext
-    retrieval: RetrievalBundle
-    voice_profile: PublishedVoiceProfile
-    virality_profile: ViralityProfile
-    requested_at: UtcDatetime
 
 
 class TextChange(ContractModel):
@@ -186,3 +167,41 @@ class ReVoicedDraft(ContractModel):
     thread: tuple[NonBlankText, ...]
     report: ReVoiceReport
     created_at: UtcDatetime
+
+
+class EditedDraft(ContractModel):
+    """Human edit with the initial generation and immediate prior accepted revision."""
+
+    original: GeneratedDraft
+    content: NonBlankText
+    edited_at: UtcDatetime
+    editor_note: str | None = Field(
+        default=None, max_length=1_000, exclude_if=lambda value: value is None
+    )
+    previous_revision: ReVoicedDraft | None = None
+
+    @model_validator(mode="after")
+    def validate_previous_revision(self) -> Self:
+        previous = self.previous_revision
+        if previous is not None and (
+            previous.original_draft_id != self.original.id
+            or previous.report.original_draft_id != self.original.id
+            or previous.report.retrieval_bundle_id != self.original.report.retrieval_bundle_id
+        ):
+            raise ValueError("previous revision must belong to the original generated draft")
+        return self
+
+    @property
+    def baseline_content(self) -> str:
+        return self.previous_revision.content if self.previous_revision else self.original.content
+
+
+class ReVoiceInput(ContractModel):
+    """Complete sealed input needed to restore voice without hidden lookups."""
+
+    edited_draft: EditedDraft
+    context: GenerationContext
+    retrieval: RetrievalBundle
+    voice_profile: PublishedVoiceProfile
+    virality_profile: ViralityProfile
+    requested_at: UtcDatetime

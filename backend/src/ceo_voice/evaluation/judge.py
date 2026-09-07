@@ -97,8 +97,15 @@ class StructuredLLMJudge:
         )
 
     def _render(self, value: EvaluationInput) -> str:
-        payload = {
+        payload: dict[str, JsonValue] = {
             "candidate": value.draft.content,
+            "request": {
+                "topic": value.context.intent.topic,
+                "objective": value.context.intent.objective,
+                "audience": value.context.intent.audience,
+                "platform": value.context.intent.platform.value,
+                "content_type": value.context.intent.content_type.value,
+            },
             "voice_targets": [
                 {
                     "feature_id": item.feature_id,

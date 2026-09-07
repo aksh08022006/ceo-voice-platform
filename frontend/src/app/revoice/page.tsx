@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
+import { AUTH_ENABLED } from "@/lib/auth/config";
 
 import { RevoiceWorkspace } from "@/components/revoice-workspace";
 
 export const metadata: Metadata = { title: "Re-Voice" };
 
 export default function RevoicePage() {
+  if (AUTH_ENABLED) redirect("/workspace");
   return (
     <div className="page-shell py-16 sm:py-24">
       <header className="mb-14 max-w-3xl sm:mb-20">
@@ -14,8 +17,8 @@ export default function RevoicePage() {
           Keep the edit. Restore the voice.
         </h1>
         <p className="mt-6 max-w-2xl text-base leading-7 text-muted-foreground">
-          Re-Voice modifies only eligible regions. Facts, structure, formatting, and human intent are
-          protected before a model is called.
+          Re-Voice checks edited regions, paragraph order, and recognized anchors such as names,
+          numbers, and links. Review the result for meaning and voice.
         </p>
       </header>
       <Suspense fallback={<p className="text-muted-foreground">Loading workflow…</p>}><RevoiceWorkspace /></Suspense>

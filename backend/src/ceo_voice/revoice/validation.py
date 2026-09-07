@@ -5,6 +5,7 @@ from difflib import SequenceMatcher
 
 from ceo_voice.context.enums import ConstraintCategory, ConstraintOperator, ConstraintStrength
 from ceo_voice.core.exceptions import ReVoiceError
+from ceo_voice.models.enums import ContentType
 from ceo_voice.prompts import THREAD_SEPARATOR
 from ceo_voice.revoice.contracts import (
     RegionPlan,
@@ -14,6 +15,7 @@ from ceo_voice.revoice.contracts import (
     ReVoiceValidation,
 )
 from ceo_voice.revoice.enums import ProtectionKind, ReVoiceValidationCode
+from ceo_voice.services.expression import emoji_sequences
 from ceo_voice.virality.enums import PublicationStatus
 from ceo_voice.voice.enums import ReleaseStatus
 
@@ -27,7 +29,7 @@ def validate_revoice_input(value: ReVoiceInput) -> None:
 
     voice_release = value.voice_profile.managed_release.release
     vkr_release = value.virality_profile.publication.release
-    checks = (
+    checks: tuple[tuple[bool, str], ...] = (
         (value.edited_draft.original.request_id == value.context.intent.request_id, "request"),
         (
             value.edited_draft.original.report.retrieval_bundle_id == value.retrieval.bundle_id,
@@ -47,6 +49,13 @@ def validate_revoice_input(value: ReVoiceInput) -> None:
         (value.voice_profile.managed_release.status is ReleaseStatus.ACTIVE, "hvm_status"),
         (value.virality_profile.publication.status is PublicationStatus.ACTIVE, "vkr_status"),
     )
+    previous = value.edited_draft.previous_revision
+    if previous is not None:
+        checks += (
+            (previous.report.context_id == value.context.context_id, "previous_revision_context"),
+            (previous.report.hvm_release_id == voice_release.id, "previous_revision_hvm"),
+            (previous.report.vkr_release_id == vkr_release.id, "previous_revision_vkr"),
+        )
     for valid, boundary in checks:
         if not valid:
             raise ReVoiceError(
@@ -84,6 +93,15 @@ class ReVoiceValidator:
         if len(edited_lines) == len(candidate_lines):
             self._add(
                 any(
+                    emoji_sequences(before) != emoji_sequences(after)
+                    for before, after in zip(edited_lines, candidate_lines, strict=True)
+                ),
+                ReVoiceValidationCode.FORMATTING_CHANGED,
+                "editor emoji choice, order or line placement changed",
+                findings,
+            )
+            self._add(
+                any(
                     self._format_signature(before) != self._format_signature(after)
                     for before, after in zip(edited_lines, candidate_lines, strict=True)
                 ),
@@ -115,7 +133,10 @@ class ReVoiceValidator:
         )
         maximum_posts = value.context.platform.maximum_thread_posts
         self._add(
-            maximum_posts is not None and len(posts) > maximum_posts,
+            (maximum_posts is not None and len(posts) > maximum_posts)
+            or (len(posts) > 1 and not value.context.platform.thread_output_supported)
+            or (len(posts) > 1 and value.context.intent.content_type is not ContentType.THREAD)
+            or (len(posts) < 2 and value.context.intent.content_type is ContentType.THREAD),
             ReVoiceValidationCode.THREAD_LENGTH,
             "thread exceeds its platform post limit",
             findings,

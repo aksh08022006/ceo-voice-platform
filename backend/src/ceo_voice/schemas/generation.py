@@ -5,8 +5,10 @@ from uuid import UUID, uuid4
 from pydantic import Field, model_validator
 
 from ceo_voice.models.base import NonBlankText, NonEmptyStr, UtcDatetime
+from ceo_voice.models.communication import CommentContext
 from ceo_voice.models.enums import ContentType, GenerationStatus, Platform
 from ceo_voice.models.evaluation import EvaluationResult
+from ceo_voice.models.expression import ExpressionDirection, ExpressionProfile
 from ceo_voice.schemas.base import BoundarySchema
 
 
@@ -23,6 +25,12 @@ class GenerationRequest(BoundarySchema):
     )
     tenant_id: UUID = Field(description="Tenant authorizing and owning the request.")
     ceo_id: UUID = Field(description="Leader whose voice should govern the output.")
+    author_display_name: NonEmptyStr | None = Field(
+        default=None,
+        max_length=200,
+        exclude_if=lambda value: value is None,
+        description="Editorial author label supplied by the selected profile, not factual authority.",
+    )
     voice_profile_id: UUID = Field(description="Explicit voice-profile lineage to use.")
     voice_profile_version: int = Field(
         ge=1,
@@ -57,7 +65,18 @@ class GenerationRequest(BoundarySchema):
         le=2_000,
         description="Optional deterministic upper word-count bound.",
     )
-    topic: NonEmptyStr = Field(description="Subject the content should address.")
+    comment_context: CommentContext | None = Field(
+        default=None,
+        exclude_if=lambda value: value is None,
+        description="Attributed parent text and editor-selected intent for a single-post comment.",
+    )
+    topic: NonEmptyStr = Field(description="Subject or supplied comment contribution.")
+    expression: ExpressionDirection | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    expression_profile: ExpressionProfile | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     objective: NonEmptyStr = Field(description="Intended communication outcome.")
     audience: NonEmptyStr = Field(description="Intended reader segment.")
     source_document_ids: tuple[UUID, ...] = Field(
@@ -79,6 +98,16 @@ class GenerationRequest(BoundarySchema):
     def validate_output_shape(self) -> "GenerationRequest":
         """Keep thread and word bounds internally consistent before orchestration."""
 
+        if self.expression_profile is not None and (
+            self.expression_profile.leader_id != self.ceo_id
+            or self.expression_profile.platform != self.platform
+        ):
+            raise ValueError("expression profile must match the leader and platform")
+        if self.comment_context is not None and (
+            self.content_type is not ContentType.POST
+            or self.platform not in {Platform.X, Platform.LINKEDIN}
+        ):
+            raise ValueError("comments require a single X or LinkedIn post")
         if self.content_type is ContentType.THREAD:
             if self.platform is not Platform.X:
                 raise ValueError("thread output is supported only for X")

@@ -11,10 +11,16 @@ npm ci
 npm run dev
 ```
 
-Open `http://localhost:3000`. The current data adapter is an explicitly synthetic in-browser
-fixture because the backend release does not expose an HTTP API. Replace functions in
-`src/lib/demo-data.ts` and mutation adapters with a typed API client when that transport exists;
-page and component contracts do not depend on Python internals.
+Start the backend from the repository root with `make api`, then open `http://localhost:3000`.
+The typed client in `src/lib/api.ts` calls the FastAPI `/api/v1` endpoints for profiles, generation,
+Re-Voice, and evaluation. It defaults to `http://127.0.0.1:8000`; set
+`NEXT_PUBLIC_API_BASE_URL` when building for another API origin.
+
+The backend selects showcase fixtures, development profiles, or reviewed published bundles.
+Provider and retrieval settings stay on the backend; no API key belongs in a frontend environment
+variable. The Generate form accepts only profile, platform, and idea. Workflow sessions currently
+live in API process memory, so restarting the API loses those sessions. See the root
+[quickstart](../README.md#quickstart) and [operations guide](../docs/OPERATIONS.md).
 
 ## Quality gate
 

@@ -2,21 +2,64 @@
 
 import re
 from datetime import datetime
+from typing import Literal
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from ceo_voice.models.enums import Platform
+from ceo_voice.models.communication import ReplyIntent
+from ceo_voice.models.enums import ContentType, Platform
+from ceo_voice.models.expression import ExpressionDirection, ExpressionProfile
 
 
 class GenerateWorkflowRequest(BaseModel):
-    """The three product inputs defined by the Draft Generator contract."""
+    """Three primary product inputs with bounded optional format controls."""
 
     model_config = ConfigDict(extra="forbid")
 
     profile_slug: str = Field(min_length=1)
-    platform: Platform
+    platform: Literal[Platform.X, Platform.LINKEDIN]
     idea: str = Field(min_length=20, max_length=1_200)
+    content_kind: Literal["original_post", "comment"] = "original_post"
+    parent_post: str | None = Field(default=None, min_length=1, max_length=8_000)
+    reply_intent: ReplyIntent | None = None
+    content_type: Literal[ContentType.POST, ContentType.THREAD] = ContentType.POST
+    thread_post_count: int | None = Field(default=None, ge=2, le=5)
+    virality_influence: float = Field(default=0.12, ge=0, le=0.25)
+    minimum_words: int | None = Field(default=None, ge=1, le=2_000)
+    maximum_words: int | None = Field(default=None, ge=1, le=2_000)
+    expression: ExpressionDirection | None = None
+
+    @model_validator(mode="after")
+    def require_consistent_output_shape(self) -> "GenerateWorkflowRequest":
+        if self.content_kind == "comment":
+            if (
+                self.parent_post is None
+                or not self.parent_post.strip()
+                or self.reply_intent is None
+            ):
+                raise ValueError("comments require the parent post and a reply intent")
+            if self.content_type is not ContentType.POST:
+                raise ValueError("comments are single posts, not threads")
+            if self.platform is Platform.LINKEDIN:
+                self.minimum_words = self.minimum_words if self.minimum_words is not None else 40
+                self.maximum_words = self.maximum_words if self.maximum_words is not None else 100
+        elif self.parent_post is not None or self.reply_intent is not None:
+            raise ValueError("parent_post and reply_intent require comment output")
+        if self.content_type is ContentType.THREAD:
+            if self.platform is not Platform.X:
+                raise ValueError("threads are supported only for X")
+            if self.thread_post_count is None:
+                raise ValueError("thread requests require a post count between 2 and 5")
+        elif self.thread_post_count is not None:
+            raise ValueError("thread_post_count requires thread output")
+        if (
+            self.minimum_words is not None
+            and self.maximum_words is not None
+            and self.minimum_words > self.maximum_words
+        ):
+            raise ValueError("minimum_words cannot exceed maximum_words")
+        return self
 
     @model_validator(mode="after")
     def require_subject_beyond_identity(self) -> "GenerateWorkflowRequest":
@@ -54,6 +97,25 @@ class ReVoiceWorkflowRequest(BaseModel):
     """Human-edited draft submitted to the Re-Voice engine."""
 
     content: str = Field(min_length=1, max_length=20_000)
+    editor_note: str | None = Field(default=None, max_length=1_000)
+    expected_revision: int | None = Field(default=None, ge=0)
+    continuation_token: str | None = Field(default=None, max_length=2_000_000)
+
+
+class ContinueWorkflowRequest(BaseModel):
+    continuation_token: str = Field(min_length=1, max_length=2_000_000)
+
+
+class ReviewWorkflowTextRequest(ContinueWorkflowRequest):
+    model_config = ConfigDict(extra="forbid")
+
+    content: str = Field(min_length=1, max_length=12_000)
+
+
+class BriefReviewFinding(BaseModel):
+    text: str
+    verdict: str
+    reason: str
 
 
 class MetricResponse(BaseModel):
@@ -80,11 +142,20 @@ class WorkflowResponse(BaseModel):
     """Compact product projection of the sealed workflow session."""
 
     session_id: UUID
+    expression: ExpressionDirection | None = None
+    expression_profile: ExpressionProfile | None = None
+    continuation_token: str | None = None
+    continuation_expires_in_seconds: int | None = None
+    revision_count: int = Field(default=0, ge=0)
+    current_candidate_id: UUID
     profile_slug: str
     profile_name: str
     platform: str
     platform_maximum_characters: int = Field(ge=1)
     content_type: str
+    content_kind: Literal["original_post", "comment"] = "original_post"
+    parent_post: str | None = None
+    reply_intent: ReplyIntent | None = None
     virality_influence: float
     thread: tuple[str, ...]
     content: str
@@ -101,6 +172,11 @@ class WorkflowResponse(BaseModel):
     revoice_applied: bool | None = None
     revoice_fallback_used: bool | None = None
     revoice_attempt_count: int | None = Field(default=None, ge=0)
+    generation_call_count: int = Field(default=0, ge=0)
+    fidelity_call_count: int = Field(default=0, ge=0)
+    initial_brief_review_status: str | None = None
+    initial_brief_review_error: str | None = None
+    initial_brief_review_findings: tuple[BriefReviewFinding, ...] = ()
     evaluation_score: float | None = None
     evaluation_status: str | None = None
     dimensions: tuple[DimensionResponse, ...] = ()

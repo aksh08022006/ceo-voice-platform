@@ -7,8 +7,8 @@ authorized, relevant to this request, and preserved through human editing?**
 
 The platform combines a typed Python 3.13 engine with an editorial Next.js 15 product interface,
 immutable HVM (voice) and VKR (structure) releases,
-deterministic context and retrieval, governed model boundaries, constraint-preserving Re-Voice, and
-independent evaluation. It does not reduce a person to a prose prompt and does not let prompt code
+deterministic context, optional BM25/hybrid evidence ranking, governed model boundaries,
+constraint-preserving Re-Voice, and blinded comparative evaluation. It does not reduce a person to a prose prompt and does not let prompt code
 reach into an entire profile.
 
 > Scientific and governance boundary: Tier-1 analyzers measure descriptive structure; they do not
@@ -27,6 +27,11 @@ draft impossible to audit after a human edits it.
 This project treats executive voice as governed knowledge, not prompt decoration. It keeps voice,
 structure, evidence, platform policy, intent, and user constraints separate until prompt rendering,
 then evaluates the result independently.
+
+For The Narrative Company, the intended outcome is recognizable writing for each client's declared
+voice, fewer editorial revisions, and preserved facts and intent. “Voice” means written expression
+here. Read the [product thesis and research roadmap](docs/NARRATIVE_PRODUCT_THESIS.md) for the
+customer workflow, what remains unproven, and the data needed to measure progress.
 
 ## Architecture
 
@@ -48,7 +53,9 @@ flowchart LR
 
 Voice, structure, evidence, user intent, platform rules, and negative constraints remain separately
 typed until the final prompt render. Every selected item retains a reason, confidence, priority,
-release reference, and evidence lineage. Only Generation and Re-Voice may call a model.
+release reference, and evidence lineage. Generation and Re-Voice own text-generation calls;
+evaluation may use an independent judge. Optional embedding calls run at a separate application
+boundary before pure retrieval and must be explicitly enabled.
 
 | Subsystem | Responsibility |
 |---|---|
@@ -56,10 +63,10 @@ release reference, and evidence lineage. Only Generation and Re-Voice may call a
 | HVM + analysis | Evidence-addressed feature observations, confidence, residuals, interactions, constraints, release governance |
 | Voice Profile Builder | Restartable corpus analysis, health checks, immutable publication, inspection and retrieval projection |
 | VKR | Independent structural patterns and observational engagement statistics without copying reusable wording |
-| Context + retrieval | Request-specific, platform-aware, confidence-gated compilation and compact deterministic evidence selection |
+| Context + retrieval | Request-specific, platform-aware, confidence-gated compilation and compact evidence selection with optional BM25 or hybrid ranking |
 | Generation | Prompt-last provider isolation, token budgeting, retry policy, post-processing, platform validation, full report |
 | Re-Voice | Diff analysis, protected regions, conservative restoration, constraint validation, change report |
-| Evaluation | Voice, structure, compliance, factual/edit preservation, readability, optional judge, benchmark and regression reports |
+| Evaluation | Voice, structure, compliance, factual/edit preservation, readability, optional judge, regression reports, and blinded human comparisons of supplied candidates |
 
 The detailed dependency rules and failure boundaries are in
 [Architecture Overview](docs/ARCHITECTURE.md). The audited assignment coverage is in
@@ -68,7 +75,7 @@ is in the [Product Walkthrough](docs/DEMO_RUNBOOK.md).
 
 ## Quickstart
 
-Prerequisites: CPython 3.13, Node.js 20+, Git, and `make` on macOS/Linux.
+Prerequisites: CPython 3.13, Node.js 20.9+, Git, and `make` on macOS/Linux.
 
 ### Run an existing checkout
 
@@ -102,7 +109,7 @@ interactive API documentation. Keep both terminal processes running while testin
 ### Fresh clone
 
 ```bash
-git clone https://github.com/aksh08022006/ceo-voice-platform.git
+git clone https://github.com/akshhkaushik/ceo-voice-platform.git
 cd ceo-voice-platform
 make setup
 make frontend-setup
@@ -301,6 +308,45 @@ bundled cases reuse synthetic content and make no fidelity claim. A valid real-p
 lawfully reviewed corpus, held-out samples, human ratings, agreement statistics, baselines, and
 confidence intervals.
 
+### Compare retrieval choices
+
+The default `baseline` preserves the existing authority-weighted selection. Enable BM25 lexical
+ranking without another provider:
+
+```bash
+CEO_VOICE_RETRIEVAL__MODE=bm25 make api
+```
+
+Hybrid mode fuses BM25 and cosine ranks from actual embeddings. It requires enabled
+OpenAI-compatible model access, an embedding model, and an operator-pinned embedding revision:
+
+```text
+CEO_VOICE_RETRIEVAL__MODE=hybrid
+CEO_VOICE_MODEL__EMBEDDING_MODEL=<approved-embedding-model>
+CEO_VOICE_RETRIEVAL__EMBEDDING_REVISION=<reviewed-model-revision>
+CEO_VOICE_RETRIEVAL__EMBEDDING_DIMENSIONS=1536
+```
+
+Set these in an ignored local environment file or the deployment's configuration system alongside
+the existing model settings. Embedding dimensions must match the selected model. Hybrid mode sends
+the request topic and the eligible evidence spans to the configured embedding provider; inputs,
+batches, and cache size are bounded. Missing or incompatible vectors fail rather than silently
+substituting a lexical score.
+
+Both modes rank the evidence spans already admitted by the compiled HVM/VKR context. They do not
+discover a larger corpus, search the web, or create a factual knowledge index. Authority, coverage,
+platform compatibility, diversity, and budgets still govern final selection. See
+[retrieval design](docs/retrieval-intelligence.md) and the
+[architecture decision](docs/adr/001-governed-retrieval-experiments.md).
+
+### Measure whether the change helps
+
+The experiment workflow validates declared training/context/held-out separation and creates
+seeded, blinded A/B ballots from actual supplied candidate outputs. Human ratings are scored per
+dimension against a common baseline with uncertainty estimates. It does not generate candidates,
+invent ratings, or certify real-person fidelity. The [experiment guide](docs/experiments.md) documents the exact
+`prepare` and `score` commands and private reviewer/analyst artifacts.
+
 ## Containers
 
 Build and run the cloud-neutral, non-root CLI image:
@@ -322,7 +368,7 @@ logs and disabled debug mode. See [Operations](docs/OPERATIONS.md).
 ```text
 backend/src/ceo_voice/
   acquisition/ ingestion/    analysis/     voice/         profiles/      virality/
-  context/     retrieval/    generation/   revoice/       evaluation/
+  context/     retrieval/    generation/   revoice/       evaluation/    experiments/
   config/      core/         models/       schemas/       utils/
 frontend/      Next.js App Router product interface and owned UI primitives
 configs/       environment-safe non-secret examples
@@ -362,8 +408,9 @@ logs, and backwards-compatible release schemas.
 - Virality statistics are descriptive associations, not causal claims or guaranteed tactics.
 - The HTTP API stores showcase workflow sessions in process memory. A multi-instance deployment
   requires a durable session repository and tenant authentication before exposing the endpoints.
-- Semantic retrieval, embeddings, and vector storage are deliberately absent; deterministic
-  retrieval remains the auditable baseline.
+- BM25 and hybrid ranking are optional experiments over existing eligible spans. Full-corpus
+  semantic discovery, a factual knowledge search service, and durable vector storage remain future
+  work. No measured voice-quality improvement is claimed without a held-out comparison.
 
 See the [Release Checklist](docs/RELEASE_CHECKLIST.md) for the concrete path from this reference
 release to an organization-operated production deployment.

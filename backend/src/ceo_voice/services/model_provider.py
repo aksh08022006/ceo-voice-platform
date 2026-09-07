@@ -38,5 +38,6 @@ def create_model_provider(settings: ModelSettings, transport: JsonTransport) -> 
     return GeminiProvider(
         transport,
         settings.api_key,
+        thinking_level=settings.gemini_thinking_level,
         **({"base_url": base_url} if base_url is not None else {}),
     )

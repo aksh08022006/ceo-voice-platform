@@ -6,8 +6,9 @@ The repository standardizes on CPython 3.13. Pinning one interpreter version kee
 the dependency lock, CI, and typing semantics aligned. A later runtime change should update
 `pyproject.toml`, `requirements.lock`, CI, and this document in the same pull request.
 
-No database, Node.js runtime, provider account, API key, or model access is needed for development,
-the quality gate, or the offline integration demonstration.
+No database, provider account, API key, or model access is needed for backend development,
+`make check`, or the offline integration demonstration. Frontend development and `make check-all`
+also require Node.js 20.9+ and the locked frontend dependencies; see the root README.
 
 ## First-time setup
 
@@ -161,8 +162,8 @@ Use structured `extra` fields for stable, non-sensitive identifiers. Do not inte
 full source documents, prompt content, or generated posts into logs. An operation should be logged
 at the boundary that owns it, not repeatedly at every layer.
 
-The request context can already correlate a local unit of work. HTTP middleware and worker
-adapters will establish it in future phases.
+Request context correlates work across the API and its application calls. Worker adapters should
+establish the same context at their entry point when introduced.
 
 ## Adding a module
 

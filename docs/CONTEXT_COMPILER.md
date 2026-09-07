@@ -192,7 +192,8 @@ and golden context regression fixtures.
   confidence. It does not semantically match arbitrary topics; doing that deterministically
   requires a governed intent-to-feature policy that does not yet exist.
 - VKR v1 supports social-post structures and descriptive associations only.
-- The default platform catalog covers LinkedIn and X single posts only.
+- The default platform catalog covers LinkedIn single posts and X single posts or request-pinned
+  threads of two to five posts.
 - Supplied retrieved text is retained in `GenerationContext`; access control and retention must be
   enforced by the future retriever and persistence adapter.
 - The compiler validates structural and governance contracts, not whether a future generated draft

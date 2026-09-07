@@ -12,6 +12,7 @@ class ProviderName(StrEnum):
 class PromptSectionKind(StrEnum):
     SYSTEM = "system"
     VOICE = "voice"
+    EXPRESSION = "expression"
     STRUCTURE = "structure"
     EVIDENCE = "evidence"
     REQUEST = "request"
@@ -31,6 +32,8 @@ class ValidationCode(StrEnum):
     TOPIC_ALIGNMENT = "topic_alignment"
     UNSAFE_CONTENT = "unsafe_content"
     LOW_VOICE_CONFIDENCE = "low_voice_confidence"
+    BRIEF_FIDELITY = "brief_fidelity"
+    EMOJI_POLICY = "emoji_policy"
 
 
 class AttemptKind(StrEnum):

@@ -1,5 +1,9 @@
 """Concrete asynchronous JSON transport for model-provider adapters."""
 
+import math
+import re
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 from time import monotonic
 from typing import cast
 
@@ -59,11 +63,13 @@ class HttpxJsonTransport:
         latency_ms = max(0, int((monotonic() - started) * 1000))
         if response.is_error:
             status = response.status_code
+            retry_after = _retry_after(response)
             raise ProviderError(
                 "model provider returned an HTTP error",
                 retryable=status in _RETRYABLE_STATUS_CODES or status >= 500,
                 details={
                     "status_code": status,
+                    **({"retry_after_seconds": retry_after} if retry_after is not None else {}),
                     "provider_request_id": _request_id(response),
                 },
             )
@@ -101,3 +107,30 @@ def _request_id(response: httpx.Response) -> str | None:
         str | None,
         response.headers.get("x-request-id") or response.headers.get("request-id"),
     )
+
+
+def _retry_after(response: httpx.Response) -> float | None:
+    """Read only a bounded delay, never retain the provider's error text."""
+    raw = response.headers.get("retry-after")
+    if raw:
+        try:
+            delay = float(raw)
+        except ValueError:
+            try:
+                date = parsedate_to_datetime(raw)
+                delay = (date - datetime.now(UTC)).total_seconds()
+            except (ValueError, TypeError, OverflowError):
+                delay = -1
+        if math.isfinite(delay) and delay >= 0:
+            return min(delay, 86_400)
+    if response.status_code == 429:
+        try:
+            details = response.json()["error"]["details"]
+            for item in details:
+                if item.get("@type") == "type.googleapis.com/google.rpc.RetryInfo":
+                    match = re.fullmatch(r"(\d+(?:\.\d+)?)s", str(item.get("retryDelay", "")))
+                    if match:
+                        return min(float(match[1]), 86_400)
+        except (ValueError, KeyError, TypeError, AttributeError):
+            pass
+    return None
