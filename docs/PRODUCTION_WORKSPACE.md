@@ -1,4 +1,8 @@
-# Production editorial workflow
+# Optional editorial workspace — paused
+
+**Current rollout decision, 7 September 2026:** the user requested that sign-in work stop. The existing Vercel URLs were restored to the working generator with no application sign-in. The workspace deployment flag is disabled and the frontend sign-in configuration has been removed. The code described below is retained for review but is not the active product. Do not re-enable it without a new product decision.
+
+The last live integration check reached JWT verification but was rejected for an issuer mismatch. That investigation was stopped at the user's request. No end-to-end saved-draft or named-approval success is claimed for this rollout.
 
 CEO Voice is being changed from an anonymous, browser-owned showcase into an authenticated editorial workspace. Its purpose is to help The Narrative Company draft and revise posts and replies in an executive's documented written style, while editors retain responsibility for factual claims and publication.
 
