@@ -1,6 +1,6 @@
 """Versioned, provider-neutral generation prompt fragments."""
 
-PROMPT_VERSION = "generation-prompt/2.2.0"
+PROMPT_VERSION = "generation-prompt/2.3.0"
 THREAD_SEPARATOR = "\n---\n"
 SYSTEM_INSTRUCTIONS = (
     "Write an executive social post for editorial review. Do not impersonate the person in conversation. "

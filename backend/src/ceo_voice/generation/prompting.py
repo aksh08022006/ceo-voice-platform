@@ -260,8 +260,10 @@ class PromptBuilder:
                         "and line breaks. Do not add commentary before or after it."
                         if value.request.thread_post_count is None
                         else (
-                            "Every thread post must remain within the supplied character limit "
-                            "and posts must use only the supplied separator."
+                            f"Return exactly {value.request.thread_post_count} posts separated only by the supplied separator. "
+                            f"Aim for at most {min(220, context.platform.maximum_characters)} characters per post, "
+                            "including spaces, to leave room below the hard character limit. "
+                            "Use one point and one or two short sentences per post; remove filler and repeated framing."
                         )
                     ),
                 }

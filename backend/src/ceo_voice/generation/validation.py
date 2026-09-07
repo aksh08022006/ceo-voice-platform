@@ -196,7 +196,7 @@ class OutputValidator:
                 f"thread must contain exactly {requested_posts} posts",
                 findings,
             )
-        for post in posts:
+        for post_index, post in enumerate(posts, start=1):
             character_count = len(post)
             maximum_characters = value.context.platform.maximum_characters
             self._add(
@@ -207,7 +207,7 @@ class OutputValidator:
                     else ValidationCode.PLATFORM_LENGTH
                 ),
                 (
-                    f"post has {character_count} characters; rewrite it to at most "
+                    f"post {post_index} has {character_count} characters; rewrite that post to at most "
                     f"{maximum_characters} characters"
                 ),
                 findings,
