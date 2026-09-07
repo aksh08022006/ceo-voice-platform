@@ -297,6 +297,26 @@ def test_analysis_detects_changes_and_protects_semantic_anchors() -> None:
     }
 
 
+def test_fully_protected_edited_call_to_action_does_not_call_model() -> None:
+    value = revoice_input(original="Original wording.", edited="Share this with the team.")
+    provider = FakeProvider(())
+    result = asyncio.run(engine(provider).restore(value))
+    assert provider.requests == []
+    assert result.content == value.edited_draft.content
+    assert result.report.regions.editable == ()
+    assert any(region.kind is ProtectionKind.CTA for region in result.report.regions.protected)
+
+
+def test_protecting_a_call_to_action_keeps_other_changed_prose_editable() -> None:
+    original = "Original thought.\n\nOriginal ending."
+    edited = "A revised thought.\n\nShare this with the team."
+    regions = RegionDetector().detect(edited, DifferenceAnalyzer().analyze(original, edited))
+    assert [region.line_index for region in regions.editable] == [0]
+    assert any(
+        region.line_index == 2 and region.kind is ProtectionKind.CTA for region in regions.protected
+    )
+
+
 def test_validator_rejects_format_structure_safety_budget_and_hard_constraint_drift() -> None:
     value = revoice_input(
         original="- Original line.\n\nStable ending.",

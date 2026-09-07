@@ -1,0 +1,686 @@
+{
+  "reviewer": "Astra, the assistant in this conversation",
+  "scope": "Qualitative review of specific outputs; not independent founder ratings or a calibrated authorship test.",
+  "production_decision": "Retain original generation path. Do not enable failed prompt-order or brief-only revision experiments.",
+  "runs": [
+    {
+      "run": "astra-review-baseline",
+      "structural_edit": {
+        "body_order_changed": false,
+        "note": "Three-paragraph draft; the old middle-only reversal was a no-op."
+      },
+      "cases": [
+        {
+          "name": "01-pdf-ali",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:42:57.094165+00:00",
+          "content": "Databricks just acquired Tabular, the company behind Apache Iceberg. This move highlights a clear trend in our industry: the most effective technology wins when it remains open. We believe that an open-source approach to data infrastructure provides the best path for innovation and long-term utility for our users.\n\nThis acquisition brings together the teams behind Apache Spark and Apache Iceberg under one roof. When you look at the technical history of these two projects, it is evident that both have been fundamental to how companies store and process massive amounts of information. By uniting the core contributors of both communities, we are aiming to create better outcomes for every organization managing complex data environments.\n\nThe strategic implication here is that we are doubling down on open standards. By removing friction between formats and simplifying how teams work with their data, we allow the market to focus on building rather than navigating proprietary lock-in. This is how we move the entire ecosystem forward. We are looking forward to seeing how these teams collaborate to solve the next generation of data challenges using open and extensible architecture.",
+          "word_count": 185,
+          "posts": [
+            1191
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "4019 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12338"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "02-pdf-matei",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:43:07.554003+00:00",
+          "content": "The AI industry is moving beyond the era of simply scaling up monolithic models. We see the next wave of progress coming from how we orchestrate multiple models, retrieval, and tools as compound AI systems.\n\n---\n\nThis architectural shift is why we are focused on Mosaic and our ML platform. It is not about making one single model bigger; it is about providing the infrastructure to compose these elements into a reliable, coherent system.\n\n---\n\nBuilding compound AI systems requires a platform that handles the complexity of managing models, data, and tools together. This is where we are directing our efforts to help teams move from experimentation to production.",
+          "word_count": 109,
+          "posts": [
+            206,
+            226,
+            220
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "4078 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "5645"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "03-pdf-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:43:16.380329+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share.\n\nThis acquisition brings together the teams behind Apache Spark and Apache Iceberg under one roof. When you look at the technical history of these two projects, it is evident that both have been fundamental to how companies store and process massive amounts of information. By uniting the core contributors of both communities, we are aiming to create better outcomes for every organization managing complex data environments.\n\nThe strategic implication here is that we are doubling down on open standards. By removing friction between formats and simplifying how teams work with their data, we allow the market to focus on building rather than navigating proprietary lock-in. This is how we move the entire ecosystem forward. We are looking forward to seeing how these teams collaborate to solve the next generation of data challenges using open and extensible architecture.",
+          "word_count": 160,
+          "posts": [
+            1015
+          ],
+          "revision": 1,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "4019 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12338"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "04-second-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:43:24.947638+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share. I want to keep that focus.\n\nThis acquisition brings together the teams behind Apache Spark and Apache Iceberg under one roof. When you look at the technical history of these two projects, it is evident that both have been fundamental to how companies store and process massive amounts of information. By uniting the core contributors of both communities, we are aiming to create better outcomes for every organization managing complex data environments.\n\nThe strategic implication here is that we are doubling down on open standards. By removing friction between formats and simplifying how teams work with their data, we allow the market to focus on building rather than navigating proprietary lock-in. This is how we move the entire ecosystem forward. We are looking forward to seeing how these teams collaborate to solve the next generation of data challenges using open and extensible architecture. 🙏",
+          "word_count": 167,
+          "posts": [
+            1044
+          ],
+          "revision": 2,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "4019 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12338"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "05-emotion-curious",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:43:35.998808+00:00",
+          "content": "Compound AI systems can blend models, retrieval, and tools to support certain applications. Yet, this approach isn't a universal improvement for every use case. When does the added complexity actually provide a clear advantage over simpler, single-model architectures?",
+          "word_count": 38,
+          "posts": [
+            268
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "curious",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "4664 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "11209"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "06-emotion-concerned",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-ohkmplmin-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:43:43.845960+00:00",
+          "content": "Compound AI systems that combine models, retrieval, and tools show potential for some applications. However, this approach is not a universal improvement. We must be cautious; complexity doesn't guarantee better outcomes across every task or use case.",
+          "word_count": 37,
+          "posts": [
+            251
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "concerned",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "1597 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "5565"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "run": "astra-review-prompt18",
+      "structural_edit": {
+        "original_paragraphs": 4,
+        "body_order_changed": true
+      },
+      "cases": [
+        {
+          "name": "01-pdf-ali",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:50:15.617192+00:00",
+          "content": "We recently acquired Tabular, the team behind Apache Iceberg. Bringing the teams behind Spark and Iceberg together under one roof marks a significant moment for the industry and confirms that the best technology wins when it remains open.\n\nOpen source is the bedrock of modern data infrastructure. When formats and engines remain accessible, the entire ecosystem benefits from wider adoption and shared innovation. By uniting the core contributors of these two projects, we are doubling down on our commitment to an open approach.\n\nThe value of this combination rests on the principle that data platforms should prioritize interoperability over closed, proprietary silos. Customers gain the most flexibility when they have the freedom to choose their tools without being locked into a single vendor's specific architecture. \n\nThis move reinforces that open-source standards are not just an alternative to proprietary solutions, but the primary driver of development in data engineering. We believe that when great minds collaborate on open foundations, the resulting progress helps every organization manage its data more effectively. Our focus remains on supporting these communities as they continue to evolve and scale.",
+          "word_count": 183,
+          "posts": [
+            1222
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "8470 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12869"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "02-pdf-matei",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:50:28.714414+00:00",
+          "content": "AI progress is moving beyond bigger monolithic models. The next wave of development is centered on compound AI systems—orchestrating multiple models, retrieval, and tools to solve complex tasks.\n\n---\n\nThis is how we are building our ML platform at Databricks. By focusing on the orchestration of these components rather than scaling a single model, we aim to build systems that handle diverse and challenging analytical workloads.\n\n---\n\nThe architecture of these compound AI systems is what defines current progress. We continue to invest in Mosaic and our platform to provide the tools for developers to manage these multi-model environments effectively.",
+          "word_count": 100,
+          "posts": [
+            194,
+            229,
+            218
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "6957 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "11819"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "03-pdf-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:50:39.017614+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share.\n\nThe value of this combination rests on the principle that data platforms should prioritize interoperability over closed, proprietary silos. Customers gain the most flexibility when they have the freedom to choose their tools without being locked into a single vendor's specific architecture. \n\nOpen source is the bedrock of modern data infrastructure. When formats and engines remain accessible, the entire ecosystem benefits from wider adoption and shared innovation. By uniting the core contributors of these two projects, we are doubling down on our commitment to an open approach.\n\nThis move reinforces that open-source standards are not just an alternative to proprietary solutions, but the primary driver of development in data engineering. We believe that when great minds collaborate on open foundations, the resulting progress helps every organization manage its data more effectively. Our focus remains on supporting these communities as they continue to evolve and scale.",
+          "word_count": 168,
+          "posts": [
+            1123
+          ],
+          "revision": 1,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "8470 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12869"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "04-second-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:50:48.362586+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share. I want to keep that focus.\n\nThe value of this combination rests on the principle that data platforms should prioritize interoperability over closed, proprietary silos. Customers gain the most flexibility when they have the freedom to choose their tools without being locked into a single vendor's specific architecture. \n\nOpen source is the bedrock of modern data infrastructure. When formats and engines remain accessible, the entire ecosystem benefits from wider adoption and shared innovation. By uniting the core contributors of these two projects, we are doubling down on our commitment to an open approach.\n\nThis move reinforces that open-source standards are not just an alternative to proprietary solutions, but the primary driver of development in data engineering. We believe that when great minds collaborate on open foundations, the resulting progress helps every organization manage its data more effectively. Our focus remains on supporting these communities as they continue to evolve and scale. 🙏",
+          "word_count": 175,
+          "posts": [
+            1152
+          ],
+          "revision": 2,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "8470 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12869"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "05-emotion-curious",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:50:56.788747+00:00",
+          "content": "Compound AI systems combine models, retrieval, and tools. They may help some applications achieve results, but they aren't a universal improvement for every use case. When does the added architectural complexity of a compound system truly pay off?",
+          "word_count": 38,
+          "posts": [
+            247
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "curious",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "2310 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "5787"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "06-emotion-concerned",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-n2x2zzapk-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:51:04.731922+00:00",
+          "content": "Compound AI systems—combining models, retrieval, and tools—may help some applications, but this is not a universal improvement. Building these systems involves complexity that does not automatically yield better results. Each design choice requires careful evaluation.",
+          "word_count": 35,
+          "posts": [
+            268
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "concerned",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "1171 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "5785"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "run": "astra-review-editorial",
+      "structural_edit": {
+        "original_paragraphs": 3,
+        "body_order_changed": true
+      },
+      "cases": [
+        {
+          "name": "01-pdf-ali",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:57:32.443862+00:00",
+          "content": "Data infrastructure often stalls when technical standards remain fragmented. Choosing between different ways to structure data creates friction for engineering teams and slows down the adoption of analytics tools. We have always maintained that the best technology wins when it is open, and today we are acting on that belief.\n\nDatabricks has acquired Tabular, the company behind Apache Iceberg. This acquisition brings the contributors behind Apache Spark and Apache Iceberg under one roof. By uniting these communities, we are betting on the idea that open-source innovation is the most effective way to build durable data infrastructure.\n\nThis move validates the open-source approach to data. When technologies are open, developers can build on standards rather than being locked into vendor-specific silos. Bringing these experts together allows us to collaborate on the evolution of these formats. We believe this supports an accessible ecosystem where the best tools emerge from a collaborative environment. We look forward to working with the community to build a more unified future for data management.",
+          "word_count": 167,
+          "posts": [
+            1111
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "26596 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "7281"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "02-pdf-matei",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:57:48.010530+00:00",
+          "content": "The AI industry is moving beyond monolithic models. The next wave of progress depends on orchestrating multiple models, retrieval, and tools, rather than simply increasing parameter counts.\n\n---\n\nDevelopers are increasingly composing agents to handle complex tasks. Success now depends on the architecture that stitches these components together, balancing model strengths with real-time data access.\n\n---\n\nAt Databricks, we are focused on our ML platform and Mosaic to support this orchestration, providing the tools teams need to develop, monitor, and scale compound AI systems.",
+          "word_count": 84,
+          "posts": [
+            189,
+            204,
+            173
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "6404 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "6597"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "03-pdf-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:57:58.823824+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share.\n\nThis move validates the open-source approach to data. When technologies are open, developers can build on standards rather than being locked into vendor-specific silos. Bringing these experts together allows us to collaborate on the evolution of these formats. We believe this supports an accessible ecosystem where the best tools emerge from a collaborative environment. We look forward to working with the community to build a more unified future for data management.\n\nDatabricks has acquired Tabular, the company behind Apache Iceberg. This acquisition brings the contributors behind Apache Spark and Apache Iceberg under one roof. By uniting these communities, we are betting on the idea that open-source innovation is the most effective way to build durable data infrastructure.",
+          "word_count": 140,
+          "posts": [
+            924
+          ],
+          "revision": 1,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "26596 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "7281"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "04-second-editor-loop",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:58:09.815630+00:00",
+          "content": "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share. I want to keep that focus.\n\nThis move validates the open-source approach to data. When technologies are open, developers can build on standards rather than being locked into vendor-specific silos. Bringing these experts together allows us to collaborate on the evolution of these formats. We believe this supports an accessible ecosystem where the best tools emerge from a collaborative environment. We look forward to working with the community to build a more unified future for data management.\n\nDatabricks has acquired Tabular, the company behind Apache Iceberg. This acquisition brings the contributors behind Apache Spark and Apache Iceberg under one roof. By uniting these communities, we are betting on the idea that open-source innovation is the most effective way to build durable data infrastructure. 🙏",
+          "word_count": 147,
+          "posts": [
+            953
+          ],
+          "revision": 2,
+          "revoice_applied": false,
+          "fallback": false,
+          "expression": null,
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "26596 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "7281"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "05-emotion-curious",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:58:22.878594+00:00",
+          "content": "Compound AI systems—combining models, retrieval, and tools—can assist with specific applications. Yet, is this complexity always the right path? Since this approach is not a universal improvement, we must ask: how do we determine when the added structure is actually necessary?",
+          "word_count": 41,
+          "posts": [
+            277
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "curious",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "7077 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "6420"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        },
+        {
+          "name": "06-emotion-concerned",
+          "http_status": "200",
+          "deployment": "https://ceo-voice-platform-4ap8otj3f-aksh08022006s-projects.vercel.app",
+          "timestamp": "2026-09-07T15:58:39.365379+00:00",
+          "content": "Compound AI systems—combining models, retrieval, and tools—can improve results for some applications. Yet, this is not a universal solution. Increased complexity should earn its place through evaluation, and it is worth considering if a simpler approach might suffice.",
+          "word_count": 38,
+          "posts": [
+            268
+          ],
+          "revision": 0,
+          "revoice_applied": null,
+          "fallback": null,
+          "expression": {
+            "emotion": "concerned",
+            "intensity": "restrained",
+            "warmth": "profile",
+            "emoji_policy": "none",
+            "viewpoint": "Compound systems may help some applications, not all.",
+            "rationale": "System complexity should earn its place through evaluation."
+          },
+          "report": [
+            {
+              "label": "Model",
+              "value": "gemini-3.1-flash-lite"
+            },
+            {
+              "label": "Latency",
+              "value": "10591 ms"
+            },
+            {
+              "label": "Tokens",
+              "value": "12832"
+            },
+            {
+              "label": "Mechanical checks",
+              "value": "Passed"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "retained_fix_verification": {
+    "deployment": "dpl_7T9oHsSqDJxeV7HHVA8HgZsVX1Zo",
+    "case": "Append a fully protected call to action to the saved baseline Ali draft",
+    "http_status": "200",
+    "returncode": 0,
+    "preserved_exactly": true,
+    "revoice_attempt_count": 0,
+    "revision": 1,
+    "fallback": false
+  }
+}

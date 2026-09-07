@@ -134,7 +134,17 @@ class RegionDetector:
                         "CTA wording and intent are preserved exactly",
                     )
                 )
-        return RegionPlan(editable=tuple(editable), protected=tuple(protected))
+        # CTA protection covers the entire line. Advertising the same line as editable
+        # needlessly calls the model even when there is no permitted wording to change.
+        fully_protected_lines = {
+            region.line_index for region in protected if region.kind is ProtectionKind.CTA
+        }
+        return RegionPlan(
+            editable=tuple(
+                region for region in editable if region.line_index not in fully_protected_lines
+            ),
+            protected=tuple(protected),
+        )
 
     @staticmethod
     def _protected(

@@ -126,10 +126,14 @@ if "content" in ali:
     parts = ali["content"].split("\n\n")
     # Explicit synthetic editor-supplied story for the workflow test, not a verified biographical fact.
     hook = "When I met the Tabular founders, we talked about keeping data infrastructure open. That conversation is the starting point I want to share."
-    edited = (
-        "\n\n".join([hook, *reversed(parts[1:-1]), parts[-1]])
-        if len(parts) > 2
-        else hook + "\n\n" + ali["content"]
+    # With only three paragraphs there is one middle paragraph, so reversing it is
+    # a no-op. Move the two body paragraphs instead and record whether a move occurred.
+    body = parts[1:]
+    reordered = [*reversed(body[:-1]), body[-1]] if len(body) > 2 else list(reversed(body))
+    moved = len(body) > 1 and reordered != body
+    edited = "\n\n".join([hook, *reordered]) if body else hook + "\n\n" + ali["content"]
+    (ROOT / "03-structural-edit.json").write_text(
+        json.dumps({"original_paragraphs": len(parts), "body_order_changed": moved})
     )
     revised = call(
         "03-pdf-editor-loop",
